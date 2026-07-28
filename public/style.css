@@ -276,3 +276,29 @@ body {
   font-style: italic;
   color: #1f7a0d;
 }
+.cb-radio-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px;
+  padding: 10px;
+  background-color: #000000;
+  color: #ff9100;
+  border: 1px solid #ff9100;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 13px;
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.cb-radio-btn:hover {
+  background-color: #ff9100;
+  color: #000000;
+}
+
+.external-icon {
+  flex-shrink: 0;
+}
