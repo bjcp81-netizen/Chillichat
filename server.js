@@ -21,14 +21,15 @@ io.on("connection", (socket) => {
 
   socket.on("chatMessage", ({ handle, color, text }) => {
     io.emit("chatMessage", { handle, color, text });
-    socket.on("typing", ({ handle }) => {
+  });
+
+  socket.on("typing", ({ handle }) => {
     socket.broadcast.emit("typing", { handle });
   });
 
   socket.on("stopTyping", ({ handle }) => {
     socket.broadcast.emit("stopTyping", { handle });
   });
-  
 
   socket.on("statusChange", (status) => {
     if (connectedUsers[socket.id]) {
