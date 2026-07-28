@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const messageInput = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
   const typingIndicator = document.getElementById("typing-indicator");
-  
+  const notifySound = document.getElementById("notify-sound");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -194,6 +194,11 @@ document.addEventListener("DOMContentLoaded", function () {
     messagesBox.appendChild(msgEl);
 
     messagesBox.scrollTop = messagesBox.scrollHeight;
+
+    if (data.handle !== myHandle) {
+      notifySound.currentTime = 0;
+      notifySound.play().catch(() => {});
+    }
   });
 
   function startIdleWatcher() {

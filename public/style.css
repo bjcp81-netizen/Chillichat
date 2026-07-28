@@ -174,7 +174,9 @@ body {
   display: flex;
   flex-direction: column;
   border-right: 1px solid #39ff14;
+  min-width: 0;
 }
+
 
 .messages-box {
   flex: 1;
@@ -190,6 +192,8 @@ body {
 
 .chat-message {
   margin-bottom: 8px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .chat-message .msg-handle {
@@ -232,8 +236,8 @@ body {
 }
 
 .users-column {
-  flex: 1;
-  max-width: 200px;
+  flex: 0 0 110px;
+  max-width: 110px;
   padding: 10px;
   overflow-y: auto;
 }
