@@ -9,28 +9,39 @@
 <body>
 
   <div id="join-screen" class="join-screen">
-    <h1>Chillichat <span class="by">by JbnZ</span></h1>
+    <div class="join-title-block">
+      <h1>ChilliChat</h1>
+      <p class="by">by JbnZ</p>
+      <p class="tagline">Pick your identity to enter the lobby</p>
+    </div>
+
     <div class="join-box">
-      <h2>Choose your handle</h2>
+      <label class="field-label" for="handle-input">Handle</label>
       <input type="text" id="handle-input" placeholder="Enter a handle..." maxlength="15" />
-      <p class="color-label">Pick a colour:</p>
+
+      <p class="field-label">Colour</p>
       <div id="color-options" class="color-options">
-        <div class="color-swatch swatch-green" data-color="#39ff14"></div>
-        <div class="color-swatch swatch-pink" data-color="#ff2079"></div>
-        <div class="color-swatch swatch-cyan" data-color="#00fff2"></div>
-        <div class="color-swatch swatch-yellow" data-color="#faff00"></div>
-        <div class="color-swatch swatch-orange" data-color="#ff9100"></div>
-        <div class="color-swatch swatch-red" data-color="#ff2b2b"></div>
-        <div class="color-swatch swatch-purple" data-color="#cc00ff"></div>
-        <div class="color-swatch swatch-blue" data-color="#00aaff"></div>
-        <div class="color-swatch swatch-lime" data-color="#ccff00"></div>
-        <div class="color-swatch swatch-coral" data-color="#ff5f6d"></div>
-        <div class="color-swatch swatch-violet" data-color="#7d00ff"></div>
-        <div class="color-swatch swatch-turquoise" data-color="#00ffc8"></div>
+        <div class="color-swatch" data-color="#ff0033"></div>
+        <div class="color-swatch" data-color="#ff8800"></div>
+        <div class="color-swatch" data-color="#ffee00"></div>
+        <div class="color-swatch" data-color="#99ff00"></div>
+        <div class="color-swatch" data-color="#39ff14"></div>
+        <div class="color-swatch" data-color="#00ff99"></div>
+        <div class="color-swatch" data-color="#00eeff"></div>
+        <div class="color-swatch" data-color="#0099ff"></div>
+        <div class="color-swatch" data-color="#4d5eff"></div>
+        <div class="color-swatch" data-color="#9900ff"></div>
+        <div class="color-swatch" data-color="#ff00dd"></div>
+        <div class="color-swatch" data-color="#ff0088"></div>
       </div>
 
- <header class="app-header">
-      <h1>Chillichat <span class="by">by JbnZ</span></h1>
+      <button id="join-btn">Enter Lobby</button>
+    </div>
+  </div>
+
+  <div id="chat-screen" class="chat-screen hidden">
+    <header class="app-header">
+      <h1>ChilliChat <span class="by">by JbnZ</span></h1>
       <button id="change-handle-btn" class="change-handle-btn">Not you? Change handle</button>
     </header>
 
