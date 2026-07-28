@@ -35,16 +35,74 @@
         <div class="color-swatch" data-color="#ff0088" style="background-color:#ff0088"></div>
       </div>
 
-      <button id="join-btn">Enter Lobby</button>
+      <p class="field-label">Terms &amp; Conditions</p>
+      <div class="terms-box">
+        <p><strong>Chillichat Terms &amp; Conditions</strong></p>
+        <p>Last Updated: 28 July 2026</p>
+        <p>Welcome to Chillichat. By creating an account or ticking the "I Agree" checkbox, you confirm that you have read, understood, and agree to these Terms &amp; Conditions.</p>
+
+        <p><strong>1. Age Requirement</strong></p>
+        <p>Chillichat is strictly for users aged 18 years or older. By using this application, you confirm that you are at least 18 years of age.</p>
+
+        <p><strong>2. Treat Others with Respect</strong></p>
+        <p>Everyone has the right to be treated with respect. We expect all users to interact with one another with basic human decency, kindness, and courtesy.</p>
+
+        <p><strong>3. Prohibited Behaviour</strong></p>
+        <p>The following behaviour is strictly prohibited:</p>
+        <ul>
+          <li>Racism, discrimination, hate speech, or harassment of any kind.</li>
+          <li>Stalking, intimidation, or unwanted persistent contact.</li>
+          <li>Doxxing, including sharing another person's personal or private information without their consent.</li>
+          <li>Trolling, bullying, or deliberately provoking or upsetting other users.</li>
+          <li>Threatening, abusive, or violent language or behaviour.</li>
+          <li>Sexual, explicit, obscene, or indecent conversations or content.</li>
+          <li>Derogatory, insulting, or degrading comments directed at individuals or groups.</li>
+          <li>Any content or behaviour that exploits, encourages, or involves minors, including paedophilic content or communication.</li>
+          <li>Any activity that is illegal or intended to facilitate illegal conduct.</li>
+        </ul>
+
+        <p><strong>4. Enforcement</strong></p>
+        <p>If you violate these Terms &amp; Conditions, the developer may, at their sole discretion:</p>
+        <ul>
+          <li>Remove content.</li>
+          <li>Suspend or permanently terminate your account without notice.</li>
+          <li>Restrict access to the application.</li>
+          <li>Preserve relevant evidence relating to suspected violations.</li>
+        </ul>
+
+        <p><strong>5. Reporting Illegal Activity</strong></p>
+        <p>Where the developer reasonably believes that a user has engaged in illegal activity, including but not limited to threats of violence, child exploitation, stalking, or other criminal offences, the developer may report the matter to the appropriate law enforcement or other relevant authorities.</p>
+        <p>Such reports may include information reasonably necessary for the investigation, which may include account information, available metadata, IP addresses where applicable, device identifiers, chat logs, and screenshots, where permitted or required by applicable law.</p>
+
+        <p><strong>6. Privacy</strong></p>
+        <p>Your information will be handled in accordance with Chillichat's Privacy Policy and applicable data protection laws. Information will only be disclosed where permitted or required by law.</p>
+
+        <p><strong>7. No Tolerance Policy</strong></p>
+        <p>Chillichat has a zero-tolerance policy towards abuse, harassment, hate speech, threats, child exploitation, and other unlawful or harmful behaviour.</p>
+
+        <p><strong>8. Changes to These Terms</strong></p>
+        <p>These Terms &amp; Conditions may be updated from time to time. Continued use of Chillichat after changes are published constitutes acceptance of the updated Terms.</p>
+
+        <p><strong>9. Acceptance</strong></p>
+        <p>By ticking the "I Agree" checkbox and using Chillichat, you acknowledge that you have read, understood, and agree to be bound by these Terms &amp; Conditions.</p>
+
+        <p>Remember: Everyone deserves to be treated with dignity and respect. Help us keep Chillichat a safe, welcoming, and enjoyable place for all users.</p>
+      </div>
+
+      <label class="terms-agree-row">
+        <input type="checkbox" id="terms-checkbox" />
+        I have read and agree to the Terms &amp; Conditions
+      </label>
+
+      <button id="join-btn" disabled>Enter Lobby</button>
     </div>
   </div>
 
   <div id="chat-screen" class="chat-screen hidden">
-    <header class="app-header">
-      <h1>ChilliChat <span class="by">by JbnZ</span></h1>
+   <header class="app-header">
+      <h1>ChilliChat</h1>
       <button id="users-toggle-btn" class="users-toggle-btn">Users (0) ▾</button>
     </header>
-
     <div id="users-dropdown" class="users-dropdown">
       <ul id="users-list" class="users-list"></ul>
     </div>

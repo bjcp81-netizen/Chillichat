@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const handleInput = document.getElementById("handle-input");
   const colorSwatches = document.querySelectorAll(".color-swatch");
   const joinBtn = document.getElementById("join-btn");
+  const termsCheckbox = document.getElementById("terms-checkbox");
   const joinScreen = document.getElementById("join-screen");
   const chatScreen = document.getElementById("chat-screen");
   const usersList = document.getElementById("users-list");
@@ -39,6 +40,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   joinBtn.addEventListener("click", () => enterLobby(false));
 
+  termsCheckbox.addEventListener("change", () => {
+    joinBtn.disabled = !termsCheckbox.checked;
+  });
+
   handleInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       enterLobby(false);
@@ -50,13 +55,17 @@ document.addEventListener("DOMContentLoaded", function () {
   function enterLobby(isReturningUser) {
     const handle = isReturningUser ? myHandle : handleInput.value.trim();
 
-    if (!isReturningUser) {
+   if (!isReturningUser) {
       if (handle === "") {
         alert("Please enter a handle.");
         return;
       }
       if (myColor === "") {
         alert("Please pick a colour.");
+        return;
+      }
+      if (!termsCheckbox.checked) {
+        alert("Please agree to the Terms & Conditions to continue.");
         return;
       }
       myHandle = handle;
