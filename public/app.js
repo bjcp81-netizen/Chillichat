@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const sendBtn = document.getElementById("send-btn");
   const typingIndicator = document.getElementById("typing-indicator");
   const notifySound = document.getElementById("notify-sound");
+ const sendSound = document.getElementById("send-sound");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -123,6 +124,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (text === "") return;
 
     socket.emit("chatMessage", { handle: myHandle, color: myColor, text: text });
+
+    sendSound.currentTime = 0;
+    sendSound.play().catch(() => {});
 
     messageInput.value = "";
     stopTypingNow();
