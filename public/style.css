@@ -266,4 +266,17 @@ body {
 .status-dot.idle {
   background-color: #ff4136;
   box-shadow: 0 0 6px #ff4136;
+}.change-handle-btn {
+  background: none;
+  border: none;
+  color: #1f7a0d;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+  text-decoration: underline;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.change-handle-btn:hover {
+  color: #39ff14;
 }

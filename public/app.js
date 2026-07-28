@@ -2,6 +2,8 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log("ChilliChat app.js loaded");
 
   const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+  const STORAGE_HANDLE_KEY = "chillichat_handle";
+  const STORAGE_COLOR_KEY = "chillichat_color";
 
   const socket = io();
 
@@ -19,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const messagesBox = document.getElementById("messages-box");
   const messageInput = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
+  const changeHandleBtn = document.getElementById("change-handle-btn");
 
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
@@ -28,33 +31,68 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  joinBtn.addEventListener("click", enterLobby);
+  joinBtn.addEventListener("click", () => enterLobby(false));
 
   handleInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
-      enterLobby();
+      enterLobby(false);
     }
   });
 
-  function enterLobby() {
-    const handle = handleInput.value.trim();
-    if (handle === "") {
-      alert("Please enter a handle.");
-      return;
-    }
-    if (myColor === "") {
-      alert("Please pick a colour.");
-      return;
-    }
+  changeHandleBtn.addEventListener("click", () => {
+    localStorage.removeItem(STORAGE_HANDLE_KEY);
+    localStorage.removeItem(STORAGE_COLOR_KEY);
+    location.reload();
+  });
 
-    myHandle = handle;
+  function enterLobby(isReturningUser) {
+    const handle = isReturningUser ? myHandle : handleInput.value.trim();
+
+    if (!isReturningUser) {
+      if (handle === "") {
+        alert("Please enter a handle.");
+        return;
+      }
+      if (myColor === "") {
+        alert("Please pick a colour.");
+        return;
+      }
+      myHandle = handle;
+
+      localStorage.setItem(STORAGE_HANDLE_KEY, myHandle);
+      localStorage.setItem(STORAGE_COLOR_KEY, myColor);
+    }
 
     socket.emit("join", { handle: myHandle, color: myColor });
 
     joinScreen.classList.add("hidden");
     chatScreen.classList.remove("hidden");
 
+    if (isReturningUser) {
+      showSystemMessage("Welcome back, " + myHandle + "!");
+    }
+
     startIdleWatcher();
+  }
+
+  // Check for a returning user as soon as the page loads
+  function checkReturningUser() {
+    const savedHandle = localStorage.getItem(STORAGE_HANDLE_KEY);
+    const savedColor = localStorage.getItem(STORAGE_COLOR_KEY);
+
+    if (savedHandle && savedColor) {
+      myHandle = savedHandle;
+      myColor = savedColor;
+      enterLobby(true);
+    }
+  }
+
+  function showSystemMessage(text) {
+    const msgEl = document.createElement("p");
+    msgEl.className = "system-msg";
+    msgEl.textContent = text;
+    messagesBox.appendChild(msgEl);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
   }
 
   socket.on("userList", (users) => {
@@ -137,4 +175,6 @@ document.addEventListener("DOMContentLoaded", function () {
       socket.emit("statusChange", "idle");
     }
   }
+
+  checkReturningUser();
 });
