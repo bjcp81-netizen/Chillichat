@@ -45,11 +45,12 @@ body {
   background-color: #000000;
   padding: 24px;
   border-radius: 8px;
-  width: 300px;
+  width: 320px;
   text-align: center;
   border: 1px solid #39ff14;
   box-shadow: 0 0 16px rgba(57, 255, 20, 0.4);
 }
+
 
 .join-box h2 {
   margin-bottom: 16px;
@@ -88,25 +89,29 @@ body {
 }
 
 .color-swatch {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   cursor: pointer;
   border: 3px solid #333;
   display: inline-block;
 }
 
-.color-swatch.selected {
-  border-color: #39ff14;
-  box-shadow: 0 0 10px #39ff14;
-}
 
-.swatch-red { background-color: #ff4136; }
+
+
 .swatch-green { background-color: #39ff14; }
-.swatch-blue { background-color: #0074d9; }
-.swatch-yellow { background-color: #ffdc00; }
-.swatch-purple { background-color: #b10dc9; }
-.swatch-orange { background-color: #ff851b; }
+.swatch-pink { background-color: #ff2079; }
+.swatch-cyan { background-color: #00fff2; }
+.swatch-yellow { background-color: #faff00; }
+.swatch-orange { background-color: #ff9100; }
+.swatch-red { background-color: #ff2b2b; }
+.swatch-purple { background-color: #cc00ff; }
+.swatch-blue { background-color: #00aaff; }
+.swatch-lime { background-color: #ccff00; }
+.swatch-coral { background-color: #ff5f6d; }
+.swatch-violet { background-color: #7d00ff; }
+.swatch-turquoise { background-color: #00ffc8; }
 
 #join-btn {
   padding: 10px 20px;
