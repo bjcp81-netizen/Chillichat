@@ -269,3 +269,10 @@ body {
 .status-dot.idle {
   background-color: #ff2b2b;
 }
+.typing-indicator {
+  min-height: 18px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-style: italic;
+  color: #1f7a0d;
+}

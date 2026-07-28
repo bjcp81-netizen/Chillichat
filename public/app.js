@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const messagesBox = document.getElementById("messages-box");
   const messageInput = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
+  const typingIndicator = document.getElementById("typing-indicator");
   
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
@@ -124,6 +125,56 @@ document.addEventListener("DOMContentLoaded", function () {
     socket.emit("chatMessage", { handle: myHandle, color: myColor, text: text });
 
     messageInput.value = "";
+    stopTypingNow();
+  }
+
+  // ---- Typing indicator (outgoing) ----
+  let typingTimeout = null;
+  let isCurrentlyTyping = false;
+
+  messageInput.addEventListener("input", () => {
+    if (!isCurrentlyTyping) {
+      isCurrentlyTyping = true;
+      socket.emit("typing", { handle: myHandle });
+    }
+
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(stopTypingNow, 2000);
+  });
+
+  function stopTypingNow() {
+    if (isCurrentlyTyping) {
+      isCurrentlyTyping = false;
+      socket.emit("stopTyping", { handle: myHandle });
+    }
+    clearTimeout(typingTimeout);
+  }
+
+  // ---- Typing indicator (incoming) ----
+  const typingUsers = new Set();
+
+  socket.on("typing", ({ handle }) => {
+    typingUsers.add(handle);
+    updateTypingIndicator();
+  });
+
+  socket.on("stopTyping", ({ handle }) => {
+    typingUsers.delete(handle);
+    updateTypingIndicator();
+  });
+
+  function updateTypingIndicator() {
+    const names = Array.from(typingUsers);
+
+    if (names.length === 0) {
+      typingIndicator.textContent = "";
+    } else if (names.length === 1) {
+      typingIndicator.textContent = names[0] + " is typing...";
+    } else if (names.length === 2) {
+      typingIndicator.textContent = names[0] + " and " + names[1] + " are typing...";
+    } else {
+      typingIndicator.textContent = "Several people are typing...";
+    }
   }
 
   socket.on("chatMessage", (data) => {
