@@ -21,8 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const messagesBox = document.getElementById("messages-box");
   const messageInput = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
-  const changeHandleBtn = document.getElementById("change-handle-btn");
-
+  
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -39,11 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  changeHandleBtn.addEventListener("click", () => {
-    localStorage.removeItem(STORAGE_HANDLE_KEY);
-    localStorage.removeItem(STORAGE_COLOR_KEY);
-    location.reload();
-  });
+  
 
   function enterLobby(isReturningUser) {
     const handle = isReturningUser ? myHandle : handleInput.value.trim();
