@@ -24,6 +24,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const typingIndicator = document.getElementById("typing-indicator");
   const notifySound = document.getElementById("notify-sound");
  const sendSound = document.getElementById("send-sound");
+  const usersToggleBtn = document.getElementById("users-toggle-btn");
+  const usersDropdown = document.getElementById("users-dropdown");
+ usersToggleBtn.addEventListener("click", () => {
+    usersDropdown.classList.toggle("open");
+  });
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -93,6 +98,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   socket.on("userList", (users) => {
+    usersToggleBtn.textContent = "Users (" + users.length + ") ▾";
     usersList.innerHTML = "";
     users.forEach(user => {
       const li = document.createElement("li");
