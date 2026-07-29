@@ -195,7 +195,29 @@ document.addEventListener("DOMContentLoaded", function () {
       typingIndicator.textContent = "Several people are typing...";
     }
   }
+socket.on("chatHistory", (messages) => {
+  messagesBox.innerHTML = "";
 
+  messages.forEach((data) => {
+    const msgEl = document.createElement("p");
+    msgEl.className = "chat-message";
+
+    const handleSpan = document.createElement("span");
+    handleSpan.className = "msg-handle";
+    handleSpan.textContent = data.handle + ":";
+    handleSpan.style.color = data.color;
+
+    const textSpan = document.createElement("span");
+    textSpan.textContent = " " + data.text;
+
+    msgEl.appendChild(handleSpan);
+    msgEl.appendChild(textSpan);
+
+    messagesBox.appendChild(msgEl);
+  });
+
+  messagesBox.scrollTop = messagesBox.scrollHeight;
+});
   socket.on("chatMessage", (data) => {
     const msgEl = document.createElement("p");
     msgEl.className = "chat-message";

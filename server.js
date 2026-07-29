@@ -26,14 +26,33 @@ async function connectToDatabase() {
   messagesCollection = db.collection("messages");
   console.log("Connected to MongoDB Atlas");
 }
+async function getRecentMessages() {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+  return await messagesCollection
+    .find({ timestamp: { $gte: yesterday } })
+    .sort({ timestamp: 1 })
+    .toArray();
+}
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
-  socket.on("join", ({ handle, color }) => {
-    connectedUsers[socket.id] = { handle, color, status: "active" };
-    io.emit("userList", Object.values(connectedUsers));
-  });
+  socket.on("join", async ({ handle, color }) => {
+  connectedUsers[socket.id] = {
+    handle,
+    color,
+    status: "active"
+  };
+
+  io.emit("userList", Object.values(connectedUsers));
+
+  try {
+    const history = await getRecentMessages();
+    socket.emit("chatHistory", history);
+  } catch (err) {
+    console.error("Couldn't load chat history:", err);
+  }
+});
 
   socket.on("chatMessage", async ({ handle, color, text }) => {
   const message = {
