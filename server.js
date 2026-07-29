@@ -35,9 +35,23 @@ io.on("connection", (socket) => {
     io.emit("userList", Object.values(connectedUsers));
   });
 
-  socket.on("chatMessage", ({ handle, color, text }) => {
-    io.emit("chatMessage", { handle, color, text });
-  });
+  socket.on("chatMessage", async ({ handle, color, text }) => {
+  const message = {
+    handle,
+    color,
+    text,
+    timestamp: new Date()
+  };
+
+  try {
+    await messagesCollection.insertOne(message);
+    console.log("Message saved to MongoDB");
+  } catch (err) {
+    console.error("Failed to save message:", err);
+  }
+
+  io.emit("chatMessage", message);
+});
 
   socket.on("typing", ({ handle }) => {
     socket.broadcast.emit("typing", { handle });
