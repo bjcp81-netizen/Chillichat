@@ -19,7 +19,7 @@ let usersCollection;
 let messagesCollection;
 
 async function connectToDatabase() {
-  const client = new MongoClient(process.env.MONGODB_URI);
+  const client = new MongoClient(process.env.Monduri);
   await client.connect();
   db = client.db("chillichat");
   usersCollection = db.collection("users");
