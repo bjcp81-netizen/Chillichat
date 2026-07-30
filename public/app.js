@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
   const STORAGE_HANDLE_KEY = "chillichat_handle";
   const STORAGE_COLOR_KEY = "chillichat_color";
-
+  const STORAGE_TOKEN_KEY = "chillichat_device_token";
   const socket = io();
 
   let myHandle = "";
@@ -74,17 +74,38 @@ document.addEventListener("DOMContentLoaded", function () {
       localStorage.setItem(STORAGE_COLOR_KEY, myColor);
     }
 
-    socket.emit("join", { handle: myHandle, color: myColor });
+    const myDeviceToken = localStorage.getItem(STORAGE_TOKEN_KEY);
 
+    socket.emit("join", { handle: myHandle, color: myColor, deviceToken: myDeviceToken });
+  }
+
+  socket.on("joinSuccess", ({ handle, color, deviceToken }) => {
+    myHandle = handle;
+    myColor = color;
+
+    localStorage.setItem(STORAGE_HANDLE_KEY, myHandle);
+    localStorage.setItem(STORAGE_COLOR_KEY, myColor);
+    localStorage.setItem(STORAGE_TOKEN_KEY, deviceToken);
+
+    const wasHidden = !joinScreen.classList.contains("hidden");
     joinScreen.classList.add("hidden");
     chatScreen.classList.remove("hidden");
 
-    if (isReturningUser) {
+    if (wasHidden === false) {
       showSystemMessage("Welcome back, " + myHandle + "!");
     }
 
     startIdleWatcher();
-  }
+  });
+
+  socket.on("joinError", (message) => {
+    alert(message);
+    localStorage.removeItem(STORAGE_HANDLE_KEY);
+    localStorage.removeItem(STORAGE_COLOR_KEY);
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
+    joinScreen.classList.remove("hidden");
+    chatScreen.classList.add("hidden");
+  });
 
   // Check for a returning user as soon as the page loads
   function checkReturningUser() {
