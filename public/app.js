@@ -14,22 +14,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const handleInput = document.getElementById("handle-input");
   const colorSwatches = document.querySelectorAll(".color-swatch");
-  const joinBtn = document.getElementById("join-btn");
   const termsCheckbox = document.getElementById("terms-checkbox");
+  const joinBtn = document.getElementById("join-btn");
   const joinScreen = document.getElementById("join-screen");
   const chatScreen = document.getElementById("chat-screen");
   const usersList = document.getElementById("users-list");
+  const usersToggleBtn = document.getElementById("users-toggle-btn");
+  const usersDropdown = document.getElementById("users-dropdown");
   const messagesBox = document.getElementById("messages-box");
   const messageInput = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
   const typingIndicator = document.getElementById("typing-indicator");
+  const sendSound = document.getElementById("send-sound");
   const notifySound = document.getElementById("notify-sound");
- const sendSound = document.getElementById("send-sound");
-  const usersToggleBtn = document.getElementById("users-toggle-btn");
-  const usersDropdown = document.getElementById("users-dropdown");
- usersToggleBtn.addEventListener("click", () => {
-    usersDropdown.classList.toggle("open");
-  });
+
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -38,11 +36,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  joinBtn.addEventListener("click", () => enterLobby(false));
-
   termsCheckbox.addEventListener("change", () => {
     joinBtn.disabled = !termsCheckbox.checked;
   });
+
+  usersToggleBtn.addEventListener("click", () => {
+    usersDropdown.classList.toggle("open");
+  });
+
+  joinBtn.addEventListener("click", () => enterLobby(false));
 
   handleInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -50,12 +52,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  
-
   function enterLobby(isReturningUser) {
     const handle = isReturningUser ? myHandle : handleInput.value.trim();
 
-   if (!isReturningUser) {
+    if (!isReturningUser) {
       if (handle === "") {
         alert("Please enter a handle.");
         return;
@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
       if (!termsCheckbox.checked) {
-        alert("Please agree to the Terms & Conditions to continue.");
+        alert("Please confirm you are 21+ and agree to the terms.");
         return;
       }
       myHandle = handle;
@@ -195,29 +195,8 @@ document.addEventListener("DOMContentLoaded", function () {
       typingIndicator.textContent = "Several people are typing...";
     }
   }
-socket.on("chatHistory", (messages) => {
-  messagesBox.innerHTML = "";
 
-  messages.forEach((data) => {
-    const msgEl = document.createElement("p");
-    msgEl.className = "chat-message";
-
-    const handleSpan = document.createElement("span");
-    handleSpan.className = "msg-handle";
-    handleSpan.textContent = data.handle + ":";
-    handleSpan.style.color = data.color;
-
-    const textSpan = document.createElement("span");
-    textSpan.textContent = " " + data.text;
-
-    msgEl.appendChild(handleSpan);
-    msgEl.appendChild(textSpan);
-
-    messagesBox.appendChild(msgEl);
-  });
-
-  messagesBox.scrollTop = messagesBox.scrollHeight;
-});
+  // ---- Incoming chat messages ----
   socket.on("chatMessage", (data) => {
     const msgEl = document.createElement("p");
     msgEl.className = "chat-message";
@@ -236,7 +215,8 @@ socket.on("chatHistory", (messages) => {
 
     messagesBox.scrollTop = messagesBox.scrollHeight;
 
-    if (data.handle !== myHandle) {
+    const isOwnMessage = data.handle === myHandle;
+    if (!isOwnMessage) {
       notifySound.currentTime = 0;
       notifySound.play().catch(() => {});
     }
