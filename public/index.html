@@ -47,13 +47,20 @@
   <div id="chat-screen" class="chat-screen hidden">
     <header class="app-header">
       <h1>ChilliChat</h1>
-      <button id="users-toggle-btn" class="users-toggle-btn">Users (0) ▾</button>
+     <rs  <button id="users-toggle-btn" class="users-toggle-btn">Users (0) ▾</button>
+      <button id="highrollers-toggle-btn" class="highrollers-toggle-btn">🔥 Highrollers ▾</button>
     </header>
 
     <div id="users-dropdown" class="users-dropdown">
       <ul id="users-list" class="users-list"></ul>
     </div>
-
+<div id="highrollers-dropdown" class="users-dropdown">
+      <div class="highrollers-tabs">
+        <button id="highrollers-today-btn" class="highrollers-tab active">Today</button>
+        <button id="highrollers-week-btn" class="highrollers-tab">This Week</button>
+      </div>
+      <ol id="highrollers-list" class="highrollers-list"></ol>
+    </div>
     <div class="main-area">
       <div class="lobby-column">
         <div id="messages-box" class="messages-box">

@@ -5,6 +5,14 @@ document.addEventListener("DOMContentLoaded", function () {
   const STORAGE_HANDLE_KEY = "chillichat_handle";
   const STORAGE_COLOR_KEY = "chillichat_color";
   const STORAGE_TOKEN_KEY = "chillichat_device_token";
+
+  const REACTIONS = [
+    { key: "chilli", emoji: "🌶️" },
+    { key: "heart", emoji: "❤️" },
+    { key: "laugh", emoji: "😂" },
+    { key: "down", emoji: "👎" },
+  ];
+
   const socket = io();
 
   let myHandle = "";
@@ -21,6 +29,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const usersList = document.getElementById("users-list");
   const usersToggleBtn = document.getElementById("users-toggle-btn");
   const usersDropdown = document.getElementById("users-dropdown");
+  const highrollersToggleBtn = document.getElementById("highrollers-toggle-btn");
+  const highrollersDropdown = document.getElementById("highrollers-dropdown");
+  const highrollersTodayBtn = document.getElementById("highrollers-today-btn");
+  const highrollersWeekBtn = document.getElementById("highrollers-week-btn");
+  const highrollersList = document.getElementById("highrollers-list");
   const messagesBox = document.getElementById("messages-box");
   const messageInput = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
@@ -43,7 +56,66 @@ document.addEventListener("DOMContentLoaded", function () {
   usersToggleBtn.addEventListener("click", () => {
     usersDropdown.classList.toggle("open");
   });
+highrollersToggleBtn.addEventListener("click", () => {
+    highrollersDropdown.classList.toggle("open");
+    if (highrollersDropdown.classList.contains("open")) {
+      requestHighrollers("day");
+    }
+  });
 
+  highrollersTodayBtn.addEventListener("click", () => {
+    setHighrollersTab("day");
+    requestHighrollers("day");
+  });
+
+  highrollersWeekBtn.addEventListener("click", () => {
+    setHighrollersTab("week");
+    requestHighrollers("week");
+  });
+
+  function setHighrollersTab(period) {
+    highrollersTodayBtn.classList.toggle("active", period === "day");
+    highrollersWeekBtn.classList.toggle("active", period === "week");
+  }
+
+  function requestHighrollers(period) {
+    socket.emit("getHighrollers", { period });
+  }
+
+  socket.on("highrollersResult", ({ entries }) => {
+    highrollersList.innerHTML = "";
+
+    if (entries.length === 0) {
+      const li = document.createElement("li");
+      li.className = "highrollers-empty";
+      li.textContent = "No hot takes yet — react to some messages!";
+      highrollersList.appendChild(li);
+      return;
+    }
+
+    entries.forEach((entry) => {
+      const li = document.createElement("li");
+      li.className = "highrollers-item";
+
+      const heat = document.createElement("span");
+      heat.className = "highrollers-heat";
+      heat.textContent = "🔥 " + entry.heatRating;
+
+      const handle = document.createElement("span");
+      handle.className = "highrollers-handle";
+      handle.textContent = entry.handle;
+      handle.style.color = entry.color;
+
+      const text = document.createElement("span");
+      text.className = "highrollers-text";
+      text.textContent = entry.text;
+
+      li.appendChild(heat);
+      li.appendChild(handle);
+      li.appendChild(text);
+      highrollersList.appendChild(li);
+    });
+  });
   joinBtn.addEventListener("click", () => enterLobby(false));
 
   handleInput.addEventListener("keydown", (e) => {
@@ -107,7 +179,6 @@ document.addEventListener("DOMContentLoaded", function () {
     chatScreen.classList.add("hidden");
   });
 
-  // Check for a returning user as soon as the page loads
   function checkReturningUser() {
     const savedHandle = localStorage.getItem(STORAGE_HANDLE_KEY);
     const savedColor = localStorage.getItem(STORAGE_COLOR_KEY);
@@ -217,10 +288,84 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // ---- Reactions & heat rating ----
+  function buildReactionBar(messageId, counts, heatRating) {
+    const bar = document.createElement("div");
+    bar.className = "reaction-bar";
+
+    const pillsWrap = document.createElement("span");
+    pillsWrap.className = "reaction-pills";
+    bar.appendChild(pillsWrap);
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "reaction-add-btn";
+    addBtn.textContent = "+";
+    bar.appendChild(addBtn);
+
+    const picker = document.createElement("div");
+    picker.className = "reaction-picker hidden";
+    REACTIONS.forEach(r => {
+      const pickBtn = document.createElement("button");
+      pickBtn.className = "reaction-pick-btn";
+      pickBtn.dataset.reaction = r.key;
+      pickBtn.textContent = r.emoji;
+      pickBtn.addEventListener("click", () => {
+        socket.emit("reaction", { messageId: messageId, handle: myHandle, reactionType: r.key });
+        picker.classList.add("hidden");
+      });
+      picker.appendChild(pickBtn);
+    });
+    bar.appendChild(picker);
+
+    addBtn.addEventListener("click", () => {
+      picker.classList.toggle("hidden");
+    });
+
+    const heatBadge = document.createElement("span");
+    heatBadge.className = "heat-badge";
+    heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
+    bar.appendChild(heatBadge);
+
+    renderPills(pillsWrap, counts);
+
+    return bar;
+  }
+
+  function renderPills(pillsWrap, counts) {
+    pillsWrap.innerHTML = "";
+    REACTIONS.forEach(r => {
+      const count = counts[r.key] || 0;
+      if (count > 0) {
+        const pill = document.createElement("span");
+        pill.className = "reaction-pill";
+        pill.textContent = r.emoji + " " + count;
+        pillsWrap.appendChild(pill);
+      }
+    });
+  }
+
+ socket.on("reactionUpdate", ({ messageId, counts, heatRating }) => {
+    const msgEl = messagesBox.querySelector('[data-message-id="' + messageId + '"]');
+    if (!msgEl) return;
+
+    const pillsWrap = msgEl.querySelector(".reaction-pills");
+    if (pillsWrap) {
+      renderPills(pillsWrap, counts);
+    }
+
+    const heatBadge = msgEl.querySelector(".heat-badge");
+    if (heatBadge) {
+      heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
+    }
+  });
+
   // ---- Incoming chat messages ----
   socket.on("chatMessage", (data) => {
-    const msgEl = document.createElement("p");
+    const msgEl = document.createElement("div");
     msgEl.className = "chat-message";
+    msgEl.dataset.messageId = data.id;
+
+    const textLine = document.createElement("p");
 
     const handleSpan = document.createElement("span");
     handleSpan.className = "msg-handle";
@@ -230,8 +375,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const textSpan = document.createElement("span");
     textSpan.textContent = " " + data.text;
 
-    msgEl.appendChild(handleSpan);
-    msgEl.appendChild(textSpan);
+    textLine.appendChild(handleSpan);
+    textLine.appendChild(textSpan);
+
+    const counts = data.counts || { chilli: 0, heart: 0, laugh: 0, down: 0 };
+    const reactionBar = buildReactionBar(data.id, counts, data.heatRating || null);
+
+    msgEl.appendChild(textLine);
+    msgEl.appendChild(reactionBar);
     messagesBox.appendChild(msgEl);
 
     messagesBox.scrollTop = messagesBox.scrollHeight;
