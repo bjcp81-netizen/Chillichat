@@ -14,6 +14,26 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const connectedUsers = {};
 
+const REACTION_SCHO_VALUES = { chilli: 5, heart: 10, laugh: 8, down: -5 };
+
+const SCOVILLE_TIERS = [
+  { min: 2200000, name: "Pepper X", emoji: "👑" },
+  { min: 1641000, name: "Carolina Reaper", emoji: "💀" },
+  { min: 1000000, name: "Ghost Pepper", emoji: "☄️" },
+  { min: 500000, name: "Habanero", emoji: "🔥" },
+  { min: 350000, name: "Scotch Bonnet", emoji: "🌶️" },
+  { min: 100000, name: "Bird's Eye", emoji: "🌶️" },
+  { min: 50000, name: "Cayenne", emoji: "🌶️" },
+  { min: 23000, name: "Serrano", emoji: "🌶️" },
+  { min: 8000, name: "Jalapeño", emoji: "🌶️" },
+  { min: 0, name: "Bell Pepper", emoji: "🫑" },
+];
+
+function computeScovilleRank(scho) {
+  const tier = SCOVILLE_TIERS.find((t) => scho >= t.min);
+  return tier || SCOVILLE_TIERS[SCOVILLE_TIERS.length - 1];
+}
+
 function generateToken() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -70,6 +90,8 @@ async function setupDatabase() {
     )
   `);
 
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS scho_total INTEGER DEFAULT 0`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (
       id SERIAL PRIMARY KEY,
@@ -116,6 +138,33 @@ async function checkBanStatus(handle, deviceToken) {
     [deviceToken || "", handle]
   );
   return result.rows.length > 0 ? result.rows[0] : null;
+}
+
+async function buildEnrichedUserList() {
+  const users = Object.values(connectedUsers);
+  if (users.length === 0) return [];
+
+  const handles = users.map((u) => u.handle);
+  const result = await pool.query(
+    "SELECT handle, scho_total FROM users WHERE handle = ANY($1)",
+    [handles]
+  );
+
+  const schoByHandle = {};
+  result.rows.forEach((row) => {
+    schoByHandle[row.handle] = row.scho_total;
+  });
+
+  return users.map((u) => {
+    const scho = schoByHandle[u.handle] || 0;
+    const rank = computeScovilleRank(scho);
+    return { ...u, scho, rankName: rank.name, rankEmoji: rank.emoji };
+  });
+}
+
+async function broadcastUserList() {
+  const enriched = await buildEnrichedUserList();
+  io.emit("userList", enriched);
 }
 
 async function sendMessageHistory(socket) {
@@ -192,7 +241,7 @@ io.on("connection", (socket) => {
 
         connectedUsers[socket.id] = { handle, color, status: "active", isModerator };
         socket.emit("joinSuccess", { handle, color, deviceToken: newToken, isModerator });
-        io.emit("userList", Object.values(connectedUsers));
+        await broadcastUserList();
         await sendMessageHistory(socket);
       } else {
         const owner = existing.rows[0];
@@ -220,7 +269,7 @@ io.on("connection", (socket) => {
             deviceToken,
             isModerator,
           });
-          io.emit("userList", Object.values(connectedUsers));
+          await broadcastUserList();
           await sendMessageHistory(socket);
         } else {
           socket.emit("joinError", "That handle is already taken. Please choose another.");
@@ -250,23 +299,47 @@ io.on("connection", (socket) => {
     if (!allowed.includes(reactionType)) return;
 
     try {
+      const messageResult = await pool.query(
+        "SELECT handle FROM messages WHERE id = $1",
+        [messageId]
+      );
+      if (messageResult.rows.length === 0) return;
+
+      const authorHandle = messageResult.rows[0].handle;
+
+      if (authorHandle === handle) {
+        socket.emit("reactionError", "You can't react to your own message.");
+        return;
+      }
+
       const existing = await pool.query(
         "SELECT id FROM message_reactions WHERE message_id = $1 AND handle = $2 AND reaction = $3",
         [messageId, handle, reactionType]
       );
 
+      const schoValue = REACTION_SCHO_VALUES[reactionType] || 0;
+
       if (existing.rows.length > 0) {
         await pool.query("DELETE FROM message_reactions WHERE id = $1", [existing.rows[0].id]);
+        await pool.query(
+          "UPDATE users SET scho_total = scho_total - $1 WHERE handle = $2",
+          [schoValue, authorHandle]
+        );
       } else {
         await pool.query(
           "INSERT INTO message_reactions (message_id, handle, reaction) VALUES ($1, $2, $3)",
           [messageId, handle, reactionType]
+        );
+        await pool.query(
+          "UPDATE users SET scho_total = scho_total + $1 WHERE handle = $2",
+          [schoValue, authorHandle]
         );
       }
 
       const counts = await getReactionCounts(messageId);
       const heatRating = computeHeatRating(counts);
       io.emit("reactionUpdate", { messageId, counts, heatRating });
+      await broadcastUserList();
     } catch (err) {
       console.error("Reaction error:", err);
     }
@@ -374,17 +447,17 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("stopTyping", { handle });
   });
 
-  socket.on("statusChange", (status) => {
+  socket.on("statusChange", async (status) => {
     if (connectedUsers[socket.id]) {
       connectedUsers[socket.id].status = status;
-      io.emit("userList", Object.values(connectedUsers));
+      await broadcastUserList();
     }
   });
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("A user disconnected:", socket.id);
     delete connectedUsers[socket.id];
-    io.emit("userList", Object.values(connectedUsers));
+    await broadcastUserList();
   });
 });
 

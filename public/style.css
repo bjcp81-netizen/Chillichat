@@ -590,3 +590,9 @@ body {
   background-color: #ff9100;
   color: #000000;
 }
+.scho-label {
+  font-size: 10px;
+  color: #ff9100;
+  margin-left: auto;
+  white-space: nowrap;
+}

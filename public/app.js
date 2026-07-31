@@ -180,7 +180,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     startIdleWatcher();
   });
-
+socket.on("reactionError", (message) => {
+    showSystemMessage("⚠️ " + message);
+  });
   socket.on("joinError", (message) => {
     alert(message);
     localStorage.removeItem(STORAGE_HANDLE_KEY);
@@ -239,11 +241,16 @@ socket.on("userList", (users) => {
       dot.className = "status-dot " + user.status;
 
       const name = document.createElement("span");
-      name.textContent = (user.isModerator ? "🛡️ " : "") + user.handle;
+      const rankPrefix = user.rankEmoji ? user.rankEmoji + " " : "";
+      name.textContent = (user.isModerator ? "🛡️ " : "") + rankPrefix + user.handle;
       name.style.color = user.color;
 
-      row.appendChild(dot);
+      const schoLabel = document.createElement("span");
+      schoLabel.className = "scho-label";
+      schoLabel.textContent = (user.scho || 0).toLocaleString() + " Scho";
+     row.appendChild(dot);
       row.appendChild(name);
+      row.appendChild(schoLabel);
       li.appendChild(row);
 
       const canModerate = myIsModerator && user.handle !== myHandle;
