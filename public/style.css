@@ -596,3 +596,18 @@ body {
   margin-left: auto;
   white-space: nowrap;
 }
+.header-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+  width: 100%;
+}
+
+.header-badge {
+  position: absolute;
+  left: 0;
+  height: 36px;
+  width: auto;
+}
