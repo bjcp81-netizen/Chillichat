@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let myColor = "";
   let lastActivityTime = Date.now();
   let isIdle = false;
-
+  let hasJoinedOnce = false;
   const handleInput = document.getElementById("handle-input");
   const colorSwatches = document.querySelectorAll(".color-swatch");
   const termsCheckbox = document.getElementById("terms-checkbox");
@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const typingIndicator = document.getElementById("typing-indicator");
   const sendSound = document.getElementById("send-sound");
   const notifySound = document.getElementById("notify-sound");
-
+  const connectionBanner = document.getElementById("connection-banner");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -154,6 +154,7 @@ highrollersToggleBtn.addEventListener("click", () => {
   socket.on("joinSuccess", ({ handle, color, deviceToken }) => {
     myHandle = handle;
     myColor = color;
+    hasJoinedOnce = true;
 
     localStorage.setItem(STORAGE_HANDLE_KEY, myHandle);
     localStorage.setItem(STORAGE_COLOR_KEY, myColor);
@@ -170,6 +171,22 @@ highrollersToggleBtn.addEventListener("click", () => {
     startIdleWatcher();
   });
 
+  // ---- Connection resilience ----
+  socket.on("disconnect", () => {
+    connectionBanner.classList.remove("hidden");
+  });
+
+  socket.on("connect", () => {
+    connectionBanner.classList.add("hidden");
+
+    if (hasJoinedOnce) {
+      // We were already in the chat — this is a reconnect, not the first connection.
+      // Clear the message box and let the server replay fresh history to avoid duplicates.
+      messagesBox.innerHTML = "";
+      const myDeviceToken = localStorage.getItem(STORAGE_TOKEN_KEY);
+      socket.emit("join", { handle: myHandle, color: myColor, deviceToken: myDeviceToken });
+    }
+  });
   socket.on("joinError", (message) => {
     alert(message);
     localStorage.removeItem(STORAGE_HANDLE_KEY);

@@ -8,6 +8,8 @@
 </head>
 <body>
 
+  <div id="connection-banner" class="connection-banner hidden">⚠️ Connection lost — reconnecting...</div>
+
   <div id="join-screen" class="join-screen">
     <div class="join-title-block">
       <h1>ChilliChat</h1>
@@ -47,10 +49,11 @@
   <div id="chat-screen" class="chat-screen hidden">
     <header class="app-header">
       <h1>ChilliChat</h1>
-     <rs  <button id="users-toggle-btn" class="users-toggle-btn">Users (0) ▾</button>
-      <button id="highrollers-toggle-btn" class="highrollers-toggle-btn">🔥 Highrollers ▾</button>
+      <div class="header-controls">
+        <button id="users-toggle-btn" class="users-toggle-btn">Users (0) ▾</button>
+        <button id="highrollers-toggle-btn" class="highrollers-toggle-btn">🔥 Highrollers ▾</button>
+      </div>
     </header>
-
     <div id="users-dropdown" class="users-dropdown">
       <ul id="users-list" class="users-list"></ul>
     </div>

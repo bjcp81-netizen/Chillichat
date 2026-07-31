@@ -174,7 +174,17 @@ body {
   padding: 12px 16px;
   text-align: center;
   border-bottom: 1px solid #39ff14;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .app-header h1 {
@@ -184,10 +194,6 @@ body {
 }
 
 .users-toggle-btn {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
   background-color: #000000;
   color: #39ff14;
   border: 1px solid #39ff14;
@@ -197,6 +203,7 @@ body {
   cursor: pointer;
   font-family: 'Courier New', Courier, monospace;
 }
+
 
 .users-toggle-btn:hover {
   background-color: #39ff14;
@@ -431,10 +438,6 @@ body {
   margin-left: 4px;
 }
 .highrollers-toggle-btn {
-  position: absolute;
-  top: 50%;
-  right: 130px;
-  transform: translateY(-50%);
   background-color: #000000;
   color: #ff9100;
   border: 1px solid #ff9100;
@@ -508,4 +511,17 @@ body {
   color: #1f7a0d;
   font-style: italic;
   font-size: 12px;
+}
+.connection-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #ff2b2b;
+  color: #000000;
+  text-align: center;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: bold;
+  z-index: 100;
 }
