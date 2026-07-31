@@ -29,6 +29,15 @@ const SCOVILLE_TIERS = [
   { min: 0, name: "Bell Pepper", emoji: "🫑" },
 ];
 
+const BADGE_DEFS = {
+  fresh_face: { emoji: "🌱", name: "Fresh Face" },
+  ice_breaker: { emoji: "💬", name: "Ice Breaker" },
+  first_burn: { emoji: "🌶️", name: "First Burn" },
+  well_liked: { emoji: "❤️", name: "Well Liked" },
+  crowd_pleaser: { emoji: "😂", name: "Crowd Pleaser" },
+  spice_merchant: { emoji: "🌶️", name: "Spice Merchant" },
+};
+
 function computeScovilleRank(scho) {
   const tier = SCOVILLE_TIERS.find((t) => scho >= t.min);
   return tier || SCOVILLE_TIERS[SCOVILLE_TIERS.length - 1];
@@ -91,6 +100,11 @@ async function setupDatabase() {
   `);
 
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS scho_total INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS messages_sent INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS hearts_received INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS laughs_received INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS chilli_received INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS down_received INTEGER DEFAULT 0`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -126,6 +140,16 @@ async function setupDatabase() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS badges (
+      id SERIAL PRIMARY KEY,
+      handle TEXT NOT NULL,
+      badge_key TEXT NOT NULL,
+      earned_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(handle, badge_key)
+    )
+  `);
+
   console.log("Connected to Neon and tables are ready");
 }
 
@@ -138,6 +162,58 @@ async function checkBanStatus(handle, deviceToken) {
     [deviceToken || "", handle]
   );
   return result.rows.length > 0 ? result.rows[0] : null;
+}
+
+async function awardBadge(handle, badgeKey) {
+  const result = await pool.query(
+    "INSERT INTO badges (handle, badge_key) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id",
+    [handle, badgeKey]
+  );
+
+  if (result.rows.length > 0) {
+    const def = BADGE_DEFS[badgeKey];
+    const targetSocketId = findSocketIdByHandle(handle);
+    if (targetSocketId) {
+      const targetSocket = io.sockets.sockets.get(targetSocketId);
+      if (targetSocket) {
+        targetSocket.emit("badgeUnlocked", { emoji: def.emoji, name: def.name });
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+async function checkThresholdBadges(handle) {
+  const result = await pool.query(
+    "SELECT messages_sent, hearts_received, laughs_received, chilli_received, down_received FROM users WHERE handle = $1",
+    [handle]
+  );
+  if (result.rows.length === 0) return;
+
+  const u = result.rows[0];
+  const totalReceived = u.hearts_received + u.laughs_received + u.chilli_received + u.down_received;
+
+  if (u.messages_sent >= 1) await awardBadge(handle, "ice_breaker");
+  if (totalReceived >= 1) await awardBadge(handle, "first_burn");
+  if (u.hearts_received >= 25) await awardBadge(handle, "well_liked");
+  if (u.laughs_received >= 50) await awardBadge(handle, "crowd_pleaser");
+  if (u.chilli_received >= 100) await awardBadge(handle, "spice_merchant");
+}
+
+async function getBadgesForHandles(handles) {
+  if (handles.length === 0) return {};
+  const result = await pool.query(
+    "SELECT handle, badge_key FROM badges WHERE handle = ANY($1)",
+    [handles]
+  );
+  const map = {};
+  result.rows.forEach((row) => {
+    if (!map[row.handle]) map[row.handle] = [];
+    const def = BADGE_DEFS[row.badge_key];
+    if (def) map[row.handle].push(def.emoji);
+  });
+  return map;
 }
 
 async function buildEnrichedUserList() {
@@ -155,10 +231,18 @@ async function buildEnrichedUserList() {
     schoByHandle[row.handle] = row.scho_total;
   });
 
+  const badgesByHandle = await getBadgesForHandles(handles);
+
   return users.map((u) => {
     const scho = schoByHandle[u.handle] || 0;
     const rank = computeScovilleRank(scho);
-    return { ...u, scho, rankName: rank.name, rankEmoji: rank.emoji };
+    return {
+      ...u,
+      scho,
+      rankName: rank.name,
+      rankEmoji: rank.emoji,
+      badges: badgesByHandle[u.handle] || [],
+    };
   });
 }
 
@@ -241,6 +325,7 @@ io.on("connection", (socket) => {
 
         connectedUsers[socket.id] = { handle, color, status: "active", isModerator };
         socket.emit("joinSuccess", { handle, color, deviceToken: newToken, isModerator });
+        await awardBadge(handle, "fresh_face");
         await broadcastUserList();
         await sendMessageHistory(socket);
       } else {
@@ -289,6 +374,12 @@ io.on("connection", (socket) => {
       );
       const messageId = result.rows[0].id;
       io.emit("chatMessage", { id: messageId, handle, color, text });
+
+      await pool.query(
+        "UPDATE users SET messages_sent = messages_sent + 1 WHERE handle = $1",
+        [handle]
+      );
+      await checkThresholdBadges(handle);
     } catch (err) {
       console.error("Failed to save message:", err);
     }
@@ -318,11 +409,17 @@ io.on("connection", (socket) => {
       );
 
       const schoValue = REACTION_SCHO_VALUES[reactionType] || 0;
+      const counterColumn = {
+        chilli: "chilli_received",
+        heart: "hearts_received",
+        laugh: "laughs_received",
+        down: "down_received",
+      }[reactionType];
 
       if (existing.rows.length > 0) {
         await pool.query("DELETE FROM message_reactions WHERE id = $1", [existing.rows[0].id]);
         await pool.query(
-          "UPDATE users SET scho_total = scho_total - $1 WHERE handle = $2",
+          `UPDATE users SET scho_total = scho_total - $1, ${counterColumn} = GREATEST(${counterColumn} - 1, 0) WHERE handle = $2`,
           [schoValue, authorHandle]
         );
       } else {
@@ -331,9 +428,10 @@ io.on("connection", (socket) => {
           [messageId, handle, reactionType]
         );
         await pool.query(
-          "UPDATE users SET scho_total = scho_total + $1 WHERE handle = $2",
+          `UPDATE users SET scho_total = scho_total + $1, ${counterColumn} = ${counterColumn} + 1 WHERE handle = $2`,
           [schoValue, authorHandle]
         );
+        await checkThresholdBadges(authorHandle);
       }
 
       const counts = await getReactionCounts(messageId);
@@ -344,28 +442,7 @@ io.on("connection", (socket) => {
       console.error("Reaction error:", err);
     }
   });
-socket.on("getUserLeaderboard", async () => {
-    try {
-      const result = await pool.query(
-        "SELECT handle, color, scho_total, created_at FROM users ORDER BY scho_total DESC, created_at ASC LIMIT 20"
-      );
 
-      const leaderboard = result.rows.map((row) => {
-        const rank = computeScovilleRank(row.scho_total);
-        return {
-          handle: row.handle,
-          color: row.color,
-          scho: row.scho_total,
-          rankName: rank.name,
-          rankEmoji: rank.emoji,
-        };
-      });
-
-      socket.emit("userLeaderboardResult", { leaderboard });
-    } catch (err) {
-      console.error("Leaderboard error:", err);
-    }
-  });
   socket.on("getHighrollers", async ({ period }) => {
     const interval = period === "week" ? "7 days" : "24 hours";
 
@@ -404,6 +481,29 @@ socket.on("getUserLeaderboard", async () => {
       socket.emit("highrollersResult", { period, entries: top5 });
     } catch (err) {
       console.error("Highrollers error:", err);
+    }
+  });
+
+  socket.on("getUserLeaderboard", async () => {
+    try {
+      const result = await pool.query(
+        "SELECT handle, color, scho_total, created_at FROM users ORDER BY scho_total DESC, created_at ASC LIMIT 20"
+      );
+
+      const leaderboard = result.rows.map((row) => {
+        const rank = computeScovilleRank(row.scho_total);
+        return {
+          handle: row.handle,
+          color: row.color,
+          scho: row.scho_total,
+          rankName: rank.name,
+          rankEmoji: rank.emoji,
+        };
+      });
+
+      socket.emit("userLeaderboardResult", { leaderboard });
+    } catch (err) {
+      console.error("Leaderboard error:", err);
     }
   });
 

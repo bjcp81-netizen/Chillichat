@@ -229,6 +229,9 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 socket.on("reactionError", (message) => {
     showSystemMessage("⚠️ " + message);
   });
+  socket.on("badgeUnlocked", ({ emoji, name }) => {
+    showSystemMessage("🏅 Badge unlocked: " + emoji + " " + name + "!");
+  });
   socket.on("joinError", (message) => {
     alert(message);
     localStorage.removeItem(STORAGE_HANDLE_KEY);
@@ -288,7 +291,8 @@ socket.on("userList", (users) => {
 
       const name = document.createElement("span");
       const rankPrefix = user.rankEmoji ? user.rankEmoji + " " : "";
-      name.textContent = (user.isModerator ? "🛡️ " : "") + rankPrefix + user.handle;
+      const badgeStr = (user.badges && user.badges.length > 0) ? " " + user.badges.join("") : "";
+      name.textContent = (user.isModerator ? "🛡️ " : "") + rankPrefix + user.handle + badgeStr;
       name.style.color = user.color;
 
       const schoLabel = document.createElement("span");
