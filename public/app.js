@@ -35,7 +35,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const highrollersDropdown = document.getElementById("highrollers-dropdown");
   const highrollersTodayBtn = document.getElementById("highrollers-today-btn");
   const highrollersWeekBtn = document.getElementById("highrollers-week-btn");
+  const highrollersUsersBtn = document.getElementById("highrollers-users-btn");
   const highrollersList = document.getElementById("highrollers-list");
+  const userLeaderboardList = document.getElementById("user-leaderboard-list");
   const messagesBox = document.getElementById("messages-box");
   const messageInput = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
@@ -77,15 +79,59 @@ document.addEventListener("DOMContentLoaded", function () {
     requestHighrollers("week");
   });
 
-  function setHighrollersTab(period) {
-    highrollersTodayBtn.classList.toggle("active", period === "day");
-    highrollersWeekBtn.classList.toggle("active", period === "week");
+  highrollersUsersBtn.addEventListener("click", () => {
+    setHighrollersTab("users");
+    socket.emit("getUserLeaderboard");
+  });
+
+  function setHighrollersTab(mode) {
+    highrollersTodayBtn.classList.toggle("active", mode === "day");
+    highrollersWeekBtn.classList.toggle("active", mode === "week");
+    highrollersUsersBtn.classList.toggle("active", mode === "users");
+
+    highrollersList.classList.toggle("hidden", mode === "users");
+    userLeaderboardList.classList.toggle("hidden", mode !== "users");
   }
 
   function requestHighrollers(period) {
     socket.emit("getHighrollers", { period });
   }
+const MEDALS = ["🥇", "🥈", "🥉"];
 
+  socket.on("userLeaderboardResult", ({ leaderboard }) => {
+    userLeaderboardList.innerHTML = "";
+
+    if (leaderboard.length === 0) {
+      const li = document.createElement("li");
+      li.className = "highrollers-empty";
+      li.textContent = "No users on the board yet.";
+      userLeaderboardList.appendChild(li);
+      return;
+    }
+
+    leaderboard.forEach((entry, index) => {
+      const li = document.createElement("li");
+      li.className = "highrollers-item";
+
+      const position = document.createElement("span");
+      position.className = "highrollers-heat";
+      position.textContent = MEDALS[index] || "#" + (index + 1);
+
+      const handle = document.createElement("span");
+      handle.className = "highrollers-handle";
+      handle.textContent = entry.rankEmoji + " " + entry.handle;
+      handle.style.color = entry.color;
+
+      const scho = document.createElement("span");
+      scho.className = "highrollers-text";
+      scho.textContent = entry.scho.toLocaleString() + " Scho — " + entry.rankName;
+
+      li.appendChild(position);
+      li.appendChild(handle);
+      li.appendChild(scho);
+      userLeaderboardList.appendChild(li);
+    });
+  });
   socket.on("highrollersResult", ({ entries }) => {
     highrollersList.innerHTML = "";
 

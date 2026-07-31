@@ -344,7 +344,28 @@ io.on("connection", (socket) => {
       console.error("Reaction error:", err);
     }
   });
+socket.on("getUserLeaderboard", async () => {
+    try {
+      const result = await pool.query(
+        "SELECT handle, color, scho_total, created_at FROM users ORDER BY scho_total DESC, created_at ASC LIMIT 20"
+      );
 
+      const leaderboard = result.rows.map((row) => {
+        const rank = computeScovilleRank(row.scho_total);
+        return {
+          handle: row.handle,
+          color: row.color,
+          scho: row.scho_total,
+          rankName: rank.name,
+          rankEmoji: rank.emoji,
+        };
+      });
+
+      socket.emit("userLeaderboardResult", { leaderboard });
+    } catch (err) {
+      console.error("Leaderboard error:", err);
+    }
+  });
   socket.on("getHighrollers", async ({ period }) => {
     const interval = period === "week" ? "7 days" : "24 hours";
 
