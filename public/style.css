@@ -525,22 +525,55 @@ body {
   font-weight: bold;
   z-index: 100;
 }
-.mod-controls {
+.user-item {
+  display: block;
+  padding: 8px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.user-row {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-left: auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.clickable-handle {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.clickable-handle:hover {
+  opacity: 0.8;
+}
+
+.mod-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px;
+  background-color: #0a0a0a;
+  border: 1px solid #ff2b2b;
+  border-radius: 6px;
+}
+
+.mod-panel-title {
+  font-size: 12px;
+  color: #ff2b2b;
+  margin-bottom: 2px;
 }
 
 .mod-btn {
-  background-color: #0a0a0a;
+  background-color: #000000;
   color: #ff2b2b;
   border: 1px solid #ff2b2b;
   border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 10px;
+  padding: 10px;
+  font-size: 14px;
   cursor: pointer;
   font-family: 'Courier New', Courier, monospace;
+  width: 100%;
+  text-align: left;
 }
 
 .mod-btn:hover {
@@ -548,6 +581,12 @@ body {
   color: #000000;
 }
 
-.user-item {
-  flex-wrap: wrap;
+.mod-kick-btn {
+  color: #ff9100;
+  border-color: #ff9100;
+}
+
+.mod-kick-btn:hover {
+  background-color: #ff9100;
+  color: #000000;
 }

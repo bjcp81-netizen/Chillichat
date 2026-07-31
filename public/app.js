@@ -225,13 +225,15 @@ document.addEventListener("DOMContentLoaded", function () {
     messagesBox.appendChild(msgEl);
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
-
-  socket.on("userList", (users) => {
+socket.on("userList", (users) => {
     usersToggleBtn.textContent = "Users (" + users.length + ") ▾";
     usersList.innerHTML = "";
     users.forEach(user => {
       const li = document.createElement("li");
       li.className = "user-item";
+
+      const row = document.createElement("div");
+      row.className = "user-row";
 
       const dot = document.createElement("span");
       dot.className = "status-dot " + user.status;
@@ -240,52 +242,68 @@ document.addEventListener("DOMContentLoaded", function () {
       name.textContent = (user.isModerator ? "🛡️ " : "") + user.handle;
       name.style.color = user.color;
 
-      li.appendChild(dot);
-      li.appendChild(name);
+      row.appendChild(dot);
+      row.appendChild(name);
+      li.appendChild(row);
 
-      if (myIsModerator && user.handle !== myHandle) {
-        li.appendChild(buildModControls(user.handle));
+      const canModerate = myIsModerator && user.handle !== myHandle;
+
+      if (canModerate) {
+        name.classList.add("clickable-handle");
+
+        const panel = buildModPanel(user.handle);
+        panel.classList.add("hidden");
+        li.appendChild(panel);
+
+        name.addEventListener("click", () => {
+          panel.classList.toggle("hidden");
+        });
       }
 
       usersList.appendChild(li);
     });
   });
 
-  function buildModControls(targetHandle) {
-    const wrap = document.createElement("span");
-    wrap.className = "mod-controls";
+  function buildModPanel(targetHandle) {
+    const panel = document.createElement("div");
+    panel.className = "mod-panel";
+
+    const title = document.createElement("p");
+    title.className = "mod-panel-title";
+    title.textContent = "Moderate " + targetHandle;
+    panel.appendChild(title);
 
     const kickBtn = document.createElement("button");
-    kickBtn.className = "mod-btn";
-    kickBtn.textContent = "Kick";
+    kickBtn.className = "mod-btn mod-kick-btn";
+    kickBtn.textContent = "🚪 Kick";
     kickBtn.addEventListener("click", () => {
       if (confirm("Kick " + targetHandle + "?")) {
         socket.emit("moderatorKick", { targetHandle });
       }
     });
-    wrap.appendChild(kickBtn);
+    panel.appendChild(kickBtn);
 
     const durations = [
-      { label: "1h", value: "1h" },
-      { label: "1d", value: "1d" },
-      { label: "1w", value: "1w" },
-      { label: "Perm", value: "perm" },
+      { label: "Ban 1 Hour", value: "1h" },
+      { label: "Ban 1 Day", value: "1d" },
+      { label: "Ban 1 Week", value: "1w" },
+      { label: "Ban Permanently", value: "perm" },
     ];
 
     durations.forEach(d => {
       const banBtn = document.createElement("button");
       banBtn.className = "mod-btn mod-ban-btn";
-      banBtn.textContent = "Ban " + d.label;
+      banBtn.textContent = "⛔ " + d.label;
       banBtn.addEventListener("click", () => {
         const reason = prompt("Reason for banning " + targetHandle + " (optional):") || "";
-        if (confirm("Confirm ban (" + d.label + ") for " + targetHandle + "?")) {
+        if (confirm("Confirm " + d.label + " for " + targetHandle + "?")) {
           socket.emit("moderatorBan", { targetHandle, duration: d.value, reason });
         }
       });
-      wrap.appendChild(banBtn);
+      panel.appendChild(banBtn);
     });
 
-    return wrap;
+    return panel;
   }
 
   sendBtn.addEventListener("click", sendMessage);
