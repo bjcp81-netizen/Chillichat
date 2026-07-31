@@ -525,3 +525,29 @@ body {
   font-weight: bold;
   z-index: 100;
 }
+.mod-controls {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.mod-btn {
+  background-color: #0a0a0a;
+  color: #ff2b2b;
+  border: 1px solid #ff2b2b;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.mod-btn:hover {
+  background-color: #ff2b2b;
+  color: #000000;
+}
+
+.user-item {
+  flex-wrap: wrap;
+}

@@ -17,9 +17,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let myHandle = "";
   let myColor = "";
+  let myIsModerator = false;
   let lastActivityTime = Date.now();
   let isIdle = false;
   let hasJoinedOnce = false;
+
   const handleInput = document.getElementById("handle-input");
   const colorSwatches = document.querySelectorAll(".color-swatch");
   const termsCheckbox = document.getElementById("terms-checkbox");
@@ -41,6 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const sendSound = document.getElementById("send-sound");
   const notifySound = document.getElementById("notify-sound");
   const connectionBanner = document.getElementById("connection-banner");
+
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -56,7 +59,8 @@ document.addEventListener("DOMContentLoaded", function () {
   usersToggleBtn.addEventListener("click", () => {
     usersDropdown.classList.toggle("open");
   });
-highrollersToggleBtn.addEventListener("click", () => {
+
+  highrollersToggleBtn.addEventListener("click", () => {
     highrollersDropdown.classList.toggle("open");
     if (highrollersDropdown.classList.contains("open")) {
       requestHighrollers("day");
@@ -116,6 +120,7 @@ highrollersToggleBtn.addEventListener("click", () => {
       highrollersList.appendChild(li);
     });
   });
+
   joinBtn.addEventListener("click", () => enterLobby(false));
 
   handleInput.addEventListener("keydown", (e) => {
@@ -151,9 +156,10 @@ highrollersToggleBtn.addEventListener("click", () => {
     socket.emit("join", { handle: myHandle, color: myColor, deviceToken: myDeviceToken });
   }
 
-  socket.on("joinSuccess", ({ handle, color, deviceToken }) => {
+  socket.on("joinSuccess", ({ handle, color, deviceToken, isModerator }) => {
     myHandle = handle;
     myColor = color;
+    myIsModerator = !!isModerator;
     hasJoinedOnce = true;
 
     localStorage.setItem(STORAGE_HANDLE_KEY, myHandle);
@@ -168,25 +174,13 @@ highrollersToggleBtn.addEventListener("click", () => {
       showSystemMessage("Welcome back, " + myHandle + "!");
     }
 
+    if (myIsModerator) {
+      showSystemMessage("🛡️ Moderator mode active.");
+    }
+
     startIdleWatcher();
   });
 
-  // ---- Connection resilience ----
-  socket.on("disconnect", () => {
-    connectionBanner.classList.remove("hidden");
-  });
-
-  socket.on("connect", () => {
-    connectionBanner.classList.add("hidden");
-
-    if (hasJoinedOnce) {
-      // We were already in the chat — this is a reconnect, not the first connection.
-      // Clear the message box and let the server replay fresh history to avoid duplicates.
-      messagesBox.innerHTML = "";
-      const myDeviceToken = localStorage.getItem(STORAGE_TOKEN_KEY);
-      socket.emit("join", { handle: myHandle, color: myColor, deviceToken: myDeviceToken });
-    }
-  });
   socket.on("joinError", (message) => {
     alert(message);
     localStorage.removeItem(STORAGE_HANDLE_KEY);
@@ -194,6 +188,23 @@ highrollersToggleBtn.addEventListener("click", () => {
     localStorage.removeItem(STORAGE_TOKEN_KEY);
     joinScreen.classList.remove("hidden");
     chatScreen.classList.add("hidden");
+  });
+
+  socket.on("youWereKicked", () => {
+    alert("You have been removed from ChilliChat by a moderator. You may rejoin.");
+    location.reload();
+  });
+
+  socket.on("youWereBanned", ({ permanent, until }) => {
+    if (permanent) {
+      alert("You have been permanently banned from ChilliChat.");
+    } else {
+      alert("You have been banned from ChilliChat until " + until + ".");
+    }
+    localStorage.removeItem(STORAGE_HANDLE_KEY);
+    localStorage.removeItem(STORAGE_COLOR_KEY);
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
+    location.reload();
   });
 
   function checkReturningUser() {
@@ -226,14 +237,56 @@ highrollersToggleBtn.addEventListener("click", () => {
       dot.className = "status-dot " + user.status;
 
       const name = document.createElement("span");
-      name.textContent = user.handle;
+      name.textContent = (user.isModerator ? "🛡️ " : "") + user.handle;
       name.style.color = user.color;
 
       li.appendChild(dot);
       li.appendChild(name);
+
+      if (myIsModerator && user.handle !== myHandle) {
+        li.appendChild(buildModControls(user.handle));
+      }
+
       usersList.appendChild(li);
     });
   });
+
+  function buildModControls(targetHandle) {
+    const wrap = document.createElement("span");
+    wrap.className = "mod-controls";
+
+    const kickBtn = document.createElement("button");
+    kickBtn.className = "mod-btn";
+    kickBtn.textContent = "Kick";
+    kickBtn.addEventListener("click", () => {
+      if (confirm("Kick " + targetHandle + "?")) {
+        socket.emit("moderatorKick", { targetHandle });
+      }
+    });
+    wrap.appendChild(kickBtn);
+
+    const durations = [
+      { label: "1h", value: "1h" },
+      { label: "1d", value: "1d" },
+      { label: "1w", value: "1w" },
+      { label: "Perm", value: "perm" },
+    ];
+
+    durations.forEach(d => {
+      const banBtn = document.createElement("button");
+      banBtn.className = "mod-btn mod-ban-btn";
+      banBtn.textContent = "Ban " + d.label;
+      banBtn.addEventListener("click", () => {
+        const reason = prompt("Reason for banning " + targetHandle + " (optional):") || "";
+        if (confirm("Confirm ban (" + d.label + ") for " + targetHandle + "?")) {
+          socket.emit("moderatorBan", { targetHandle, duration: d.value, reason });
+        }
+      });
+      wrap.appendChild(banBtn);
+    });
+
+    return wrap;
+  }
 
   sendBtn.addEventListener("click", sendMessage);
 
@@ -361,7 +414,7 @@ highrollersToggleBtn.addEventListener("click", () => {
     });
   }
 
- socket.on("reactionUpdate", ({ messageId, counts, heatRating }) => {
+  socket.on("reactionUpdate", ({ messageId, counts, heatRating }) => {
     const msgEl = messagesBox.querySelector('[data-message-id="' + messageId + '"]');
     if (!msgEl) return;
 
@@ -436,6 +489,21 @@ highrollersToggleBtn.addEventListener("click", () => {
       socket.emit("statusChange", "idle");
     }
   }
+
+  // ---- Connection resilience ----
+  socket.on("disconnect", () => {
+    connectionBanner.classList.remove("hidden");
+  });
+
+  socket.on("connect", () => {
+    connectionBanner.classList.add("hidden");
+
+    if (hasJoinedOnce) {
+      messagesBox.innerHTML = "";
+      const myDeviceToken = localStorage.getItem(STORAGE_TOKEN_KEY);
+      socket.emit("join", { handle: myHandle, color: myColor, deviceToken: myDeviceToken });
+    }
+  });
 
   checkReturningUser();
 });

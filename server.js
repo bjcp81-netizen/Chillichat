@@ -27,6 +27,14 @@ function computeHeatRating(counts) {
   return rating;
 }
 
+function computeBanExpiry(duration) {
+  const now = Date.now();
+  if (duration === "1h") return new Date(now + 60 * 60 * 1000);
+  if (duration === "1d") return new Date(now + 24 * 60 * 60 * 1000);
+  if (duration === "1w") return new Date(now + 7 * 24 * 60 * 60 * 1000);
+  return null; // permanent
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -58,7 +66,6 @@ async function setupDatabase() {
       color TEXT NOT NULL,
       device_token TEXT NOT NULL,
       is_moderator BOOLEAN DEFAULT FALSE,
-      banned_until TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
@@ -84,7 +91,31 @@ async function setupDatabase() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bans (
+      id SERIAL PRIMARY KEY,
+      handle TEXT NOT NULL,
+      device_token TEXT NOT NULL,
+      reason TEXT,
+      banned_by TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      expires_at TIMESTAMP,
+      permanent BOOLEAN DEFAULT FALSE
+    )
+  `);
+
   console.log("Connected to Neon and tables are ready");
+}
+
+async function checkBanStatus(handle, deviceToken) {
+  const result = await pool.query(
+    `SELECT * FROM bans
+     WHERE (device_token = $1 OR handle = $2)
+     AND (permanent = TRUE OR expires_at > NOW())
+     ORDER BY created_at DESC LIMIT 1`,
+    [deviceToken || "", handle]
+  );
+  return result.rows.length > 0 ? result.rows[0] : null;
 }
 
 async function sendMessageHistory(socket) {
@@ -123,11 +154,28 @@ async function sendMessageHistory(socket) {
   }
 }
 
+function findSocketIdByHandle(handle) {
+  return Object.keys(connectedUsers).find(
+    (id) => connectedUsers[id].handle === handle
+  );
+}
+
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
   socket.on("join", async ({ handle, color, deviceToken }) => {
     try {
+      const ban = await checkBanStatus(handle, deviceToken);
+      if (ban) {
+        if (ban.permanent) {
+          socket.emit("joinError", "You are permanently banned from ChilliChat.");
+        } else {
+          const until = new Date(ban.expires_at).toLocaleString();
+          socket.emit("joinError", "You are banned until " + until + ".");
+        }
+        return;
+      }
+
       const existing = await pool.query(
         "SELECT * FROM users WHERE handle = $1",
         [handle]
@@ -135,21 +183,33 @@ io.on("connection", (socket) => {
 
       if (existing.rows.length === 0) {
         const newToken = deviceToken || generateToken();
+        const isModerator = handle === "Mdnight";
+
         await pool.query(
-          "INSERT INTO users (handle, color, device_token) VALUES ($1, $2, $3)",
-          [handle, color, newToken]
+          "INSERT INTO users (handle, color, device_token, is_moderator) VALUES ($1, $2, $3, $4)",
+          [handle, color, newToken, isModerator]
         );
 
-        connectedUsers[socket.id] = { handle, color, status: "active" };
-        socket.emit("joinSuccess", { handle, color, deviceToken: newToken });
+        connectedUsers[socket.id] = { handle, color, status: "active", isModerator };
+        socket.emit("joinSuccess", { handle, color, deviceToken: newToken, isModerator });
         io.emit("userList", Object.values(connectedUsers));
         await sendMessageHistory(socket);
       } else {
         const owner = existing.rows[0];
 
         if (owner.device_token === deviceToken) {
-          connectedUsers[socket.id] = { handle, color, status: "active" };
-          socket.emit("joinSuccess", { handle, color, deviceToken });
+          connectedUsers[socket.id] = {
+            handle,
+            color,
+            status: "active",
+            isModerator: owner.is_moderator,
+          };
+          socket.emit("joinSuccess", {
+            handle,
+            color,
+            deviceToken,
+            isModerator: owner.is_moderator,
+          });
           io.emit("userList", Object.values(connectedUsers));
           await sendMessageHistory(socket);
         } else {
@@ -201,7 +261,8 @@ io.on("connection", (socket) => {
       console.error("Reaction error:", err);
     }
   });
-socket.on("getHighrollers", async ({ period }) => {
+
+  socket.on("getHighrollers", async ({ period }) => {
     const interval = period === "week" ? "7 days" : "24 hours";
 
     try {
@@ -241,36 +302,38 @@ socket.on("getHighrollers", async ({ period }) => {
       console.error("Highrollers error:", err);
     }
   });
-  socket.on("typing", ({ handle }) => {
-    socket.broadcast.emit("typing", { handle });
-  });
 
-  socket.on("stopTyping", ({ handle }) => {
-    socket.broadcast.emit("stopTyping", { handle });
-  });
+  // ---- Moderator actions ----
+  socket.on("moderatorKick", ({ targetHandle }) => {
+    const me = connectedUsers[socket.id];
+    if (!me || !me.isModerator) return;
+    if (targetHandle === me.handle) return;
 
-  socket.on("statusChange", (status) => {
-    if (connectedUsers[socket.id]) {
-      connectedUsers[socket.id].status = status;
-      io.emit("userList", Object.values(connectedUsers));
+    const targetSocketId = findSocketIdByHandle(targetHandle);
+    if (!targetSocketId) return;
+
+    const targetSocket = io.sockets.sockets.get(targetSocketId);
+    if (targetSocket) {
+      targetSocket.emit("youWereKicked");
+      targetSocket.disconnect(true);
     }
   });
 
-  socket.on("disconnect", () => {
-    console.log("A user disconnected:", socket.id);
-    delete connectedUsers[socket.id];
-    io.emit("userList", Object.values(connectedUsers));
-  });
-});
+  socket.on("moderatorBan", async ({ targetHandle, duration, reason }) => {
+    const me = connectedUsers[socket.id];
+    if (!me || !me.isModerator) return;
+    if (targetHandle === me.handle) return;
 
-const PORT = process.env.PORT || 3000;
+    try {
+      const targetUser = await pool.query(
+        "SELECT device_token FROM users WHERE handle = $1",
+        [targetHandle]
+      );
+      if (targetUser.rows.length === 0) return;
 
-setupDatabase()
-  .then(() => {
-    server.listen(PORT, () => {
-      console.log(`ChilliChat server running at http://localhost:${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error("Failed to connect to database:", err);
-  });
+      const deviceToken = targetUser.rows[0].device_token;
+      const expiresAt = computeBanExpiry(duration);
+      const permanent = expiresAt === null;
+
+      await pool.query(
+        "INSERT INTO bans (handle, device_token, reason, banned_by, expires_at, permanent) VALUES ($1, $2, $3, $4, $5, $6)",
