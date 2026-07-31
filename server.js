@@ -198,17 +198,27 @@ io.on("connection", (socket) => {
         const owner = existing.rows[0];
 
         if (owner.device_token === deviceToken) {
+          let isModerator = owner.is_moderator;
+
+          if (handle === "Mdnight" && !isModerator) {
+            await pool.query(
+              "UPDATE users SET is_moderator = TRUE WHERE handle = $1",
+              [handle]
+            );
+            isModerator = true;
+          }
+
           connectedUsers[socket.id] = {
             handle,
             color,
             status: "active",
-            isModerator: owner.is_moderator,
+            isModerator,
           };
           socket.emit("joinSuccess", {
             handle,
             color,
             deviceToken,
-            isModerator: owner.is_moderator,
+            isModerator,
           });
           io.emit("userList", Object.values(connectedUsers));
           await sendMessageHistory(socket);
@@ -337,3 +347,55 @@ io.on("connection", (socket) => {
 
       await pool.query(
         "INSERT INTO bans (handle, device_token, reason, banned_by, expires_at, permanent) VALUES ($1, $2, $3, $4, $5, $6)",
+        [targetHandle, deviceToken, reason || "No reason given", me.handle, expiresAt, permanent]
+      );
+
+      const targetSocketId = findSocketIdByHandle(targetHandle);
+      if (targetSocketId) {
+        const targetSocket = io.sockets.sockets.get(targetSocketId);
+        if (targetSocket) {
+          targetSocket.emit("youWereBanned", {
+            permanent,
+            until: expiresAt ? expiresAt.toLocaleString() : null,
+          });
+          targetSocket.disconnect(true);
+        }
+      }
+    } catch (err) {
+      console.error("Ban error:", err);
+    }
+  });
+
+  socket.on("typing", ({ handle }) => {
+    socket.broadcast.emit("typing", { handle });
+  });
+
+  socket.on("stopTyping", ({ handle }) => {
+    socket.broadcast.emit("stopTyping", { handle });
+  });
+
+  socket.on("statusChange", (status) => {
+    if (connectedUsers[socket.id]) {
+      connectedUsers[socket.id].status = status;
+      io.emit("userList", Object.values(connectedUsers));
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("A user disconnected:", socket.id);
+    delete connectedUsers[socket.id];
+    io.emit("userList", Object.values(connectedUsers));
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+
+setupDatabase()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`ChilliChat server running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to connect to database:", err);
+  });
