@@ -712,13 +712,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function stopRecording(cancelled) {
+function stopRecording(cancelled) {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") return;
+
     wasCancelled = cancelled;
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-      notifySound.currentTime = 0;
-      notifySound.play().catch(() => {});
-    }
+    mediaRecorder.stop();
+    notifySound.currentTime = 0;
+    notifySound.play().catch(() => {});
   }
 
   micBtn.addEventListener("mousedown", startRecording);
@@ -744,8 +744,20 @@ document.addEventListener("DOMContentLoaded", function () {
     playBtn.className = "voice-play-btn";
     playBtn.textContent = "▶";
 
-    const audio = new Audio(data.audioData);
+   const audio = new Audio(data.audioData);
     let isPlaying = false;
+
+    // Fix for Chrome's broken duration metadata on MediaRecorder webm files,
+    // which can otherwise cause playback to end early.
+    audio.addEventListener("loadedmetadata", () => {
+      if (audio.duration === Infinity || isNaN(audio.duration)) {
+        audio.currentTime = 1e101;
+        audio.addEventListener("timeupdate", function fixDuration() {
+          audio.removeEventListener("timeupdate", fixDuration);
+          audio.currentTime = 0;
+        });
+      }
+    });
 
     playBtn.addEventListener("click", () => {
       if (isPlaying) {
