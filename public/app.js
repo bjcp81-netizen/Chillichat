@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const recordingOverlay = document.getElementById("recording-overlay");
   const recordingTimer = document.getElementById("recording-timer");
   const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
+
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -99,7 +100,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function requestHighrollers(period) {
     socket.emit("getHighrollers", { period });
   }
-const MEDALS = ["🥇", "🥈", "🥉"];
+
+  const MEDALS = ["🥇", "🥈", "🥉"];
 
   socket.on("userLeaderboardResult", ({ leaderboard }) => {
     userLeaderboardList.innerHTML = "";
@@ -135,6 +137,7 @@ const MEDALS = ["🥇", "🥈", "🥉"];
       userLeaderboardList.appendChild(li);
     });
   });
+
   socket.on("highrollersResult", ({ entries }) => {
     highrollersList.innerHTML = "";
 
@@ -229,12 +232,7 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 
     startIdleWatcher();
   });
-socket.on("reactionError", (message) => {
-    showSystemMessage("⚠️ " + message);
-  });
-  socket.on("badgeUnlocked", ({ emoji, name }) => {
-    showSystemMessage("🏅 Badge unlocked: " + emoji + " " + name + "!");
-  });
+
   socket.on("joinError", (message) => {
     alert(message);
     localStorage.removeItem(STORAGE_HANDLE_KEY);
@@ -261,6 +259,40 @@ socket.on("reactionError", (message) => {
     location.reload();
   });
 
+  socket.on("reactionError", (message) => {
+    showSystemMessage("⚠️ " + message);
+  });
+
+  socket.on("badgeUnlocked", ({ emoji, name }) => {
+    showSystemMessage("🏅 Badge unlocked: " + emoji + " " + name + "!");
+  });
+
+  socket.on("heatNotification", (message) => {
+    showHeatNotification(message);
+  });
+
+  function showHeatNotification(text) {
+    const msgEl = document.createElement("p");
+    msgEl.className = "heat-notification";
+    msgEl.textContent = text;
+    messagesBox.appendChild(msgEl);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+
+  socket.on("contentDeleted", ({ type, id }) => {
+    const selector = type === "text"
+      ? '[data-message-id="' + id + '"]'
+      : '[data-clip-id="' + id + '"]';
+    const el = messagesBox.querySelector(selector);
+    if (!el) return;
+
+    el.innerHTML = "";
+    el.className = "system-msg";
+    el.textContent = type === "text"
+      ? "Message removed by moderator"
+      : "Voice clip removed by moderator";
+  });
+
   function checkReturningUser() {
     const savedHandle = localStorage.getItem(STORAGE_HANDLE_KEY);
     const savedColor = localStorage.getItem(STORAGE_COLOR_KEY);
@@ -279,7 +311,8 @@ socket.on("reactionError", (message) => {
     messagesBox.appendChild(msgEl);
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
-socket.on("userList", (users) => {
+
+  socket.on("userList", (users) => {
     usersToggleBtn.textContent = "Users (" + users.length + ") ▾";
     usersList.innerHTML = "";
     users.forEach(user => {
@@ -301,7 +334,8 @@ socket.on("userList", (users) => {
       const schoLabel = document.createElement("span");
       schoLabel.className = "scho-label";
       schoLabel.textContent = (user.scho || 0).toLocaleString() + " Scho";
-     row.appendChild(dot);
+
+      row.appendChild(dot);
       row.appendChild(name);
       row.appendChild(schoLabel);
       li.appendChild(row);
@@ -473,6 +507,19 @@ socket.on("userList", (users) => {
     heatBadge.className = "heat-badge";
     heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
     bar.appendChild(heatBadge);
+
+    if (myIsModerator) {
+      const delBtn = document.createElement("button");
+      delBtn.className = "mod-delete-btn";
+      delBtn.textContent = "🗑️";
+      delBtn.title = "Delete message";
+      delBtn.addEventListener("click", () => {
+        if (confirm("Delete this message?")) {
+          socket.emit("moderatorDeleteMessage", { messageId });
+        }
+      });
+      bar.appendChild(delBtn);
+    }
 
     renderPills(pillsWrap, counts);
 
@@ -691,6 +738,7 @@ socket.on("userList", (users) => {
   socket.on("voiceClip", (data) => {
     const msgEl = document.createElement("div");
     msgEl.className = "voice-message";
+    msgEl.dataset.clipId = data.id;
 
     const playBtn = document.createElement("button");
     playBtn.className = "voice-play-btn";
@@ -707,7 +755,7 @@ socket.on("userList", (users) => {
       }
     });
 
-  audio.addEventListener("play", () => {
+    audio.addEventListener("play", () => {
       isPlaying = true;
       playBtn.textContent = "⏸";
     });
@@ -721,7 +769,6 @@ socket.on("userList", (users) => {
       notifySound.currentTime = 0;
       notifySound.play().catch(() => {});
     });
-     
 
     const meta = document.createElement("div");
     meta.className = "voice-meta";
@@ -740,6 +787,20 @@ socket.on("userList", (users) => {
 
     msgEl.appendChild(playBtn);
     msgEl.appendChild(meta);
+
+    if (myIsModerator) {
+      const delBtn = document.createElement("button");
+      delBtn.className = "mod-delete-btn";
+      delBtn.textContent = "🗑️";
+      delBtn.title = "Delete voice clip";
+      delBtn.addEventListener("click", () => {
+        if (confirm("Delete this voice clip?")) {
+          socket.emit("moderatorDeleteVoiceClip", { clipId: data.id });
+        }
+      });
+      msgEl.appendChild(delBtn);
+    }
+
     messagesBox.appendChild(msgEl);
     messagesBox.scrollTop = messagesBox.scrollHeight;
 

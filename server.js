@@ -118,6 +118,9 @@ async function setupDatabase() {
     )
   `);
 
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_by TEXT`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS message_reactions (
       id SERIAL PRIMARY KEY,
@@ -162,6 +165,9 @@ async function setupDatabase() {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+
+  await pool.query(`ALTER TABLE voice_clips ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE`);
+  await pool.query(`ALTER TABLE voice_clips ADD COLUMN IF NOT EXISTS deleted_by TEXT`);
 
   console.log("Connected to Neon and tables are ready");
 }
@@ -309,14 +315,14 @@ async function sendMessageHistory(socket) {
         COUNT(*) FILTER (WHERE r.reaction = 'down') AS down
       FROM messages m
       LEFT JOIN message_reactions r ON r.message_id = m.id
-      WHERE m.created_at > NOW() - INTERVAL '24 hours'
+      WHERE m.created_at > NOW() - INTERVAL '24 hours' AND m.deleted = FALSE
       GROUP BY m.id
     `);
 
     const voiceResult = await pool.query(`
       SELECT id, handle, color, audio_data, duration_ms, created_at
       FROM voice_clips
-      WHERE created_at > NOW() - INTERVAL '24 hours'
+      WHERE created_at > NOW() - INTERVAL '24 hours' AND deleted = FALSE
     `);
 
     const textItems = msgResult.rows.map((msg) => {
@@ -575,7 +581,7 @@ io.on("connection", (socket) => {
           COUNT(*) FILTER (WHERE r.reaction = 'down') AS down
         FROM messages m
         JOIN message_reactions r ON r.message_id = m.id
-        WHERE m.created_at > NOW() - INTERVAL '${interval}'
+        WHERE m.created_at > NOW() - INTERVAL '${interval}' AND m.deleted = FALSE
         GROUP BY m.id
       `);
 
@@ -677,6 +683,36 @@ io.on("connection", (socket) => {
       }
     } catch (err) {
       console.error("Ban error:", err);
+    }
+  });
+
+  socket.on("moderatorDeleteMessage", async ({ messageId }) => {
+    const me = connectedUsers[socket.id];
+    if (!me || !me.isModerator) return;
+
+    try {
+      await pool.query(
+        "UPDATE messages SET deleted = TRUE, deleted_by = $1 WHERE id = $2",
+        [me.handle, messageId]
+      );
+      io.emit("contentDeleted", { type: "text", id: messageId });
+    } catch (err) {
+      console.error("Delete message error:", err);
+    }
+  });
+
+  socket.on("moderatorDeleteVoiceClip", async ({ clipId }) => {
+    const me = connectedUsers[socket.id];
+    if (!me || !me.isModerator) return;
+
+    try {
+      await pool.query(
+        "UPDATE voice_clips SET deleted = TRUE, deleted_by = $1 WHERE id = $2",
+        [me.handle, clipId]
+      );
+      io.emit("contentDeleted", { type: "voice", id: clipId });
+    } catch (err) {
+      console.error("Delete voice clip error:", err);
     }
   });
 

@@ -565,31 +565,50 @@ body {
 
 .mod-btn {
   background-color: #000000;
-  color: #ff2b2b;
-  border: 1px solid #ff2b2b;
+  color: #ffee00;
+  border: 1px solid #ffee00;
   border-radius: 4px;
-  padding: 10px;
-  font-size: 14px;
+  padding: 12px;
+  font-size: 16px;
   cursor: pointer;
   font-family: 'Courier New', Courier, monospace;
   width: 100%;
   text-align: left;
+  font-weight: bold;
 }
 
 .mod-btn:hover {
-  background-color: #ff2b2b;
+  background-color: #ffee00;
   color: #000000;
 }
 
+
 .mod-kick-btn {
-  color: #ff9100;
-  border-color: #ff9100;
+  color: #ffee00;
+  border-color: #ffee00;
 }
 
 .mod-kick-btn:hover {
-  background-color: #ff9100;
+  background-color: #ffee00;
   color: #000000;
 }
+
+.mod-delete-btn {
+  background: none;
+  border: 1px solid #ffee00;
+  color: #ffee00;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+.mod-delete-btn:hover {
+  background-color: #ffee00;
+  color: #000000;
+}
+
 .scho-label {
   font-size: 10px;
   color: #ff9100;
