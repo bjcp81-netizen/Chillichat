@@ -470,4 +470,246 @@ io.on("connection", (socket) => {
     const MAX_DURATION_MS = 10000;
     const MAX_SIZE_BYTES = 1024 * 1024; // 1MB safety cap
 
-    if (!audioData ||
+    if (!audioData || durationMs > MAX_DURATION_MS + 500) {
+      socket.emit("reactionError", "Voice clip rejected: too long.");
+      return;
+    }
+
+    if (audioData.length > MAX_SIZE_BYTES) {
+      socket.emit("reactionError", "Voice clip rejected: too large.");
+      return;
+    }
+
+    try {
+      const result = await pool.query(
+        "INSERT INTO voice_clips (handle, color, audio_data, duration_ms) VALUES ($1, $2, $3, $4) RETURNING id, created_at",
+        [handle, color, audioData, durationMs]
+      );
+
+      io.emit("voiceClip", {
+        id: result.rows[0].id,
+        handle,
+        color,
+        audioData,
+        durationMs,
+      });
+    } catch (err) {
+      console.error("Failed to save voice clip:", err);
+    }
+  });
+
+  socket.on("reaction", async ({ messageId, handle, reactionType }) => {
+    const allowed = ["chilli", "heart", "laugh", "down"];
+    if (!allowed.includes(reactionType)) return;
+
+    try {
+      const messageResult = await pool.query(
+        "SELECT handle FROM messages WHERE id = $1",
+        [messageId]
+      );
+      if (messageResult.rows.length === 0) return;
+
+      const authorHandle = messageResult.rows[0].handle;
+
+      if (authorHandle === handle) {
+        socket.emit("reactionError", "You can't react to your own message.");
+        return;
+      }
+
+      const existing = await pool.query(
+        "SELECT id FROM message_reactions WHERE message_id = $1 AND handle = $2 AND reaction = $3",
+        [messageId, handle, reactionType]
+      );
+
+      const schoValue = REACTION_SCHO_VALUES[reactionType] || 0;
+      const counterColumn = {
+        chilli: "chilli_received",
+        heart: "hearts_received",
+        laugh: "laughs_received",
+        down: "down_received",
+      }[reactionType];
+
+      let scoreIncreased = false;
+
+      if (existing.rows.length > 0) {
+        await pool.query("DELETE FROM message_reactions WHERE id = $1", [existing.rows[0].id]);
+        await pool.query(
+          `UPDATE users SET scho_total = scho_total - $1, ${counterColumn} = GREATEST(${counterColumn} - 1, 0) WHERE handle = $2`,
+          [schoValue, authorHandle]
+        );
+      } else {
+        await pool.query(
+          "INSERT INTO message_reactions (message_id, handle, reaction) VALUES ($1, $2, $3)",
+          [messageId, handle, reactionType]
+        );
+        await pool.query(
+          `UPDATE users SET scho_total = scho_total + $1, ${counterColumn} = ${counterColumn} + 1 WHERE handle = $2`,
+          [schoValue, authorHandle]
+        );
+        await checkThresholdBadges(authorHandle);
+        scoreIncreased = schoValue > 0;
+      }
+
+      const counts = await getReactionCounts(messageId);
+      const heatRating = computeHeatRating(counts);
+      io.emit("reactionUpdate", { messageId, counts, heatRating });
+      await broadcastUserList();
+
+      if (scoreIncreased) {
+        await checkHeatNotifications(authorHandle);
+      }
+    } catch (err) {
+      console.error("Reaction error:", err);
+    }
+  });
+
+  socket.on("getHighrollers", async ({ period }) => {
+    const interval = period === "week" ? "7 days" : "24 hours";
+
+    try {
+      const result = await pool.query(`
+        SELECT m.id, m.handle, m.color, m.text, m.created_at,
+          COUNT(*) FILTER (WHERE r.reaction = 'chilli') AS chilli,
+          COUNT(*) FILTER (WHERE r.reaction = 'heart') AS heart,
+          COUNT(*) FILTER (WHERE r.reaction = 'laugh') AS laugh,
+          COUNT(*) FILTER (WHERE r.reaction = 'down') AS down
+        FROM messages m
+        JOIN message_reactions r ON r.message_id = m.id
+        WHERE m.created_at > NOW() - INTERVAL '${interval}'
+        GROUP BY m.id
+      `);
+
+      const rated = result.rows.map((msg) => {
+        const counts = {
+          chilli: parseInt(msg.chilli),
+          heart: parseInt(msg.heart),
+          laugh: parseInt(msg.laugh),
+          down: parseInt(msg.down),
+        };
+        return {
+          id: msg.id,
+          handle: msg.handle,
+          color: msg.color,
+          text: msg.text,
+          heatRating: computeHeatRating(counts),
+        };
+      });
+
+      rated.sort((a, b) => b.heatRating - a.heatRating);
+      const top5 = rated.slice(0, 5);
+
+      socket.emit("highrollersResult", { period, entries: top5 });
+    } catch (err) {
+      console.error("Highrollers error:", err);
+    }
+  });
+
+  socket.on("getUserLeaderboard", async () => {
+    try {
+      const result = await pool.query(
+        "SELECT handle, color, scho_total, created_at FROM users ORDER BY scho_total DESC, created_at ASC LIMIT 20"
+      );
+
+      const leaderboard = result.rows.map((row) => {
+        const rank = computeScovilleRank(row.scho_total);
+        return {
+          handle: row.handle,
+          color: row.color,
+          scho: row.scho_total,
+          rankName: rank.name,
+          rankEmoji: rank.emoji,
+        };
+      });
+
+      socket.emit("userLeaderboardResult", { leaderboard });
+    } catch (err) {
+      console.error("Leaderboard error:", err);
+    }
+  });
+
+  // ---- Moderator actions ----
+  socket.on("moderatorKick", ({ targetHandle }) => {
+    const me = connectedUsers[socket.id];
+    if (!me || !me.isModerator) return;
+    if (targetHandle === me.handle) return;
+
+    const targetSocketId = findSocketIdByHandle(targetHandle);
+    if (!targetSocketId) return;
+
+    const targetSocket = io.sockets.sockets.get(targetSocketId);
+    if (targetSocket) {
+      targetSocket.emit("youWereKicked");
+      targetSocket.disconnect(true);
+    }
+  });
+
+  socket.on("moderatorBan", async ({ targetHandle, duration, reason }) => {
+    const me = connectedUsers[socket.id];
+    if (!me || !me.isModerator) return;
+    if (targetHandle === me.handle) return;
+
+    try {
+      const targetUser = await pool.query(
+        "SELECT device_token FROM users WHERE handle = $1",
+        [targetHandle]
+      );
+      if (targetUser.rows.length === 0) return;
+
+      const deviceToken = targetUser.rows[0].device_token;
+      const expiresAt = computeBanExpiry(duration);
+      const permanent = expiresAt === null;
+
+      await pool.query(
+        "INSERT INTO bans (handle, device_token, reason, banned_by, expires_at, permanent) VALUES ($1, $2, $3, $4, $5, $6)",
+        [targetHandle, deviceToken, reason || "No reason given", me.handle, expiresAt, permanent]
+      );
+
+      const targetSocketId = findSocketIdByHandle(targetHandle);
+      if (targetSocketId) {
+        const targetSocket = io.sockets.sockets.get(targetSocketId);
+        if (targetSocket) {
+          targetSocket.emit("youWereBanned", {
+            permanent,
+            until: expiresAt ? expiresAt.toLocaleString() : null,
+          });
+          targetSocket.disconnect(true);
+        }
+      }
+    } catch (err) {
+      console.error("Ban error:", err);
+    }
+  });
+
+  socket.on("typing", ({ handle }) => {
+    socket.broadcast.emit("typing", { handle });
+  });
+
+  socket.on("stopTyping", ({ handle }) => {
+    socket.broadcast.emit("stopTyping", { handle });
+  });
+
+  socket.on("statusChange", async (status) => {
+    if (connectedUsers[socket.id]) {
+      connectedUsers[socket.id].status = status;
+      await broadcastUserList();
+    }
+  });
+
+  socket.on("disconnect", async () => {
+    console.log("A user disconnected:", socket.id);
+    delete connectedUsers[socket.id];
+    await broadcastUserList();
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+
+setupDatabase()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`ChilliChat server running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to connect to database:", err);
+  });
