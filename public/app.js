@@ -644,6 +644,9 @@ socket.on("userList", (users) => {
       recordingOverlay.classList.remove("hidden");
       updateRecordingTimer();
 
+      sendSound.currentTime = 0;
+      sendSound.play().catch(() => {});
+
       recordTimerInterval = setInterval(updateRecordingTimer, 200);
     } catch (err) {
       console.error("Mic access error:", err);
@@ -666,6 +669,8 @@ socket.on("userList", (users) => {
     wasCancelled = cancelled;
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
+      notifySound.currentTime = 0;
+      notifySound.play().catch(() => {});
     }
   }
 
@@ -702,9 +707,11 @@ socket.on("userList", (users) => {
       }
     });
 
-    audio.addEventListener("play", () => {
+   audio.addEventListener("play", () => {
       isPlaying = true;
       playBtn.textContent = "⏸";
+      sendSound.currentTime = 0;
+      sendSound.play().catch(() => {});
     });
     audio.addEventListener("pause", () => {
       isPlaying = false;
@@ -713,7 +720,10 @@ socket.on("userList", (users) => {
     audio.addEventListener("ended", () => {
       isPlaying = false;
       playBtn.textContent = "▶";
-    });
+      notifySound.currentTime = 0;
+      notifySound.play().catch(() => {});
+    }); 
+     
 
     const meta = document.createElement("div");
     meta.className = "voice-meta";
