@@ -45,7 +45,10 @@ document.addEventListener("DOMContentLoaded", function () {
   const sendSound = document.getElementById("send-sound");
   const notifySound = document.getElementById("notify-sound");
   const connectionBanner = document.getElementById("connection-banner");
-
+  const micBtn = document.getElementById("mic-btn");
+  const recordingOverlay = document.getElementById("recording-overlay");
+  const recordingTimer = document.getElementById("recording-timer");
+  const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -577,6 +580,164 @@ socket.on("userList", (users) => {
       messagesBox.innerHTML = "";
       const myDeviceToken = localStorage.getItem(STORAGE_TOKEN_KEY);
       socket.emit("join", { handle: myHandle, color: myColor, deviceToken: myDeviceToken });
+    }
+  });
+
+  // ---- Voice clips ----
+  const MAX_RECORD_MS = 10000;
+
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let recordStartTime = 0;
+  let recordTimerInterval = null;
+  let wasCancelled = false;
+
+  function isRecordingSupported() {
+    return !!(navigator.mediaDevices && window.MediaRecorder);
+  }
+
+  async function startRecording() {
+    if (!isRecordingSupported()) {
+      alert("Voice recording isn't supported in this browser.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      wasCancelled = false;
+
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        clearInterval(recordTimerInterval);
+        recordingOverlay.classList.add("hidden");
+        micBtn.classList.remove("recording");
+
+        if (wasCancelled) return;
+
+        const durationMs = Date.now() - recordStartTime;
+        if (durationMs < 300) return; // ignore accidental taps
+
+        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Audio = reader.result;
+          socket.emit("voiceClip", {
+            handle: myHandle,
+            color: myColor,
+            audioData: base64Audio,
+            durationMs: Math.min(durationMs, MAX_RECORD_MS),
+          });
+        };
+        reader.readAsDataURL(audioBlob);
+      };
+
+      mediaRecorder.start();
+      recordStartTime = Date.now();
+      micBtn.classList.add("recording");
+      recordingOverlay.classList.remove("hidden");
+      updateRecordingTimer();
+
+      recordTimerInterval = setInterval(updateRecordingTimer, 200);
+    } catch (err) {
+      console.error("Mic access error:", err);
+      alert("Couldn't access your microphone. Please check permissions.");
+    }
+  }
+
+  function updateRecordingTimer() {
+    const elapsed = Date.now() - recordStartTime;
+    const seconds = Math.floor(elapsed / 1000);
+    const tenths = Math.floor((elapsed % 1000) / 100);
+    recordingTimer.textContent = seconds + "." + tenths + "s / 10.0s";
+
+    if (elapsed >= MAX_RECORD_MS) {
+      stopRecording(false);
+    }
+  }
+
+  function stopRecording(cancelled) {
+    wasCancelled = cancelled;
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+  }
+
+  micBtn.addEventListener("mousedown", startRecording);
+  micBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    startRecording();
+  });
+
+  micBtn.addEventListener("mouseup", () => stopRecording(false));
+  micBtn.addEventListener("mouseleave", () => {
+    if (mediaRecorder && mediaRecorder.state === "recording") stopRecording(false);
+  });
+  micBtn.addEventListener("touchend", () => stopRecording(false));
+
+  cancelRecordingBtn.addEventListener("click", () => stopRecording(true));
+
+  socket.on("voiceClip", (data) => {
+    const msgEl = document.createElement("div");
+    msgEl.className = "voice-message";
+
+    const playBtn = document.createElement("button");
+    playBtn.className = "voice-play-btn";
+    playBtn.textContent = "▶";
+
+    const audio = new Audio(data.audioData);
+    let isPlaying = false;
+
+    playBtn.addEventListener("click", () => {
+      if (isPlaying) {
+        audio.pause();
+      } else {
+        audio.play();
+      }
+    });
+
+    audio.addEventListener("play", () => {
+      isPlaying = true;
+      playBtn.textContent = "⏸";
+    });
+    audio.addEventListener("pause", () => {
+      isPlaying = false;
+      playBtn.textContent = "▶";
+    });
+    audio.addEventListener("ended", () => {
+      isPlaying = false;
+      playBtn.textContent = "▶";
+    });
+
+    const meta = document.createElement("div");
+    meta.className = "voice-meta";
+
+    const handleLine = document.createElement("span");
+    handleLine.textContent = data.handle;
+    handleLine.style.color = data.color;
+    handleLine.style.fontWeight = "bold";
+
+    const durationLine = document.createElement("span");
+    durationLine.textContent = (data.durationMs / 1000).toFixed(1) + "s voice clip";
+    durationLine.style.color = "#1f7a0d";
+
+    meta.appendChild(handleLine);
+    meta.appendChild(durationLine);
+
+    msgEl.appendChild(playBtn);
+    msgEl.appendChild(meta);
+    messagesBox.appendChild(msgEl);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+
+    if (data.handle !== myHandle) {
+      notifySound.currentTime = 0;
+      notifySound.play().catch(() => {});
     }
   });
 

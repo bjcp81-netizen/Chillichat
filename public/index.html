@@ -47,36 +47,47 @@
   </div>
 
   <div id="chat-screen" class="chat-screen hidden">
-   <header class="app-header">
+    <header class="app-header">
       <div class="header-top-row">
         <img src="FieryChiliChatBadge.png" alt="ChilliChat badge" class="header-badge" />
         <h1>ChilliChat</h1>
       </div>
-      <div class="header-controls"> 
+      <div class="header-controls">
         <button id="users-toggle-btn" class="users-toggle-btn">Users (0) ▾</button>
         <button id="highrollers-toggle-btn" class="highrollers-toggle-btn">🔥 Highrollers ▾</button>
       </div>
     </header>
+
     <div id="users-dropdown" class="users-dropdown">
       <ul id="users-list" class="users-list"></ul>
     </div>
-<div id="highrollers-dropdown" class="users-dropdown">
-     <div class="highrollers-tabs">
+
+    <div id="highrollers-dropdown" class="users-dropdown">
+      <div class="highrollers-tabs">
         <button id="highrollers-today-btn" class="highrollers-tab active">Today</button>
         <button id="highrollers-week-btn" class="highrollers-tab">This Week</button>
         <button id="highrollers-users-btn" class="highrollers-tab">🏆 Top Users</button>
       </div>
       <ol id="highrollers-list" class="highrollers-list"></ol>
-      <ol id="user-leaderboard-list" class="highrollers-list hidden"></ol> 
+      <ol id="user-leaderboard-list" class="highrollers-list hidden"></ol>
     </div>
+
     <div class="main-area">
       <div class="lobby-column">
         <div id="messages-box" class="messages-box">
           <p class="system-msg">Welcome to ChilliChat!</p>
         </div>
         <p id="typing-indicator" class="typing-indicator"></p>
+
+        <div id="recording-overlay" class="recording-overlay hidden">
+          <span id="recording-timer" class="recording-timer">0:00 / 0:10</span>
+          <span class="recording-hint">Release to send</span>
+          <button id="cancel-recording-btn" class="cancel-recording-btn">✕</button>
+        </div>
+
         <div class="input-row">
           <input type="text" id="message-input" placeholder="Type a message..." />
+          <button id="mic-btn" class="mic-btn" title="Hold to record a voice clip">🎤</button>
           <button id="send-btn">Send</button>
         </div>
         <a href="https://cbradio.pages.dev/" target="_blank" rel="noopener noreferrer" class="cb-radio-btn">
