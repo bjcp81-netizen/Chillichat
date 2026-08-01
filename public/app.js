@@ -707,11 +707,9 @@ socket.on("userList", (users) => {
       }
     });
 
-   audio.addEventListener("play", () => {
+  audio.addEventListener("play", () => {
       isPlaying = true;
       playBtn.textContent = "⏸";
-      sendSound.currentTime = 0;
-      sendSound.play().catch(() => {});
     });
     audio.addEventListener("pause", () => {
       isPlaying = false;
@@ -722,7 +720,7 @@ socket.on("userList", (users) => {
       playBtn.textContent = "▶";
       notifySound.currentTime = 0;
       notifySound.play().catch(() => {});
-    }); 
+    });
      
 
     const meta = document.createElement("div");
