@@ -169,6 +169,28 @@ async function setupDatabase() {
   await pool.query(`ALTER TABLE voice_clips ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE`);
   await pool.query(`ALTER TABLE voice_clips ADD COLUMN IF NOT EXISTS deleted_by TEXT`);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS photos (
+      id SERIAL PRIMARY KEY,
+      handle TEXT NOT NULL,
+      color TEXT NOT NULL,
+      image_data TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      deleted BOOLEAN DEFAULT FALSE,
+      deleted_by TEXT
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS photo_views (
+      id SERIAL PRIMARY KEY,
+      photo_id INTEGER NOT NULL,
+      viewer_handle TEXT NOT NULL,
+      opened_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(photo_id, viewer_handle)
+    )
+  `);
+
   console.log("Connected to Neon and tables are ready");
 }
 
@@ -305,7 +327,7 @@ async function broadcastUserList() {
   io.emit("userList", enriched);
 }
 
-async function sendMessageHistory(socket) {
+async function sendMessageHistory(socket, viewerHandle) {
   try {
     const msgResult = await pool.query(`
       SELECT m.id, m.handle, m.color, m.text, m.created_at,
@@ -324,6 +346,14 @@ async function sendMessageHistory(socket) {
       FROM voice_clips
       WHERE created_at > NOW() - INTERVAL '24 hours' AND deleted = FALSE
     `);
+
+    const photoResult = await pool.query(
+      `SELECT p.id, p.handle, p.color, p.created_at,
+        EXISTS(SELECT 1 FROM photo_views v WHERE v.photo_id = p.id AND v.viewer_handle = $1) AS opened
+       FROM photos p
+       WHERE p.created_at > NOW() - INTERVAL '24 hours' AND p.deleted = FALSE`,
+      [viewerHandle]
+    );
 
     const textItems = msgResult.rows.map((msg) => {
       const counts = {
@@ -358,15 +388,29 @@ async function sendMessageHistory(socket) {
       },
     }));
 
-    const merged = [...textItems, ...voiceItems].sort(
+    const photoItems = photoResult.rows.map((p) => ({
+      type: "photo",
+      created_at: p.created_at,
+      payload: {
+        id: p.id,
+        handle: p.handle,
+        color: p.color,
+        isOwn: p.handle === viewerHandle,
+        alreadyOpened: p.opened,
+      },
+    }));
+
+    const merged = [...textItems, ...voiceItems, ...photoItems].sort(
       (a, b) => new Date(a.created_at) - new Date(b.created_at)
     );
 
     merged.forEach((item) => {
       if (item.type === "text") {
         socket.emit("chatMessage", item.payload);
-      } else {
+      } else if (item.type === "voice") {
         socket.emit("voiceClip", item.payload);
+      } else {
+        socket.emit("photoNew", item.payload);
       }
     });
   } catch (err) {
@@ -414,7 +458,7 @@ io.on("connection", (socket) => {
         socket.emit("joinSuccess", { handle, color, deviceToken: newToken, isModerator });
         await awardBadge(handle, "fresh_face");
         await broadcastUserList();
-        await sendMessageHistory(socket);
+        await sendMessageHistory(socket, handle);
       } else {
         const owner = existing.rows[0];
 
@@ -442,7 +486,7 @@ io.on("connection", (socket) => {
             isModerator,
           });
           await broadcastUserList();
-          await sendMessageHistory(socket);
+          await sendMessageHistory(socket, handle);
         } else {
           socket.emit("joinError", "That handle is already taken. Please choose another.");
         }
@@ -501,6 +545,78 @@ io.on("connection", (socket) => {
       });
     } catch (err) {
       console.error("Failed to save voice clip:", err);
+    }
+  });
+
+  socket.on("photoUpload", async ({ handle, color, imageData }) => {
+    const MAX_SIZE_BYTES = 1.2 * 1024 * 1024; // ~1.2MB base64 safety cap
+
+    if (!imageData || typeof imageData !== "string" || !imageData.startsWith("data:image/")) {
+      socket.emit("reactionError", "Photo rejected: invalid file.");
+      return;
+    }
+
+    if (imageData.length > MAX_SIZE_BYTES) {
+      socket.emit("reactionError", "Photo rejected: too large.");
+      return;
+    }
+
+    try {
+      const result = await pool.query(
+        "INSERT INTO photos (handle, color, image_data) VALUES ($1, $2, $3) RETURNING id, created_at",
+        [handle, color, imageData]
+      );
+
+      io.emit("photoNew", {
+        id: result.rows[0].id,
+        handle,
+        color,
+        isOwn: false,
+        alreadyOpened: false,
+      });
+    } catch (err) {
+      console.error("Failed to save photo:", err);
+    }
+  });
+
+  socket.on("photoOpen", async ({ photoId, viewerHandle }) => {
+    try {
+      const photoResult = await pool.query(
+        "SELECT handle, color, image_data, deleted FROM photos WHERE id = $1",
+        [photoId]
+      );
+
+      if (photoResult.rows.length === 0 || photoResult.rows[0].deleted) {
+        socket.emit("photoResult", { photoId, expired: true });
+        return;
+      }
+
+      const photo = photoResult.rows[0];
+
+      if (photo.handle === viewerHandle) {
+        socket.emit("photoResult", { photoId, imageData: photo.image_data, expired: false });
+        return;
+      }
+
+      const viewCheck = await pool.query(
+        "SELECT id FROM photo_views WHERE photo_id = $1 AND viewer_handle = $2",
+        [photoId, viewerHandle]
+      );
+
+      if (viewCheck.rows.length > 0) {
+        socket.emit("photoResult", { photoId, expired: true });
+        return;
+      }
+
+      await pool.query(
+        "INSERT INTO photo_views (photo_id, viewer_handle) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        [photoId, viewerHandle]
+      );
+
+      socket.emit("photoResult", { photoId, imageData: photo.image_data, expired: false });
+    } catch (err) {
+      console.error("Photo open error:", err);
+      socket.emit("photoResult", { photoId, expired: true });
     }
   });
 
@@ -713,6 +829,21 @@ io.on("connection", (socket) => {
       io.emit("contentDeleted", { type: "voice", id: clipId });
     } catch (err) {
       console.error("Delete voice clip error:", err);
+    }
+  });
+
+  socket.on("moderatorDeletePhoto", async ({ photoId }) => {
+    const me = connectedUsers[socket.id];
+    if (!me || !me.isModerator) return;
+
+    try {
+      await pool.query(
+        "UPDATE photos SET deleted = TRUE, deleted_by = $1 WHERE id = $2",
+        [me.handle, photoId]
+      );
+      io.emit("contentDeleted", { type: "photo", id: photoId });
+    } catch (err) {
+      console.error("Delete photo error:", err);
     }
   });
 

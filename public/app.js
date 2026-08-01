@@ -52,7 +52,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const recordingOverlay = document.getElementById("recording-overlay");
   const recordingTimer = document.getElementById("recording-timer");
   const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
-
+const photoBtn = document.getElementById("photo-btn");
+  const photoFileInput = document.getElementById("photo-file-input");
+  const photoViewerOverlay = document.getElementById("photo-viewer-overlay");
+  const photoViewerImg = document.getElementById("photo-viewer-img");
+  const photoCountdownFill = document.getElementById("photo-countdown-fill");
+  const photoCountdownText = document.getElementById("photo-countdown-text");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -283,18 +288,27 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   socket.on("contentDeleted", ({ type, id }) => {
-    const selector = type === "text"
-      ? '[data-message-id="' + id + '"]'
-      : '[data-clip-id="' + id + '"]';
+    let selector;
+    let label;
+    if (type === "text") {
+      selector = '[data-message-id="' + id + '"]';
+      label = "Message removed by moderator";
+    } else if (type === "voice") {
+      selector = '[data-clip-id="' + id + '"]';
+      label = "Voice clip removed by moderator";
+    } else {
+      selector = '[data-photo-id="' + id + '"]';
+      label = "Photo removed by moderator";
+    }
+
     const el = messagesBox.querySelector(selector);
     if (!el) return;
 
     el.innerHTML = "";
     el.className = "system-msg";
-    el.textContent = type === "text"
-      ? "Message removed by moderator"
-      : "Voice clip removed by moderator";
+    el.textContent = label;
   });
+  
 
   function checkReturningUser() {
     const savedHandle = localStorage.getItem(STORAGE_HANDLE_KEY);
@@ -863,6 +877,212 @@ function stopRecording(cancelled) {
       notifySound.currentTime = 0;
       notifySound.play().catch(() => {});
     }
+  });
+
+// ---- Ephemeral photos ----
+  const MAX_PHOTO_DIMENSION = 800;
+  const MAX_PHOTO_BASE64_LENGTH = 1.1 * 1024 * 1024;
+  const PHOTO_VIEW_SECONDS = 10;
+
+  photoBtn.addEventListener("click", () => {
+    photoFileInput.click();
+  });
+
+  photoFileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    photoFileInput.value = "";
+    compressAndSendPhoto(file);
+  });
+
+  function compressAndSendPhoto(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > MAX_PHOTO_DIMENSION) {
+          height = Math.round((height * MAX_PHOTO_DIMENSION) / width);
+          width = MAX_PHOTO_DIMENSION;
+        } else if (height > MAX_PHOTO_DIMENSION) {
+          width = Math.round((width * MAX_PHOTO_DIMENSION) / height);
+          height = MAX_PHOTO_DIMENSION;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        tryCompress(canvas, 0.7);
+      };
+      img.onerror = () => alert("Couldn't read that image file.");
+      img.src = e.target.result;
+    };
+    reader.onerror = () => alert("Couldn't read that image file.");
+    reader.readAsDataURL(file);
+  }
+
+  function tryCompress(canvas, quality) {
+    const dataUrl = canvas.toDataURL("image/jpeg", quality);
+    if (dataUrl.length > MAX_PHOTO_BASE64_LENGTH && quality > 0.3) {
+      tryCompress(canvas, quality - 0.15);
+      return;
+    }
+    if (dataUrl.length > MAX_PHOTO_BASE64_LENGTH) {
+      alert("That photo is too large even after compression. Try a smaller image.");
+      return;
+    }
+    socket.emit("photoUpload", { handle: myHandle, color: myColor, imageData: dataUrl });
+  }
+
+  socket.on("photoNew", (data) => {
+    const msgEl = document.createElement("div");
+    msgEl.className = "photo-thumb";
+    msgEl.dataset.photoId = data.id;
+
+    if (data.alreadyOpened && !data.isOwn) {
+      renderExpiredThumb(msgEl, data.handle, data.color);
+    } else {
+      renderActiveThumb(msgEl, data.handle, data.color, data.id);
+    }
+
+    messagesBox.appendChild(msgEl);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+
+    if (data.handle !== myHandle) {
+      notifySound.currentTime = 0;
+      notifySound.play().catch(() => {});
+    }
+  });
+
+  function renderActiveThumb(msgEl, handle, color, photoId) {
+    msgEl.innerHTML = "";
+    msgEl.classList.remove("expired");
+
+    const icon = document.createElement("span");
+    icon.className = "photo-thumb-icon";
+    icon.textContent = "📷";
+
+    const meta = document.createElement("div");
+    meta.className = "photo-thumb-meta";
+
+    const handleLine = document.createElement("span");
+    handleLine.className = "photo-thumb-handle";
+    handleLine.textContent = handle;
+    handleLine.style.color = color;
+
+    const hint = document.createElement("span");
+    hint.className = "photo-thumb-hint";
+    hint.textContent = "View once photo — tap to reveal (10s)";
+
+    meta.appendChild(handleLine);
+    meta.appendChild(hint);
+    msgEl.appendChild(icon);
+    msgEl.appendChild(meta);
+
+    if (myIsModerator) {
+      const delBtn = document.createElement("button");
+      delBtn.className = "mod-delete-btn";
+      delBtn.textContent = "🗑️";
+      delBtn.title = "Delete photo";
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (confirm("Delete this photo?")) {
+          socket.emit("moderatorDeletePhoto", { photoId });
+        }
+      });
+      msgEl.appendChild(delBtn);
+    }
+
+    msgEl.onclick = () => {
+      socket.emit("photoOpen", { photoId, viewerHandle: myHandle });
+    };
+  }
+
+  function renderExpiredThumb(msgEl, handle, color) {
+    msgEl.innerHTML = "";
+    msgEl.classList.add("expired");
+    msgEl.onclick = null;
+
+    const icon = document.createElement("span");
+    icon.className = "photo-thumb-icon";
+    icon.textContent = "📷";
+
+    const meta = document.createElement("div");
+    meta.className = "photo-thumb-meta";
+
+    const handleLine = document.createElement("span");
+    handleLine.className = "photo-thumb-handle";
+    handleLine.textContent = handle;
+    handleLine.style.color = color;
+
+    const hint = document.createElement("span");
+    hint.className = "photo-thumb-hint";
+    hint.textContent = "Photo expired";
+
+    meta.appendChild(handleLine);
+    meta.appendChild(hint);
+    msgEl.appendChild(icon);
+    msgEl.appendChild(meta);
+  }
+
+  let photoCountdownInterval = null;
+
+  socket.on("photoResult", ({ photoId, imageData, expired }) => {
+    const thumbEl = messagesBox.querySelector('[data-photo-id="' + photoId + '"]');
+
+    if (expired || !imageData) {
+      if (thumbEl) renderExpiredThumb(thumbEl, thumbEl.querySelector(".photo-thumb-handle")?.textContent || "", "");
+      return;
+    }
+
+    openPhotoViewer(imageData, () => {
+      if (thumbEl) {
+        const isOwnPhoto = thumbEl.onclick !== null && thumbEl.querySelector(".photo-thumb-hint")?.textContent.includes("tap to reveal");
+        // Only mark expired for other people's photos; sender can keep reopening their own.
+        const handleColor = thumbEl.querySelector(".photo-thumb-handle");
+        const handleText = handleColor ? handleColor.textContent : "";
+        if (handleText !== myHandle) {
+          renderExpiredThumb(thumbEl, handleText, "");
+        }
+      }
+    });
+  });
+
+  function openPhotoViewer(imageData, onExpireCallback) {
+    photoViewerImg.src = imageData;
+    photoViewerOverlay.classList.remove("hidden");
+
+    let secondsLeft = PHOTO_VIEW_SECONDS;
+    photoCountdownText.textContent = secondsLeft + "s";
+    photoCountdownFill.style.width = "100%";
+
+    clearInterval(photoCountdownInterval);
+    photoCountdownInterval = setInterval(() => {
+      secondsLeft -= 1;
+      photoCountdownText.textContent = Math.max(secondsLeft, 0) + "s";
+      photoCountdownFill.style.width = Math.max((secondsLeft / PHOTO_VIEW_SECONDS) * 100, 0) + "%";
+
+      if (secondsLeft <= 0) {
+        clearInterval(photoCountdownInterval);
+        closePhotoViewer();
+        if (onExpireCallback) onExpireCallback();
+      }
+    }, 1000);
+  }
+
+  function closePhotoViewer() {
+    photoViewerOverlay.classList.add("hidden");
+    photoViewerImg.src = "";
+    clearInterval(photoCountdownInterval);
+  }
+
+  photoViewerOverlay.addEventListener("click", () => {
+    // Tapping anywhere just closes early; expiry logic still applies via the timer callback normally,
+    // but an early manual close does not count as "opened and expired" beyond what's already recorded server-side.
+    closePhotoViewer();
   });
 
   checkReturningUser();
