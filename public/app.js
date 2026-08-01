@@ -6,12 +6,15 @@ document.addEventListener("DOMContentLoaded", function () {
   const STORAGE_COLOR_KEY = "chillichat_color";
   const STORAGE_TOKEN_KEY = "chillichat_device_token";
 
-  const REACTIONS = [
+ const REACTIONS = [
     { key: "chilli", emoji: "🌶️" },
     { key: "heart", emoji: "❤️" },
     { key: "laugh", emoji: "😂" },
     { key: "down", emoji: "👎" },
   ];
+
+  const lastKnownCounts = {};
+
 
   const socket = io();
 
@@ -473,7 +476,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // ---- Reactions & heat rating ----
   function buildReactionBar(messageId, counts, heatRating) {
     const bar = document.createElement("div");
-    bar.className = "reaction-bar";
+    bar.className = "reaction-bar hidden";
 
     const pillsWrap = document.createElement("span");
     pillsWrap.className = "reaction-pills";
@@ -525,7 +528,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
     return bar;
   }
+function attachLongPress(triggerEl, panelEl) {
+    let pressTimer = null;
+    const LONG_PRESS_MS = 450;
 
+    function start() {
+      pressTimer = setTimeout(() => {
+        panelEl.classList.toggle("hidden");
+      }, LONG_PRESS_MS);
+    }
+    function cancel() {
+      clearTimeout(pressTimer);
+    }
+
+    triggerEl.addEventListener("mousedown", start);
+    triggerEl.addEventListener("mouseup", cancel);
+    triggerEl.addEventListener("mouseleave", cancel);
+    triggerEl.addEventListener("touchstart", start, { passive: true });
+    triggerEl.addEventListener("touchend", cancel);
+    triggerEl.addEventListener("touchmove", cancel);
+  }
+
+  function spawnFloatingReaction(msgEl, emoji) {
+    const float = document.createElement("span");
+    float.className = "floating-reaction";
+    float.textContent = emoji;
+    float.style.left = (20 + Math.random() * 60) + "%";
+    msgEl.appendChild(float);
+    float.addEventListener("animationend", () => float.remove());
+  }
   function renderPills(pillsWrap, counts) {
     pillsWrap.innerHTML = "";
     REACTIONS.forEach(r => {
@@ -539,9 +570,17 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  socket.on("reactionUpdate", ({ messageId, counts, heatRating }) => {
+ socket.on("reactionUpdate", ({ messageId, counts, heatRating }) => {
     const msgEl = messagesBox.querySelector('[data-message-id="' + messageId + '"]');
     if (!msgEl) return;
+
+    const prevCounts = lastKnownCounts[messageId] || { chilli: 0, heart: 0, laugh: 0, down: 0 };
+    REACTIONS.forEach(r => {
+      if ((counts[r.key] || 0) > (prevCounts[r.key] || 0)) {
+        spawnFloatingReaction(msgEl, r.emoji);
+      }
+    });
+    lastKnownCounts[messageId] = counts;
 
     const pillsWrap = msgEl.querySelector(".reaction-pills");
     if (pillsWrap) {
@@ -573,14 +612,18 @@ document.addEventListener("DOMContentLoaded", function () {
     textLine.appendChild(handleSpan);
     textLine.appendChild(textSpan);
 
-    const counts = data.counts || { chilli: 0, heart: 0, laugh: 0, down: 0 };
+   const counts = data.counts || { chilli: 0, heart: 0, laugh: 0, down: 0 };
     const reactionBar = buildReactionBar(data.id, counts, data.heatRating || null);
+    lastKnownCounts[data.id] = counts;
 
     msgEl.appendChild(textLine);
     msgEl.appendChild(reactionBar);
     messagesBox.appendChild(msgEl);
+    attachLongPress(textLine, reactionBar);
 
     messagesBox.scrollTop = messagesBox.scrollHeight;
+
+  
 
     const isOwnMessage = data.handle === myHandle;
     if (!isOwnMessage) {

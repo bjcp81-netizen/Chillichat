@@ -724,3 +724,26 @@ body {
   flex-direction: column;
   font-size: 11px;
 }
+.chat-message {
+  position: relative;
+  overflow: visible;
+}
+
+.floating-reaction {
+  position: absolute;
+  bottom: 100%;
+  font-size: 22px;
+  pointer-events: none;
+  animation: floatUp 1.2s ease-out forwards;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-45px) scale(1.5);
+  }
+}
