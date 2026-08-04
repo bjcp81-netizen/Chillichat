@@ -619,16 +619,29 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  position: relative;
+  gap: 6px;
   width: 100%;
 }
 
-.header-badge {
-  position: absolute;
-  left: 0;
-  height: 36px;
+.header-badge-desktop {
+  height: 52px;
   width: auto;
+}
+
+.header-badge-mobile {
+  display: none;
+  height: 40px;
+  width: auto;
+  margin: 4px auto 0;
+}
+
+@media (max-width: 480px) {
+  .header-badge-desktop {
+    display: none;
+  }
+  .header-badge-mobile {
+    display: block;
+  }
 }
 .mic-btn {
   padding: 8px 14px;
