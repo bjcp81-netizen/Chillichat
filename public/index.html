@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ChilliChat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Sans:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -61,10 +64,53 @@
         <h1>ChilliChat</h1>
       </div>
       <div class="header-controls">
+        <button id="options-toggle-btn" class="options-toggle-btn">⚙️ Options ▾</button>
         <button id="users-toggle-btn" class="users-toggle-btn">Users (0) ▾</button>
         <button id="highrollers-toggle-btn" class="highrollers-toggle-btn">🔥 Highrollers ▾</button>
       </div>
     </header>
+
+    <div id="options-dropdown" class="users-dropdown">
+      <div class="options-panel">
+        <label class="options-row">
+          <span>Font</span>
+          <select id="font-select" class="options-select">
+            <option value="default">Default (Retro)</option>
+            <option value="inter">Inter</option>
+            <option value="atkinson">Atkinson Hyperlegible</option>
+            <option value="noto">Noto Sans</option>
+            <option value="roboto">Roboto</option>
+            <option value="sfpro">SF Pro</option>
+            <option value="segoe">Segoe UI</option>
+            <option value="source">Source Sans 3</option>
+          </select>
+        </label>
+
+        <div class="options-row options-row-column">
+          <span>Font Colour</span>
+          <div id="font-color-options" class="color-options options-color-grid">
+            <div class="color-swatch font-color-swatch" data-color="#39ff14" style="background-color:#39ff14"></div>
+            <div class="color-swatch font-color-swatch" data-color="#ffffff" style="background-color:#ffffff"></div>
+            <div class="color-swatch font-color-swatch" data-color="#00eeff" style="background-color:#00eeff"></div>
+            <div class="color-swatch font-color-swatch" data-color="#ffee00" style="background-color:#ffee00"></div>
+            <div class="color-swatch font-color-swatch" data-color="#ff8800" style="background-color:#ff8800"></div>
+            <div class="color-swatch font-color-swatch" data-color="#ff0088" style="background-color:#ff0088"></div>
+            <div class="color-swatch font-color-swatch" data-color="#c0c0c0" style="background-color:#c0c0c0"></div>
+            <div class="color-swatch font-color-swatch" data-color="#7fffd4" style="background-color:#7fffd4"></div>
+          </div>
+        </div>
+
+        <label class="options-row">
+          <span>Bold Text</span>
+          <input type="checkbox" id="bold-toggle" />
+        </label>
+
+        <label class="options-row">
+          <span>Sound</span>
+          <input type="checkbox" id="sound-toggle" checked />
+        </label>
+      </div>
+    </div>
 
     <div id="users-dropdown" class="users-dropdown">
       <ul id="users-list" class="users-list"></ul>

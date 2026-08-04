@@ -14,7 +14,85 @@ document.addEventListener("DOMContentLoaded", function () {
   ];
 
   const lastKnownCounts = {};
+const FONT_MAP = {
+    default: "'Courier New', Courier, monospace",
+    inter: "'Inter', sans-serif",
+    atkinson: "'Atkinson Hyperlegible', sans-serif",
+    noto: "'Noto Sans', sans-serif",
+    roboto: "'Roboto', sans-serif",
+    sfpro: "-apple-system, 'SF Pro Display', 'SF Pro Text', sans-serif",
+    segoe: "'Segoe UI', Tahoma, sans-serif",
+    source: "'Source Sans 3', sans-serif",
+  };
 
+  let soundEnabled = true;
+
+  function buzz(ms) {
+    if (navigator.vibrate) {
+      navigator.vibrate(ms || 15);
+    }
+  }
+
+  function playSound(audioEl) {
+    if (!soundEnabled) return;
+    audioEl.currentTime = 0;
+    audioEl.play().catch(() => {});
+  }
+
+  function applyOptions() {
+    const savedFont = localStorage.getItem("chillichat_font") || "default";
+    const savedColor = localStorage.getItem("chillichat_font_color") || "#39ff14";
+    const savedBold = localStorage.getItem("chillichat_bold") === "true";
+    const savedSound = localStorage.getItem("chillichat_sound");
+
+    document.documentElement.style.setProperty("--app-font-family", FONT_MAP[savedFont] || FONT_MAP.default);
+    document.documentElement.style.setProperty("--app-text-color", savedColor);
+    document.body.classList.toggle("bold-text", savedBold);
+
+    fontSelect.value = savedFont;
+    boldToggle.checked = savedBold;
+    fontColorSwatches.forEach(s => {
+      s.classList.toggle("selected", s.dataset.color === savedColor);
+    });
+
+    soundEnabled = savedSound === null ? true : savedSound === "true";
+    soundToggle.checked = soundEnabled;
+  }
+
+  optionsToggleBtn.addEventListener("click", () => {
+    buzz();
+    optionsDropdown.classList.toggle("open");
+  });
+
+  fontSelect.addEventListener("change", () => {
+    localStorage.setItem("chillichat_font", fontSelect.value);
+    document.documentElement.style.setProperty("--app-font-family", FONT_MAP[fontSelect.value] || FONT_MAP.default);
+  });
+
+  fontColorSwatches.forEach(swatch => {
+    swatch.addEventListener("click", () => {
+      fontColorSwatches.forEach(s => s.classList.remove("selected"));
+      swatch.classList.add("selected");
+      const color = swatch.dataset.color;
+      localStorage.setItem("chillichat_font_color", color);
+      document.documentElement.style.setProperty("--app-text-color", color);
+      buzz();
+    });
+  });
+
+  boldToggle.addEventListener("change", () => {
+    localStorage.setItem("chillichat_bold", boldToggle.checked);
+    document.body.classList.toggle("bold-text", boldToggle.checked);
+    buzz();
+  });
+
+  soundToggle.addEventListener("change", () => {
+    soundEnabled = soundToggle.checked;
+    localStorage.setItem("chillichat_sound", soundEnabled);
+    buzz();
+  });
+
+  applyOptions();
   const socket = io();
 
   let myHandle = "";
@@ -57,7 +135,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const photoViewerImg = document.getElementById("photo-viewer-img");
   const photoCountdownFill = document.getElementById("photo-countdown-fill");
   const photoCountdownText = document.getElementById("photo-countdown-text");
-
+  const optionsToggleBtn = document.getElementById("options-toggle-btn");
+  const optionsDropdown = document.getElementById("options-dropdown");
+  const fontSelect = document.getElementById("font-select");
+  const fontColorSwatches = document.querySelectorAll(".font-color-swatch");
+  const boldToggle = document.getElementById("bold-toggle");
+  const soundToggle = document.getElementById("sound-toggle");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -70,11 +153,13 @@ document.addEventListener("DOMContentLoaded", function () {
     joinBtn.disabled = !termsCheckbox.checked;
   });
 
-  usersToggleBtn.addEventListener("click", () => {
+ usersToggleBtn.addEventListener("click", () => {
+    buzz();
     usersDropdown.classList.toggle("open");
   });
 
-  highrollersToggleBtn.addEventListener("click", () => {
+ highrollersToggleBtn.addEventListener("click", () => {
+    buzz();
     highrollersDropdown.classList.toggle("open");
     if (highrollersDropdown.classList.contains("open")) {
       requestHighrollers("day");
@@ -181,7 +266,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  joinBtn.addEventListener("click", () => enterLobby(false));
+  joinBtn.addEventListener("click", () => { buzz(); enterLobby(false); });
 
   handleInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -422,7 +507,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return panel;
   }
 
-  sendBtn.addEventListener("click", sendMessage);
+  sendBtn.addEventListener("click", () => { buzz(); sendMessage(); });
 
   messageInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -436,8 +521,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     socket.emit("chatMessage", { handle: myHandle, color: myColor, text: text });
 
-    sendSound.currentTime = 0;
-    sendSound.play().catch(() => {});
+  playSound(sendSound);
 
     messageInput.value = "";
     stopTypingNow();
@@ -543,7 +627,8 @@ document.addEventListener("DOMContentLoaded", function () {
       pickBtn.className = "reaction-pick-btn";
       pickBtn.dataset.reaction = r.key;
       pickBtn.textContent = r.emoji;
-      pickBtn.addEventListener("click", () => {
+     pickBtn.addEventListener("click", () => {
+        buzz();
         socket.emit("reaction", { messageId: messageId, handle: myHandle, reactionType: r.key });
         picker.classList.add("hidden");
       });
@@ -651,8 +736,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const isOwnMessage = data.handle === myHandle;
     if (!isOwnMessage) {
-      notifySound.currentTime = 0;
-      notifySound.play().catch(() => {});
+    playSound(notifySound);
     }
   });
 
@@ -758,8 +842,7 @@ document.addEventListener("DOMContentLoaded", function () {
       recordingOverlay.classList.remove("hidden");
       updateRecordingTimer();
 
-      sendSound.currentTime = 0;
-      sendSound.play().catch(() => {});
+     playSound(sendSound);
 
       if (navigator.vibrate) {
         navigator.vibrate(40);
@@ -788,9 +871,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     wasCancelled = cancelled;
     mediaRecorder.stop();
-    notifySound.currentTime = 0;
-    notifySound.play().catch(() => {});
-
+    playSound(notifySound);
     if (navigator.vibrate) {
       navigator.vibrate(20);
     }
@@ -851,8 +932,7 @@ document.addEventListener("DOMContentLoaded", function () {
     audio.addEventListener("ended", () => {
       isPlaying = false;
       playBtn.textContent = "▶";
-      notifySound.currentTime = 0;
-      notifySound.play().catch(() => {});
+   playSound(notifySound);
     });
 
     const meta = document.createElement("div");
@@ -895,8 +975,7 @@ document.addEventListener("DOMContentLoaded", function () {
     messagesBox.scrollTop = messagesBox.scrollHeight;
 
     if (data.handle !== myHandle) {
-      notifySound.currentTime = 0;
-      notifySound.play().catch(() => {});
+     playSound(notifySound); 
     }
   });
 
@@ -906,6 +985,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const PHOTO_VIEW_SECONDS = 10;
 
   photoBtn.addEventListener("click", () => {
+    buzz();
     photoFileInput.click();
   });
 

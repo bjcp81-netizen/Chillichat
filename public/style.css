@@ -863,3 +863,84 @@ body {
   color: #1f7a0d;
   margin-left: 6px;
 }
+:root {
+  --app-font-family: 'Courier New', Courier, monospace;
+  --app-text-color: #39ff14;
+}
+
+body {
+  font-family: var(--app-font-family);
+}
+
+body.bold-text {
+  font-weight: bold;
+}
+
+.app-header h1,
+.join-title-block h1,
+.field-label,
+.chat-message,
+.system-msg,
+.typing-indicator,
+.highrollers-text,
+.scho-label {
+  color: var(--app-text-color);
+}
+
+.options-toggle-btn {
+  background-color: #000000;
+  color: #00eeff;
+  border: 1px solid #00eeff;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--app-font-family);
+}
+
+.options-toggle-btn:hover {
+  background-color: #00eeff;
+  color: #000000;
+}
+
+.options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+}
+
+.options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #39ff14;
+  cursor: pointer;
+}
+
+.options-row-column {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.options-select {
+  background-color: #000000;
+  color: #39ff14;
+  border: 1px solid #39ff14;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.options-color-grid {
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.options-color-grid .color-swatch {
+  width: 24px;
+  height: 24px;
+}
