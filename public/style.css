@@ -851,3 +851,8 @@ body {
   user-select: none;
   -webkit-user-select: none;
 }
+.msg-timestamp {
+  font-size: 10px;
+  color: #1f7a0d;
+  margin-left: 6px;
+}

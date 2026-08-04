@@ -320,7 +320,11 @@ const photoBtn = document.getElementById("photo-btn");
       enterLobby(true);
     }
   }
-
+function formatTimestamp(isoString) {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
   function showSystemMessage(text) {
     const msgEl = document.createElement("p");
     msgEl.className = "system-msg";
@@ -623,8 +627,13 @@ function attachLongPress(triggerEl, panelEl) {
     const textSpan = document.createElement("span");
     textSpan.textContent = " " + data.text;
 
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "msg-timestamp";
+    timeSpan.textContent = formatTimestamp(data.createdAt);
+
     textLine.appendChild(handleSpan);
     textLine.appendChild(textSpan);
+    textLine.appendChild(timeSpan);
 
    const counts = data.counts || { chilli: 0, heart: 0, laugh: 0, down: 0 };
     const reactionBar = buildReactionBar(data.id, counts, data.heatRating || null);
@@ -851,8 +860,13 @@ function stopRecording(cancelled) {
     durationLine.textContent = (data.durationMs / 1000).toFixed(1) + "s voice clip";
     durationLine.style.color = "#1f7a0d";
 
+    const timeLine = document.createElement("span");
+    timeLine.className = "msg-timestamp";
+    timeLine.textContent = formatTimestamp(data.createdAt);
+
     meta.appendChild(handleLine);
     meta.appendChild(durationLine);
+    meta.appendChild(timeLine);
 
     msgEl.appendChild(playBtn);
     msgEl.appendChild(meta);

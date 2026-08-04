@@ -372,6 +372,7 @@ async function sendMessageHistory(socket, viewerHandle) {
           text: msg.text,
           counts,
           heatRating: computeHeatRating(counts),
+          createdAt: msg.created_at,
         },
       };
     });
@@ -379,12 +380,13 @@ async function sendMessageHistory(socket, viewerHandle) {
     const voiceItems = voiceResult.rows.map((clip) => ({
       type: "voice",
       created_at: clip.created_at,
-      payload: {
+     payload: {
         id: clip.id,
         handle: clip.handle,
         color: clip.color,
         audioData: clip.audio_data,
         durationMs: clip.duration_ms,
+        createdAt: clip.created_at,
       },
     }));
 
@@ -499,12 +501,12 @@ io.on("connection", (socket) => {
 
   socket.on("chatMessage", async ({ handle, color, text }) => {
     try {
-      const result = await pool.query(
-        "INSERT INTO messages (handle, color, text) VALUES ($1, $2, $3) RETURNING id",
+     const result = await pool.query(
+        "INSERT INTO messages (handle, color, text) VALUES ($1, $2, $3) RETURNING id, created_at",
         [handle, color, text]
       );
       const messageId = result.rows[0].id;
-      io.emit("chatMessage", { id: messageId, handle, color, text });
+      io.emit("chatMessage", { id: messageId, handle, color, text, createdAt: result.rows[0].created_at });
 
       await pool.query(
         "UPDATE users SET messages_sent = messages_sent + 1 WHERE handle = $1",
@@ -536,12 +538,13 @@ io.on("connection", (socket) => {
         [handle, color, audioData, durationMs]
       );
 
-      io.emit("voiceClip", {
+   io.emit("voiceClip", {
         id: result.rows[0].id,
         handle,
         color,
         audioData,
         durationMs,
+        createdAt: result.rows[0].created_at,
       });
     } catch (err) {
       console.error("Failed to save voice clip:", err);
