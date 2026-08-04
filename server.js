@@ -36,7 +36,22 @@ const BADGE_DEFS = {
   well_liked: { emoji: "❤️", name: "Well Liked" },
   crowd_pleaser: { emoji: "😂", name: "Crowd Pleaser" },
   spice_merchant: { emoji: "🌶️", name: "Spice Merchant" },
+  friendly_flame: { emoji: "🤝", name: "Friendly Flame" },
+  top_banter: { emoji: "💡", name: "Top Banter" },
+  fire_extinguisher: { emoji: "🧯", name: "Fire Extinguisher" },
+  melted_keyboard: { emoji: "🫠", name: "Melted Keyboard" },
+  meme_machine: { emoji: "🤣", name: "Meme Machine" },
+  heartbreaker: { emoji: "❤️", name: "Heartbreaker" },
+  spice_lord: { emoji: "🌶️", name: "Spice Lord" },
+  pepper_royalty: { emoji: "👑", name: "Pepper Royalty" },
+  beta_tester: { emoji: "🚀", name: "Beta Tester" },
+  lightning_fingers: { emoji: "⚡", name: "Lightning Fingers" },
+  streak_7: { emoji: "🔥", name: "7-Day Streak" },
+  streak_30: { emoji: "🌋", name: "30-Day Streak" },
+  streak_100: { emoji: "☄️", name: "100-Day Streak" },
 };
+
+const BETA_TESTER_CUTOFF = "2026-08-05T00:00:00Z";
 
 function computeScovilleRank(scho) {
   const tier = SCOVILLE_TIERS.find((t) => scho >= t.min);
@@ -62,6 +77,16 @@ function computeBanExpiry(duration) {
   if (duration === "1d") return new Date(now + 24 * 60 * 60 * 1000);
   if (duration === "1w") return new Date(now + 7 * 24 * 60 * 60 * 1000);
   return null; // permanent
+}
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function yesterdayString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 const pool = new Pool({
@@ -107,6 +132,9 @@ async function setupDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS down_received INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_rank_min INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_leaderboard_rank INTEGER`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS messages_since_idle INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_date TEXT`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -191,6 +219,22 @@ async function setupDatabase() {
     )
   `);
 
+  // One-time retroactive award for everyone who used ChilliChat before badges existed
+  try {
+    const earlyUsers = await pool.query(
+      "SELECT handle FROM users WHERE created_at < $1",
+      [BETA_TESTER_CUTOFF]
+    );
+    for (const row of earlyUsers.rows) {
+      await pool.query(
+        "INSERT INTO badges (handle, badge_key) VALUES ($1, 'beta_tester') ON CONFLICT DO NOTHING",
+        [row.handle]
+      );
+    }
+  } catch (err) {
+    console.error("Beta tester retroactive award error:", err);
+  }
+
   console.log("Connected to Neon and tables are ready");
 }
 
@@ -233,13 +277,63 @@ async function checkThresholdBadges(handle) {
   if (result.rows.length === 0) return;
 
   const u = result.rows[0];
-  const totalReceived = u.hearts_received + u.laughs_received + u.chilli_received + u.down_received;
+  const totalPositive = u.hearts_received + u.laughs_received + u.chilli_received;
+  const totalReceived = totalPositive + u.down_received;
 
   if (u.messages_sent >= 1) await awardBadge(handle, "ice_breaker");
   if (totalReceived >= 1) await awardBadge(handle, "first_burn");
   if (u.hearts_received >= 25) await awardBadge(handle, "well_liked");
   if (u.laughs_received >= 50) await awardBadge(handle, "crowd_pleaser");
   if (u.chilli_received >= 100) await awardBadge(handle, "spice_merchant");
+
+  if (totalPositive >= 100) await awardBadge(handle, "friendly_flame");
+  if (totalReceived >= 500) await awardBadge(handle, "top_banter");
+  if (u.down_received >= 100) await awardBadge(handle, "fire_extinguisher");
+  if (u.messages_sent >= 1000) await awardBadge(handle, "melted_keyboard");
+  if (u.laughs_received >= 250) await awardBadge(handle, "meme_machine");
+  if (u.hearts_received >= 500) await awardBadge(handle, "heartbreaker");
+}
+
+async function checkRankBadges(handle) {
+  const result = await pool.query("SELECT scho_total FROM users WHERE handle = $1", [handle]);
+  if (result.rows.length === 0) return;
+
+  const scho = result.rows[0].scho_total;
+  if (scho >= 1000000) await awardBadge(handle, "spice_lord");
+  if (scho >= 2200000) await awardBadge(handle, "pepper_royalty");
+}
+
+async function updateStreak(handle) {
+  try {
+    const result = await pool.query(
+      "SELECT current_streak, last_activity_date FROM users WHERE handle = $1",
+      [handle]
+    );
+    if (result.rows.length === 0) return;
+
+    const u = result.rows[0];
+    const today = todayString();
+
+    if (u.last_activity_date === today) return; // already counted today
+
+    let newStreak;
+    if (u.last_activity_date === yesterdayString()) {
+      newStreak = (u.current_streak || 0) + 1;
+    } else {
+      newStreak = 1;
+    }
+
+    await pool.query(
+      "UPDATE users SET current_streak = $1, last_activity_date = $2 WHERE handle = $3",
+      [newStreak, today, handle]
+    );
+
+    if (newStreak >= 7) await awardBadge(handle, "streak_7");
+    if (newStreak >= 30) await awardBadge(handle, "streak_30");
+    if (newStreak >= 100) await awardBadge(handle, "streak_100");
+  } catch (err) {
+    console.error("Streak update error:", err);
+  }
 }
 
 async function checkHeatNotifications(handle) {
@@ -380,7 +474,7 @@ async function sendMessageHistory(socket, viewerHandle) {
     const voiceItems = voiceResult.rows.map((clip) => ({
       type: "voice",
       created_at: clip.created_at,
-     payload: {
+      payload: {
         id: clip.id,
         handle: clip.handle,
         color: clip.color,
@@ -501,7 +595,7 @@ io.on("connection", (socket) => {
 
   socket.on("chatMessage", async ({ handle, color, text }) => {
     try {
-     const result = await pool.query(
+      const result = await pool.query(
         "INSERT INTO messages (handle, color, text) VALUES ($1, $2, $3) RETURNING id, created_at",
         [handle, color, text]
       );
@@ -509,10 +603,20 @@ io.on("connection", (socket) => {
       io.emit("chatMessage", { id: messageId, handle, color, text, createdAt: result.rows[0].created_at });
 
       await pool.query(
-        "UPDATE users SET messages_sent = messages_sent + 1 WHERE handle = $1",
+        "UPDATE users SET messages_sent = messages_sent + 1, messages_since_idle = messages_since_idle + 1 WHERE handle = $1",
         [handle]
       );
+
+      const counterCheck = await pool.query(
+        "SELECT messages_since_idle FROM users WHERE handle = $1",
+        [handle]
+      );
+      if (counterCheck.rows.length > 0 && counterCheck.rows[0].messages_since_idle >= 100) {
+        await awardBadge(handle, "lightning_fingers");
+      }
+
       await checkThresholdBadges(handle);
+      await updateStreak(handle);
     } catch (err) {
       console.error("Failed to save message:", err);
     }
@@ -538,7 +642,7 @@ io.on("connection", (socket) => {
         [handle, color, audioData, durationMs]
       );
 
-   io.emit("voiceClip", {
+      io.emit("voiceClip", {
         id: result.rows[0].id,
         handle,
         color,
@@ -550,7 +654,6 @@ io.on("connection", (socket) => {
       console.error("Failed to save voice clip:", err);
     }
   });
-
   socket.on("photoUpload", async ({ handle, color, imageData }) => {
     const MAX_SIZE_BYTES = 1.2 * 1024 * 1024; // ~1.2MB base64 safety cap
 
@@ -672,6 +775,7 @@ io.on("connection", (socket) => {
           [schoValue, authorHandle]
         );
         await checkThresholdBadges(authorHandle);
+        await checkRankBadges(authorHandle);
         scoreIncreased = schoValue > 0;
       }
 
@@ -861,6 +965,19 @@ io.on("connection", (socket) => {
   socket.on("statusChange", async (status) => {
     if (connectedUsers[socket.id]) {
       connectedUsers[socket.id].status = status;
+
+      if (status === "idle") {
+        const handle = connectedUsers[socket.id].handle;
+        try {
+          await pool.query(
+            "UPDATE users SET messages_since_idle = 0 WHERE handle = $1",
+            [handle]
+          );
+        } catch (err) {
+          console.error("Reset idle counter error:", err);
+        }
+      }
+
       await broadcastUserList();
     }
   });
