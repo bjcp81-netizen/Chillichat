@@ -14,7 +14,8 @@ document.addEventListener("DOMContentLoaded", function () {
   ];
 
   const lastKnownCounts = {};
-const FONT_MAP = {
+
+  const FONT_MAP = {
     default: "'Courier New', Courier, monospace",
     inter: "'Inter', sans-serif",
     atkinson: "'Atkinson Hyperlegible', sans-serif",
@@ -38,6 +39,55 @@ const FONT_MAP = {
     audioEl.currentTime = 0;
     audioEl.play().catch(() => {});
   }
+
+  const socket = io();
+
+  let myHandle = "";
+  let myColor = "";
+  let myIsModerator = false;
+  let lastActivityTime = Date.now();
+  let isIdle = false;
+  let hasJoinedOnce = false;
+
+  const handleInput = document.getElementById("handle-input");
+  const colorSwatches = document.querySelectorAll(".color-swatch");
+  const termsCheckbox = document.getElementById("terms-checkbox");
+  const joinBtn = document.getElementById("join-btn");
+  const joinScreen = document.getElementById("join-screen");
+  const chatScreen = document.getElementById("chat-screen");
+  const usersList = document.getElementById("users-list");
+  const usersToggleBtn = document.getElementById("users-toggle-btn");
+  const usersDropdown = document.getElementById("users-dropdown");
+  const highrollersToggleBtn = document.getElementById("highrollers-toggle-btn");
+  const highrollersDropdown = document.getElementById("highrollers-dropdown");
+  const highrollersTodayBtn = document.getElementById("highrollers-today-btn");
+  const highrollersWeekBtn = document.getElementById("highrollers-week-btn");
+  const highrollersUsersBtn = document.getElementById("highrollers-users-btn");
+  const highrollersList = document.getElementById("highrollers-list");
+  const userLeaderboardList = document.getElementById("user-leaderboard-list");
+  const messagesBox = document.getElementById("messages-box");
+  const messageInput = document.getElementById("message-input");
+  const sendBtn = document.getElementById("send-btn");
+  const typingIndicator = document.getElementById("typing-indicator");
+  const sendSound = document.getElementById("send-sound");
+  const notifySound = document.getElementById("notify-sound");
+  const connectionBanner = document.getElementById("connection-banner");
+  const micBtn = document.getElementById("mic-btn");
+  const recordingOverlay = document.getElementById("recording-overlay");
+  const recordingTimer = document.getElementById("recording-timer");
+  const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
+  const photoBtn = document.getElementById("photo-btn");
+  const photoFileInput = document.getElementById("photo-file-input");
+  const photoViewerOverlay = document.getElementById("photo-viewer-overlay");
+  const photoViewerImg = document.getElementById("photo-viewer-img");
+  const photoCountdownFill = document.getElementById("photo-countdown-fill");
+  const photoCountdownText = document.getElementById("photo-countdown-text");
+  const optionsToggleBtn = document.getElementById("options-toggle-btn");
+  const optionsDropdown = document.getElementById("options-dropdown");
+  const fontSelect = document.getElementById("font-select");
+  const fontColorSwatches = document.querySelectorAll(".font-color-swatch");
+  const boldToggle = document.getElementById("bold-toggle");
+  const soundToggle = document.getElementById("sound-toggle");
 
   function applyOptions() {
     const savedFont = localStorage.getItem("chillichat_font") || "default";
@@ -93,54 +143,7 @@ const FONT_MAP = {
   });
 
   applyOptions();
-  const socket = io();
 
-  let myHandle = "";
-  let myColor = "";
-  let myIsModerator = false;
-  let lastActivityTime = Date.now();
-  let isIdle = false;
-  let hasJoinedOnce = false;
-
-  const handleInput = document.getElementById("handle-input");
-  const colorSwatches = document.querySelectorAll(".color-swatch");
-  const termsCheckbox = document.getElementById("terms-checkbox");
-  const joinBtn = document.getElementById("join-btn");
-  const joinScreen = document.getElementById("join-screen");
-  const chatScreen = document.getElementById("chat-screen");
-  const usersList = document.getElementById("users-list");
-  const usersToggleBtn = document.getElementById("users-toggle-btn");
-  const usersDropdown = document.getElementById("users-dropdown");
-  const highrollersToggleBtn = document.getElementById("highrollers-toggle-btn");
-  const highrollersDropdown = document.getElementById("highrollers-dropdown");
-  const highrollersTodayBtn = document.getElementById("highrollers-today-btn");
-  const highrollersWeekBtn = document.getElementById("highrollers-week-btn");
-  const highrollersUsersBtn = document.getElementById("highrollers-users-btn");
-  const highrollersList = document.getElementById("highrollers-list");
-  const userLeaderboardList = document.getElementById("user-leaderboard-list");
-  const messagesBox = document.getElementById("messages-box");
-  const messageInput = document.getElementById("message-input");
-  const sendBtn = document.getElementById("send-btn");
-  const typingIndicator = document.getElementById("typing-indicator");
-  const sendSound = document.getElementById("send-sound");
-  const notifySound = document.getElementById("notify-sound");
-  const connectionBanner = document.getElementById("connection-banner");
-  const micBtn = document.getElementById("mic-btn");
-  const recordingOverlay = document.getElementById("recording-overlay");
-  const recordingTimer = document.getElementById("recording-timer");
-  const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
-  const photoBtn = document.getElementById("photo-btn");
-  const photoFileInput = document.getElementById("photo-file-input");
-  const photoViewerOverlay = document.getElementById("photo-viewer-overlay");
-  const photoViewerImg = document.getElementById("photo-viewer-img");
-  const photoCountdownFill = document.getElementById("photo-countdown-fill");
-  const photoCountdownText = document.getElementById("photo-countdown-text");
-  const optionsToggleBtn = document.getElementById("options-toggle-btn");
-  const optionsDropdown = document.getElementById("options-dropdown");
-  const fontSelect = document.getElementById("font-select");
-  const fontColorSwatches = document.querySelectorAll(".font-color-swatch");
-  const boldToggle = document.getElementById("bold-toggle");
-  const soundToggle = document.getElementById("sound-toggle");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -153,12 +156,12 @@ const FONT_MAP = {
     joinBtn.disabled = !termsCheckbox.checked;
   });
 
- usersToggleBtn.addEventListener("click", () => {
+  usersToggleBtn.addEventListener("click", () => {
     buzz();
     usersDropdown.classList.toggle("open");
   });
 
- highrollersToggleBtn.addEventListener("click", () => {
+  highrollersToggleBtn.addEventListener("click", () => {
     buzz();
     highrollersDropdown.classList.toggle("open");
     if (highrollersDropdown.classList.contains("open")) {
@@ -521,7 +524,7 @@ const FONT_MAP = {
 
     socket.emit("chatMessage", { handle: myHandle, color: myColor, text: text });
 
-  playSound(sendSound);
+    playSound(sendSound);
 
     messageInput.value = "";
     stopTypingNow();
@@ -627,7 +630,7 @@ const FONT_MAP = {
       pickBtn.className = "reaction-pick-btn";
       pickBtn.dataset.reaction = r.key;
       pickBtn.textContent = r.emoji;
-     pickBtn.addEventListener("click", () => {
+      pickBtn.addEventListener("click", () => {
         buzz();
         socket.emit("reaction", { messageId: messageId, handle: myHandle, reactionType: r.key });
         picker.classList.add("hidden");
@@ -736,7 +739,7 @@ const FONT_MAP = {
 
     const isOwnMessage = data.handle === myHandle;
     if (!isOwnMessage) {
-    playSound(notifySound);
+      playSound(notifySound);
     }
   });
 
@@ -842,7 +845,7 @@ const FONT_MAP = {
       recordingOverlay.classList.remove("hidden");
       updateRecordingTimer();
 
-     playSound(sendSound);
+      playSound(sendSound);
 
       if (navigator.vibrate) {
         navigator.vibrate(40);
@@ -872,6 +875,7 @@ const FONT_MAP = {
     wasCancelled = cancelled;
     mediaRecorder.stop();
     playSound(notifySound);
+
     if (navigator.vibrate) {
       navigator.vibrate(20);
     }
@@ -932,7 +936,7 @@ const FONT_MAP = {
     audio.addEventListener("ended", () => {
       isPlaying = false;
       playBtn.textContent = "▶";
-   playSound(notifySound);
+      playSound(notifySound);
     });
 
     const meta = document.createElement("div");
@@ -975,7 +979,7 @@ const FONT_MAP = {
     messagesBox.scrollTop = messagesBox.scrollHeight;
 
     if (data.handle !== myHandle) {
-     playSound(notifySound); 
+      playSound(notifySound);
     }
   });
 
@@ -1053,8 +1057,7 @@ const FONT_MAP = {
     messagesBox.scrollTop = messagesBox.scrollHeight;
 
     if (data.handle !== myHandle) {
-      notifySound.currentTime = 0;
-      notifySound.play().catch(() => {});
+      playSound(notifySound);
     }
   });
 
