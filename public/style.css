@@ -2,7 +2,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--app-font-family);
 }
 
 html, body {
@@ -201,7 +201,7 @@ body {
   padding: 6px 10px;
   font-size: 12px;
   cursor: pointer;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--app-font-family);
 }
 
 
@@ -445,7 +445,7 @@ body {
   padding: 6px 10px;
   font-size: 12px;
   cursor: pointer;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--app-font-family);
 }
 
 .highrollers-toggle-btn:hover {
@@ -465,7 +465,7 @@ body {
   color: #1f7a0d;
   padding: 8px;
   cursor: pointer;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--app-font-family);
   font-size: 12px;
 }
 
@@ -563,6 +563,7 @@ body {
   margin-bottom: 2px;
 }
 
+
 .mod-btn {
   background-color: #000000;
   color: #ffee00;
@@ -571,12 +572,11 @@ body {
   padding: 12px;
   font-size: 16px;
   cursor: pointer;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--app-font-family);
   width: 100%;
   text-align: left;
   font-weight: bold;
 }
-
 .mod-btn:hover {
   background-color: #ffee00;
   color: #000000;
