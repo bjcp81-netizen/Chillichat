@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const STORAGE_COLOR_KEY = "chillichat_color";
   const STORAGE_TOKEN_KEY = "chillichat_device_token";
 
- const REACTIONS = [
+  const REACTIONS = [
     { key: "chilli", emoji: "🌶️" },
     { key: "heart", emoji: "❤️" },
     { key: "laugh", emoji: "😂" },
@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", function () {
   ];
 
   const lastKnownCounts = {};
-
 
   const socket = io();
 
@@ -52,12 +51,13 @@ document.addEventListener("DOMContentLoaded", function () {
   const recordingOverlay = document.getElementById("recording-overlay");
   const recordingTimer = document.getElementById("recording-timer");
   const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
-const photoBtn = document.getElementById("photo-btn");
+  const photoBtn = document.getElementById("photo-btn");
   const photoFileInput = document.getElementById("photo-file-input");
   const photoViewerOverlay = document.getElementById("photo-viewer-overlay");
   const photoViewerImg = document.getElementById("photo-viewer-img");
   const photoCountdownFill = document.getElementById("photo-countdown-fill");
   const photoCountdownText = document.getElementById("photo-countdown-text");
+
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
@@ -308,7 +308,12 @@ const photoBtn = document.getElementById("photo-btn");
     el.className = "system-msg";
     el.textContent = label;
   });
-  
+
+  function formatTimestamp(isoString) {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
 
   function checkReturningUser() {
     const savedHandle = localStorage.getItem(STORAGE_HANDLE_KEY);
@@ -320,11 +325,7 @@ const photoBtn = document.getElementById("photo-btn");
       enterLobby(true);
     }
   }
-function formatTimestamp(isoString) {
-    if (!isoString) return "";
-    const date = new Date(isoString);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
+
   function showSystemMessage(text) {
     const msgEl = document.createElement("p");
     msgEl.className = "system-msg";
@@ -492,6 +493,36 @@ function formatTimestamp(isoString) {
   }
 
   // ---- Reactions & heat rating ----
+  function attachLongPress(triggerEl, panelEl) {
+    let pressTimer = null;
+    const LONG_PRESS_MS = 450;
+
+    function start() {
+      pressTimer = setTimeout(() => {
+        panelEl.classList.toggle("hidden");
+      }, LONG_PRESS_MS);
+    }
+    function cancel() {
+      clearTimeout(pressTimer);
+    }
+
+    triggerEl.addEventListener("mousedown", start);
+    triggerEl.addEventListener("mouseup", cancel);
+    triggerEl.addEventListener("mouseleave", cancel);
+    triggerEl.addEventListener("touchstart", start, { passive: true });
+    triggerEl.addEventListener("touchend", cancel);
+    triggerEl.addEventListener("touchmove", cancel);
+  }
+
+  function spawnFloatingReaction(msgEl, emoji) {
+    const float = document.createElement("span");
+    float.className = "floating-reaction";
+    float.textContent = emoji;
+    float.style.left = (20 + Math.random() * 60) + "%";
+    msgEl.appendChild(float);
+    float.addEventListener("animationend", () => float.remove());
+  }
+
   function buildReactionBar(messageId, counts, heatRating) {
     const bar = document.createElement("div");
     bar.className = "reaction-bar hidden";
@@ -546,35 +577,7 @@ function formatTimestamp(isoString) {
 
     return bar;
   }
-function attachLongPress(triggerEl, panelEl) {
-    let pressTimer = null;
-    const LONG_PRESS_MS = 450;
 
-    function start() {
-      pressTimer = setTimeout(() => {
-        panelEl.classList.toggle("hidden");
-      }, LONG_PRESS_MS);
-    }
-    function cancel() {
-      clearTimeout(pressTimer);
-    }
-
-    triggerEl.addEventListener("mousedown", start);
-    triggerEl.addEventListener("mouseup", cancel);
-    triggerEl.addEventListener("mouseleave", cancel);
-    triggerEl.addEventListener("touchstart", start, { passive: true });
-    triggerEl.addEventListener("touchend", cancel);
-    triggerEl.addEventListener("touchmove", cancel);
-  }
-
-  function spawnFloatingReaction(msgEl, emoji) {
-    const float = document.createElement("span");
-    float.className = "floating-reaction";
-    float.textContent = emoji;
-    float.style.left = (20 + Math.random() * 60) + "%";
-    msgEl.appendChild(float);
-    float.addEventListener("animationend", () => float.remove());
-  }
   function renderPills(pillsWrap, counts) {
     pillsWrap.innerHTML = "";
     REACTIONS.forEach(r => {
@@ -588,7 +591,7 @@ function attachLongPress(triggerEl, panelEl) {
     });
   }
 
- socket.on("reactionUpdate", ({ messageId, counts, heatRating }) => {
+  socket.on("reactionUpdate", ({ messageId, counts, heatRating }) => {
     const msgEl = messagesBox.querySelector('[data-message-id="' + messageId + '"]');
     if (!msgEl) return;
 
@@ -635,7 +638,7 @@ function attachLongPress(triggerEl, panelEl) {
     textLine.appendChild(textSpan);
     textLine.appendChild(timeSpan);
 
-   const counts = data.counts || { chilli: 0, heart: 0, laugh: 0, down: 0 };
+    const counts = data.counts || { chilli: 0, heart: 0, laugh: 0, down: 0 };
     const reactionBar = buildReactionBar(data.id, counts, data.heatRating || null);
     lastKnownCounts[data.id] = counts;
 
@@ -645,8 +648,6 @@ function attachLongPress(triggerEl, panelEl) {
     attachLongPress(textLine, reactionBar);
 
     messagesBox.scrollTop = messagesBox.scrollHeight;
-
-  
 
     const isOwnMessage = data.handle === myHandle;
     if (!isOwnMessage) {
@@ -751,7 +752,7 @@ function attachLongPress(triggerEl, panelEl) {
         reader.readAsDataURL(audioBlob);
       };
 
-   mediaRecorder.start();
+      mediaRecorder.start();
       recordStartTime = Date.now();
       micBtn.classList.add("recording");
       recordingOverlay.classList.remove("hidden");
@@ -781,7 +782,8 @@ function attachLongPress(triggerEl, panelEl) {
       stopRecording(false);
     }
   }
-function stopRecording(cancelled) {
+
+  function stopRecording(cancelled) {
     if (!mediaRecorder || mediaRecorder.state === "inactive") return;
 
     wasCancelled = cancelled;
@@ -792,7 +794,6 @@ function stopRecording(cancelled) {
     if (navigator.vibrate) {
       navigator.vibrate(20);
     }
-  }
   }
 
   micBtn.addEventListener("mousedown", startRecording);
@@ -818,11 +819,9 @@ function stopRecording(cancelled) {
     playBtn.className = "voice-play-btn";
     playBtn.textContent = "▶";
 
-   const audio = new Audio(data.audioData);
+    const audio = new Audio(data.audioData);
     let isPlaying = false;
 
-    // Fix for Chrome's broken duration metadata on MediaRecorder webm files,
-    // which can otherwise cause playback to end early.
     audio.addEventListener("loadedmetadata", () => {
       if (audio.duration === Infinity || isNaN(audio.duration)) {
         audio.currentTime = 1e101;
@@ -901,7 +900,7 @@ function stopRecording(cancelled) {
     }
   });
 
-// ---- Ephemeral photos ----
+  // ---- Ephemeral photos ----
   const MAX_PHOTO_DIMENSION = 800;
   const MAX_PHOTO_BASE64_LENGTH = 1.1 * 1024 * 1024;
   const PHOTO_VIEW_SECONDS = 10;
@@ -1056,14 +1055,15 @@ function stopRecording(cancelled) {
     const thumbEl = messagesBox.querySelector('[data-photo-id="' + photoId + '"]');
 
     if (expired || !imageData) {
-      if (thumbEl) renderExpiredThumb(thumbEl, thumbEl.querySelector(".photo-thumb-handle")?.textContent || "", "");
+      if (thumbEl) {
+        const handleColor = thumbEl.querySelector(".photo-thumb-handle");
+        renderExpiredThumb(thumbEl, handleColor ? handleColor.textContent : "", "");
+      }
       return;
     }
 
     openPhotoViewer(imageData, () => {
       if (thumbEl) {
-        const isOwnPhoto = thumbEl.onclick !== null && thumbEl.querySelector(".photo-thumb-hint")?.textContent.includes("tap to reveal");
-        // Only mark expired for other people's photos; sender can keep reopening their own.
         const handleColor = thumbEl.querySelector(".photo-thumb-handle");
         const handleText = handleColor ? handleColor.textContent : "";
         if (handleText !== myHandle) {
@@ -1102,8 +1102,6 @@ function stopRecording(cancelled) {
   }
 
   photoViewerOverlay.addEventListener("click", () => {
-    // Tapping anywhere just closes early; expiry logic still applies via the timer callback normally,
-    // but an early manual close does not count as "opened and expired" beyond what's already recorded server-side.
     closePhotoViewer();
   });
 
