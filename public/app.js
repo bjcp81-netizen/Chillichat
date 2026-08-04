@@ -751,7 +751,7 @@ function attachLongPress(triggerEl, panelEl) {
         reader.readAsDataURL(audioBlob);
       };
 
-      mediaRecorder.start();
+   mediaRecorder.start();
       recordStartTime = Date.now();
       micBtn.classList.add("recording");
       recordingOverlay.classList.remove("hidden");
@@ -759,6 +759,10 @@ function attachLongPress(triggerEl, panelEl) {
 
       sendSound.currentTime = 0;
       sendSound.play().catch(() => {});
+
+      if (navigator.vibrate) {
+        navigator.vibrate(40);
+      }
 
       recordTimerInterval = setInterval(updateRecordingTimer, 200);
     } catch (err) {
@@ -777,7 +781,6 @@ function attachLongPress(triggerEl, panelEl) {
       stopRecording(false);
     }
   }
-
 function stopRecording(cancelled) {
     if (!mediaRecorder || mediaRecorder.state === "inactive") return;
 
@@ -785,6 +788,11 @@ function stopRecording(cancelled) {
     mediaRecorder.stop();
     notifySound.currentTime = 0;
     notifySound.play().catch(() => {});
+
+    if (navigator.vibrate) {
+      navigator.vibrate(20);
+    }
+  }
   }
 
   micBtn.addEventListener("mousedown", startRecording);
