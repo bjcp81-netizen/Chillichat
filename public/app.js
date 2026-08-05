@@ -823,7 +823,24 @@ document.addEventListener("DOMContentLoaded", function () {
   function isRecordingSupported() {
     return !!(navigator.mediaDevices && window.MediaRecorder);
   }
+function isRecordingSupported() {
+    return !!(navigator.mediaDevices && window.MediaRecorder);
+  }
 
+  function pickSupportedMimeType() {
+    const candidates = [
+      "audio/mp4",
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+    ];
+    for (const type of candidates) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return ""; // let the browser pick its own default as a last resort
+  }
   async function startRecording() {
     if (!isRecordingSupported()) {
       alert("Voice recording isn't supported in this browser.");
@@ -835,7 +852,10 @@ document.addEventListener("DOMContentLoaded", function () {
       audioChunks = [];
       wasCancelled = false;
 
-      mediaRecorder = new MediaRecorder(stream);
+      const chosenMimeType = pickSupportedMimeType();
+      mediaRecorder = chosenMimeType
+        ? new MediaRecorder(stream, { mimeType: chosenMimeType })
+        : new MediaRecorder(stream);
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunks.push(e.data);
@@ -852,7 +872,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const durationMs = Date.now() - recordStartTime;
         if (durationMs < 300) return; // ignore accidental taps
 
-        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64Audio = reader.result;
