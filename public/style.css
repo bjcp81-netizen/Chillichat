@@ -270,12 +270,15 @@ body {
 
 .input-row {
   display: flex;
+  align-items: center;
   border-top: 1px solid #39ff14;
   padding: 8px;
+  gap: 4px;
 }
 
 #message-input {
   flex: 1;
+  min-width: 0;
   padding: 8px;
   border: 1px solid #39ff14;
   border-radius: 4px;
@@ -978,4 +981,22 @@ body.bold-text {
 .options-color-grid .color-swatch {
   width: 24px;
   height: 24px;
+}
+
+@media (max-width: 480px) {
+  .input-row {
+    padding: 6px;
+    gap: 3px;
+  }
+
+  #message-input {
+    padding: 6px;
+  }
+
+  .photo-btn,
+  .mic-btn,
+  #send-btn {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
 }
