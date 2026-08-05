@@ -930,8 +930,27 @@ body.bold-text {
   color: #39ff14;
   border: 1px solid #39ff14;
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 4px 24px 4px 6px;
   font-size: 12px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  max-width: 160px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><polygon points='0,0 10,0 5,6' fill='%2339ff14'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.options-select::-ms-expand {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .options-select {
+    font-size: 12px;
+    max-width: 130px;
+    padding: 4px 22px 4px 6px;
+  }
 }
 
 .options-color-grid {
