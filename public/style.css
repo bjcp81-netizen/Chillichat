@@ -866,7 +866,9 @@ body {
 :root {
   --app-font-family: 'Courier New', Courier, monospace;
   --app-text-color: #39ff14;
+  --app-font-size: 14px;
 }
+
 
 body {
   font-family: var(--app-font-family);
@@ -885,6 +887,13 @@ body.bold-text {
 .highrollers-text,
 .scho-label {
   color: var(--app-text-color);
+}
+
+.chat-message,
+.system-msg,
+.typing-indicator,
+#message-input {
+  font-size: var(--app-font-size);
 }
 
 .options-toggle-btn {

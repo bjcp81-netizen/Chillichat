@@ -28,6 +28,13 @@ document.addEventListener("DOMContentLoaded", function () {
     poppins: "'Poppins', sans-serif",
     worksans: "'Work Sans', sans-serif",
   };
+
+  const FONT_SIZE_MAP = {
+    small: "13px",
+    medium: "15px",
+    large: "18px",
+    xlarge: "22px",
+  };
   let soundEnabled = true;
 
   function buzz(ms) {
@@ -91,19 +98,23 @@ document.addEventListener("DOMContentLoaded", function () {
   const fontColorSwatches = document.querySelectorAll(".font-color-swatch");
   const boldToggle = document.getElementById("bold-toggle");
   const soundToggle = document.getElementById("sound-toggle");
+  const fontSizeSelect = document.getElementById("font-size-select");
 
-  function applyOptions() {
+ function applyOptions() {
     const savedFont = localStorage.getItem("chillichat_font") || "default";
     const savedColor = localStorage.getItem("chillichat_font_color") || "#39ff14";
     const savedBold = localStorage.getItem("chillichat_bold") === "true";
     const savedSound = localStorage.getItem("chillichat_sound");
+    const savedFontSize = localStorage.getItem("chillichat_font_size") || "medium";
 
     document.documentElement.style.setProperty("--app-font-family", FONT_MAP[savedFont] || FONT_MAP.default);
     document.documentElement.style.setProperty("--app-text-color", savedColor);
+    document.documentElement.style.setProperty("--app-font-size", FONT_SIZE_MAP[savedFontSize] || FONT_SIZE_MAP.medium);
     document.body.classList.toggle("bold-text", savedBold);
 
     fontSelect.value = savedFont;
     boldToggle.checked = savedBold;
+    fontSizeSelect.value = savedFontSize;
     fontColorSwatches.forEach(s => {
       s.classList.toggle("selected", s.dataset.color === savedColor);
     });
@@ -111,6 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
     soundEnabled = savedSound === null ? true : savedSound === "true";
     soundToggle.checked = soundEnabled;
   }
+  
 
   optionsToggleBtn.addEventListener("click", () => {
     buzz();
@@ -123,6 +135,12 @@ document.addEventListener("DOMContentLoaded", function () {
     document.documentElement.style.setProperty("--app-font-family", FONT_MAP[fontSelect.value] || FONT_MAP.default);
   });
 
+
+  fontSizeSelect.addEventListener("change", () => {
+    localStorage.setItem("chillichat_font_size", fontSizeSelect.value);
+    document.documentElement.style.setProperty("--app-font-size", FONT_SIZE_MAP[fontSizeSelect.value] || FONT_SIZE_MAP.medium);
+    buzz();
+  });
   fontColorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       fontColorSwatches.forEach(s => s.classList.remove("selected"));
