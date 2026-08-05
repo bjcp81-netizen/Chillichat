@@ -944,7 +944,14 @@ body.bold-text {
 .options-select::-ms-expand {
   display: none;
 }
+.options-select::-ms-expand {
+  display: none;
+}
 
+.options-select option {
+  background-color: #000000;
+  color: #39ff14;
+}
 @media (max-width: 480px) {
   .options-select {
     font-size: 12px;
