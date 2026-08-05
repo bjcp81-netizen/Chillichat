@@ -6,7 +6,7 @@
   <title>ChilliChat</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Sans:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Sans:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&family=Nunito:wght@400;700&family=Poppins:wght@400;700&family=Work+Sans:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -83,6 +83,9 @@
             <option value="sfpro">SF Pro</option>
             <option value="segoe">Segoe UI</option>
             <option value="source">Source Sans 3</option>
+            <option value="nunito">Nunito</option>
+            <option value="poppins">Poppins</option>
+            <option value="worksans">Work Sans</option>
           </select>
         </label>
 
@@ -177,9 +180,9 @@
     </div>
     <img id="photo-viewer-img" class="photo-viewer-img" src="" alt="Shared photo" />
   </div>
-
   <audio id="send-sound" src="cbstrt.wav" preload="auto"></audio>
   <audio id="notify-sound" src="cbstop.wav" preload="auto"></audio>
+  <audio id="btnfx-sound" src="btnfx.wav" preload="auto"></audio>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js"></script>

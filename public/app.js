@@ -24,8 +24,10 @@ document.addEventListener("DOMContentLoaded", function () {
     sfpro: "-apple-system, 'SF Pro Display', 'SF Pro Text', sans-serif",
     segoe: "'Segoe UI', Tahoma, sans-serif",
     source: "'Source Sans 3', sans-serif",
+    nunito: "'Nunito', sans-serif",
+    poppins: "'Poppins', sans-serif",
+    worksans: "'Work Sans', sans-serif",
   };
-
   let soundEnabled = true;
 
   function buzz(ms) {
@@ -71,6 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const typingIndicator = document.getElementById("typing-indicator");
   const sendSound = document.getElementById("send-sound");
   const notifySound = document.getElementById("notify-sound");
+  const btnfxSound = document.getElementById("btnfx-sound");
   const connectionBanner = document.getElementById("connection-banner");
   const micBtn = document.getElementById("mic-btn");
   const recordingOverlay = document.getElementById("recording-overlay");
@@ -111,6 +114,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   optionsToggleBtn.addEventListener("click", () => {
     buzz();
+    playSound(btnfxSound);
     optionsDropdown.classList.toggle("open");
   });
 
@@ -158,28 +162,33 @@ document.addEventListener("DOMContentLoaded", function () {
 
   usersToggleBtn.addEventListener("click", () => {
     buzz();
+    playSound(btnfxSound);
     usersDropdown.classList.toggle("open");
   });
 
   highrollersToggleBtn.addEventListener("click", () => {
     buzz();
+    playSound(btnfxSound);
     highrollersDropdown.classList.toggle("open");
     if (highrollersDropdown.classList.contains("open")) {
       requestHighrollers("day");
     }
   });
 
-  highrollersTodayBtn.addEventListener("click", () => {
+ highrollersTodayBtn.addEventListener("click", () => {
+    playSound(btnfxSound);
     setHighrollersTab("day");
     requestHighrollers("day");
   });
 
   highrollersWeekBtn.addEventListener("click", () => {
+    playSound(btnfxSound);
     setHighrollersTab("week");
     requestHighrollers("week");
   });
 
   highrollersUsersBtn.addEventListener("click", () => {
+    playSound(btnfxSound);
     setHighrollersTab("users");
     socket.emit("getUserLeaderboard");
   });
@@ -988,8 +997,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const MAX_PHOTO_BASE64_LENGTH = 1.1 * 1024 * 1024;
   const PHOTO_VIEW_SECONDS = 10;
 
-  photoBtn.addEventListener("click", () => {
+ photoBtn.addEventListener("click", () => {
     buzz();
+    playSound(btnfxSound);
     photoFileInput.click();
   });
 
