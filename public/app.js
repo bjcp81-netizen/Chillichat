@@ -1038,7 +1038,7 @@ function isRecordingSupported() {
         audio.pause();
       } else {
         playSound(playClipSound);
-        audio.play();
+        audio.play().catch(() => {});
       }
     });
 
