@@ -898,22 +898,7 @@ function isRecordingSupported() {
 
   function isIOSDevice() {
     const ua = navigator.userAgent;
-    const isAppleTouch = /iPad|iPhone|iPod/.test(ua);
-    const isIpadOS13Plus = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-    return isAppleTouch || isIpadOS13Plus;
-  }
-
-  function pickSupportedMimeType() {
-    const candidates = isIOSDevice()
-      ? ["audio/mp4", "audio/aac"]
-      : ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
-
-    for (const type of candidates) {
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
-        return type;
-      }
-    }
-    return ""; // let the browser pick its own default as a last resort
+    return /iPad|iPhone|iPod/.test(ua);
   }
   async function startRecording() {
     if (!isRecordingSupported()) {
@@ -926,10 +911,10 @@ function isRecordingSupported() {
       audioChunks = [];
       wasCancelled = false;
 
-      const chosenMimeType = pickSupportedMimeType();
-      mediaRecorder = chosenMimeType
-        ? new MediaRecorder(stream, { mimeType: chosenMimeType })
-        : new MediaRecorder(stream);
+     const useIOSFormat = isIOSDevice() && window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/mp4");
+      mediaRecorder = useIOSFormat
+        ? new MediaRecorder(stream, { mimeType: "audio/mp4" })
+        : new MediaRecorder(stream); // let the browser use its own default everywhere else (this is what worked originally)
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunks.push(e.data);
@@ -946,9 +931,7 @@ function isRecordingSupported() {
         const durationMs = Date.now() - recordStartTime;
         if (durationMs < 300) return; // ignore accidental taps
 
-        const rawMimeType = mediaRecorder.mimeType || "audio/webm";
-        const cleanMimeType = rawMimeType.split(";")[0]; // strip ";codecs=..." — keep just e.g. "audio/webm"
-        const audioBlob = new Blob(audioChunks, { type: cleanMimeType });
+        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType.split(";")[0] || "audio/webm" });
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64Audio = reader.result;
