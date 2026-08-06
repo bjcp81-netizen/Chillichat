@@ -84,6 +84,8 @@ document.addEventListener("DOMContentLoaded", function () {
   
   const micSound = document.getElementById("mic-sound");
   const endSound = document.getElementById("end-sound");
+  const playClipSound = document.getElementById("play-sound");
+  
   const connectionBanner = document.getElementById("connection-banner");
   const micBtn = document.getElementById("mic-btn");
   const recordingOverlay = document.getElementById("recording-overlay");
@@ -1035,6 +1037,7 @@ function isRecordingSupported() {
       if (isPlaying) {
         audio.pause();
       } else {
+        playSound(playClipSound);
         audio.play();
       }
     });
