@@ -900,6 +900,16 @@ function isRecordingSupported() {
     const ua = navigator.userAgent;
     return /iPad|iPhone|iPod/.test(ua);
   }
+  function pickMimeType() {
+    if (isIOSDevice()) {
+      return (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/mp4"))
+        ? "audio/mp4"
+        : "";
+    }
+    return (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm;codecs=opus"))
+      ? "audio/webm;codecs=opus"
+      : "";
+  }
   async function startRecording() {
     if (!isRecordingSupported()) {
       alert("Voice recording isn't supported in this browser.");
@@ -911,10 +921,10 @@ function isRecordingSupported() {
       audioChunks = [];
       wasCancelled = false;
 
-     const useIOSFormat = isIOSDevice() && window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/mp4");
-      mediaRecorder = useIOSFormat
-        ? new MediaRecorder(stream, { mimeType: "audio/mp4" })
-        : new MediaRecorder(stream); // let the browser use its own default everywhere else (this is what worked originally)
+      const chosenMimeType = pickMimeType();
+      mediaRecorder = chosenMimeType
+        ? new MediaRecorder(stream, { mimeType: chosenMimeType })
+        : new MediaRecorder(stream);
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunks.push(e.data);
