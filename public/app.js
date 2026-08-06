@@ -45,8 +45,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function playSound(audioEl) {
     if (!soundEnabled) return;
-    audioEl.currentTime = 0;
-    audioEl.play().catch(() => {});
+    const sound = audioEl.cloneNode(true);
+    sound.play().catch(() => {});
   }
 
   const socket = io();
