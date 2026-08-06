@@ -72,22 +72,25 @@
 
     <div id="options-dropdown" class="users-dropdown">
       <div class="options-panel">
-        <label class="options-row">
+       <label class="options-row">
           <span>Font</span>
-          <select id="font-select" class="options-select">
-            <option value="default">Default (Retro)</option>
-            <option value="inter">Inter</option>
-            <option value="atkinson">Atkinson Hyperlegible</option>
-            <option value="noto">Noto Sans</option>
-            <option value="roboto">Roboto</option>
-            <option value="sfpro">SF Pro</option>
-            <option value="segoe">Segoe UI</option>
-            <option value="source">Source Sans 3</option>
-            <option value="nunito">Nunito</option>
-            <option value="poppins">Poppins</option>
-            <option value="worksans">Work Sans</option>
-          </select>
-        </label>
+          <div class="custom-select-wrap" id="font-wrap">
+            <button type="button" id="font-btn" class="custom-select-btn">Default (Retro) ▾</button>
+            <ul id="font-list" class="custom-select-list hidden">
+              <li data-value="default">Default (Retro)</li>
+              <li data-value="inter">Inter</li>
+              <li data-value="atkinson">Atkinson Hyperlegible</li>
+              <li data-value="noto">Noto Sans</li>
+              <li data-value="roboto">Roboto</li>
+              <li data-value="sfpro">SF Pro</li>
+              <li data-value="segoe">Segoe UI</li>
+              <li data-value="source">Source Sans 3</li>
+              <li data-value="nunito">Nunito</li>
+              <li data-value="poppins">Poppins</li>
+              <li data-value="worksans">Work Sans</li>
+            </ul>
+          </div>
+        </label> 
 
         <div class="options-row options-row-column">
           <span>Font Colour</span>

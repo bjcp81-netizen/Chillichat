@@ -94,7 +94,29 @@ document.addEventListener("DOMContentLoaded", function () {
   const photoCountdownText = document.getElementById("photo-countdown-text");
   const optionsToggleBtn = document.getElementById("options-toggle-btn");
   const optionsDropdown = document.getElementById("options-dropdown");
-  const fontSelect = document.getElementById("font-select");
+  const fontBtn = document.getElementById("font-btn");
+  const fontList = document.getElementById("font-list");
+
+  const FONT_LABELS = {
+    default: "Default (Retro)",
+    inter: "Inter",
+    atkinson: "Atkinson Hyperlegible",
+    noto: "Noto Sans",
+    roboto: "Roboto",
+    sfpro: "SF Pro",
+    segoe: "Segoe UI",
+    source: "Source Sans 3",
+    nunito: "Nunito",
+    poppins: "Poppins",
+    worksans: "Work Sans",
+  };
+
+  function setFontUI(value) {
+    fontBtn.textContent = (FONT_LABELS[value] || FONT_LABELS.default) + " ▾";
+    fontList.querySelectorAll("li").forEach(li => {
+      li.classList.toggle("active", li.dataset.value === value);
+    });
+  }
   const fontColorSwatches = document.querySelectorAll(".font-color-swatch");
   const boldToggle = document.getElementById("bold-toggle");
   const soundToggle = document.getElementById("sound-toggle");
@@ -127,7 +149,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.documentElement.style.setProperty("--app-font-size", FONT_SIZE_MAP[savedFontSize] || FONT_SIZE_MAP.medium);
     document.body.classList.toggle("bold-text", savedBold);
 
-    fontSelect.value = savedFont;
+    setFontUI(savedFont);
     boldToggle.checked = savedBold;
     setFontSizeUI(savedFontSize);
     fontColorSwatches.forEach(s => {
@@ -144,10 +166,19 @@ document.addEventListener("DOMContentLoaded", function () {
     playSound(btnfxSound);
     optionsDropdown.classList.toggle("open");
   });
+fontBtn.addEventListener("click", () => {
+    fontList.classList.toggle("hidden");
+  });
 
-  fontSelect.addEventListener("change", () => {
-    localStorage.setItem("chillichat_font", fontSelect.value);
-    document.documentElement.style.setProperty("--app-font-family", FONT_MAP[fontSelect.value] || FONT_MAP.default);
+  fontList.querySelectorAll("li").forEach(li => {
+    li.addEventListener("click", () => {
+      const value = li.dataset.value;
+      localStorage.setItem("chillichat_font", value);
+      document.documentElement.style.setProperty("--app-font-family", FONT_MAP[value] || FONT_MAP.default);
+      setFontUI(value);
+      fontList.classList.add("hidden");
+      buzz();
+    });
   });
 
 
@@ -166,9 +197,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  document.addEventListener("click", (e) => {
+   document.addEventListener("click", (e) => {
     if (!fontSizeBtn.contains(e.target) && !fontSizeList.contains(e.target)) {
       fontSizeList.classList.add("hidden");
+    }
+    if (!fontBtn.contains(e.target) && !fontList.contains(e.target)) {
+      fontList.classList.add("hidden");
     }
   });
   fontColorSwatches.forEach(swatch => {
