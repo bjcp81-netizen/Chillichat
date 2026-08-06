@@ -1050,24 +1050,30 @@ body.bold-text {
   background-color: #39ff14;
   color: #000000;
 }
-.users-dropdown::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 8px;
 }
 
-.users-dropdown::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background-color: #000000;
 }
 
-.users-dropdown::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   background-color: #39ff14;
   border-radius: 4px;
 }
 
-.users-dropdown::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
   background-color: #2ecc0f;
 }
 
-.users-dropdown {
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #39ff14 #000000;
+}
+
+.users-dropdown,
+.messages-box {
   scrollbar-width: thin;
   scrollbar-color: #39ff14 #000000;
 }
