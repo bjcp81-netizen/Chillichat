@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const sendSound = document.getElementById("send-sound");
   const notifySound = document.getElementById("notify-sound");
   const btnfxSound = document.getElementById("btnfx-sound");
-  const micSound = document.getElementById("mic-sound");
+  
   const micSound = document.getElementById("mic-sound");
   const endSound = document.getElementById("end-sound");
   const connectionBanner = document.getElementById("connection-banner");
