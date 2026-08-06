@@ -114,15 +114,17 @@
             <div class="color-swatch font-color-swatch" data-color="#f0e68c" style="background-color:#f0e68c"></div>
           </div>
         </div>
-
         <label class="options-row">
           <span>Font Size</span>
-          <select id="font-size-select" class="options-select">
-            <option value="small">Small</option>
-            <option value="medium">Medium</option>
-            <option value="large">Large</option>
-            <option value="xlarge">Extra Large</option>
-          </select>
+          <div class="custom-select-wrap" id="font-size-wrap">
+            <button type="button" id="font-size-btn" class="custom-select-btn">Medium ▾</button>
+            <ul id="font-size-list" class="custom-select-list hidden">
+              <li data-value="small">Small</li>
+              <li data-value="medium">Medium</li>
+              <li data-value="large">Large</li>
+              <li data-value="xlarge">Extra Large</li>
+            </ul>
+          </div>
         </label>
 
         <label class="options-row">

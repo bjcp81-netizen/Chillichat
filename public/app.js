@@ -98,7 +98,22 @@ document.addEventListener("DOMContentLoaded", function () {
   const fontColorSwatches = document.querySelectorAll(".font-color-swatch");
   const boldToggle = document.getElementById("bold-toggle");
   const soundToggle = document.getElementById("sound-toggle");
-  const fontSizeSelect = document.getElementById("font-size-select");
+  const fontSizeBtn = document.getElementById("font-size-btn");
+  const fontSizeList = document.getElementById("font-size-list");
+
+  const FONT_SIZE_LABELS = {
+    small: "Small",
+    medium: "Medium",
+    large: "Large",
+    xlarge: "Extra Large",
+  };
+
+  function setFontSizeUI(value) {
+    fontSizeBtn.textContent = (FONT_SIZE_LABELS[value] || FONT_SIZE_LABELS.medium) + " ▾";
+    fontSizeList.querySelectorAll("li").forEach(li => {
+      li.classList.toggle("active", li.dataset.value === value);
+    });
+  }
 
  function applyOptions() {
     const savedFont = localStorage.getItem("chillichat_font") || "default";
@@ -114,7 +129,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     fontSelect.value = savedFont;
     boldToggle.checked = savedBold;
-    fontSizeSelect.value = savedFontSize;
+    setFontSizeUI(savedFontSize);
     fontColorSwatches.forEach(s => {
       s.classList.toggle("selected", s.dataset.color === savedColor);
     });
@@ -136,10 +151,25 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
 
-  fontSizeSelect.addEventListener("change", () => {
-    localStorage.setItem("chillichat_font_size", fontSizeSelect.value);
-    document.documentElement.style.setProperty("--app-font-size", FONT_SIZE_MAP[fontSizeSelect.value] || FONT_SIZE_MAP.medium);
-    buzz();
+  fontSizeBtn.addEventListener("click", () => {
+    fontSizeList.classList.toggle("hidden");
+  });
+
+  fontSizeList.querySelectorAll("li").forEach(li => {
+    li.addEventListener("click", () => {
+      const value = li.dataset.value;
+      localStorage.setItem("chillichat_font_size", value);
+      document.documentElement.style.setProperty("--app-font-size", FONT_SIZE_MAP[value] || FONT_SIZE_MAP.medium);
+      setFontSizeUI(value);
+      fontSizeList.classList.add("hidden");
+      buzz();
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!fontSizeBtn.contains(e.target) && !fontSizeList.contains(e.target)) {
+      fontSizeList.classList.add("hidden");
+    }
   });
   fontColorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {

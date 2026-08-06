@@ -1000,3 +1000,53 @@ body.bold-text {
     font-size: 14px;
   }
 }
+.custom-select-wrap {
+  position: relative;
+}
+
+.custom-select-btn {
+  background-color: #000000;
+  color: #39ff14;
+  border: 1px solid #39ff14;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: var(--app-font-family);
+  cursor: pointer;
+  min-width: 90px;
+  text-align: left;
+}
+
+.custom-select-btn:hover {
+  background-color: #39ff14;
+  color: #000000;
+}
+
+.custom-select-list {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  background-color: #000000;
+  border: 1px solid #39ff14;
+  border-radius: 4px;
+  list-style: none;
+  min-width: 110px;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 20;
+  padding: 4px 0;
+}
+
+.custom-select-list li {
+  color: #39ff14;
+  font-size: 12px;
+  font-family: var(--app-font-family);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.custom-select-list li:hover,
+.custom-select-list li.active {
+  background-color: #39ff14;
+  color: #000000;
+}
