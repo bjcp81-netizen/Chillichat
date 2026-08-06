@@ -946,7 +946,9 @@ function isRecordingSupported() {
         const durationMs = Date.now() - recordStartTime;
         if (durationMs < 300) return; // ignore accidental taps
 
-        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+        const rawMimeType = mediaRecorder.mimeType || "audio/webm";
+        const cleanMimeType = rawMimeType.split(";")[0]; // strip ";codecs=..." — keep just e.g. "audio/webm"
+        const audioBlob = new Blob(audioChunks, { type: cleanMimeType });
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64Audio = reader.result;
@@ -1027,6 +1029,14 @@ function isRecordingSupported() {
 
     const audio = new Audio(data.audioData);
     let isPlaying = false;
+audio.addEventListener("error", () => {
+      console.error("Voice clip audio error:", audio.error);
+    });
+
+   
+    audio.addEventListener("error", () => {
+      console.error("Voice clip audio error:", audio.error);
+    });
 
     audio.addEventListener("loadedmetadata", () => {
       if (audio.duration === Infinity || isNaN(audio.duration)) {
@@ -1036,14 +1046,15 @@ function isRecordingSupported() {
           audio.currentTime = 0;
         });
       }
-    });
-
-    playBtn.addEventListener("click", () => {
+    });  
+  playBtn.addEventListener("click", () => {
       if (isPlaying) {
         audio.pause();
       } else {
         playSound(playClipSound);
-        audio.play().catch(() => {});
+        audio.play().catch((err) => {
+          console.error("Voice clip playback failed:", err);
+        });
       }
     });
 
