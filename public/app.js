@@ -896,13 +896,18 @@ function isRecordingSupported() {
     return !!(navigator.mediaDevices && window.MediaRecorder);
   }
 
+  function isIOSDevice() {
+    const ua = navigator.userAgent;
+    const isAppleTouch = /iPad|iPhone|iPod/.test(ua);
+    const isIpadOS13Plus = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    return isAppleTouch || isIpadOS13Plus;
+  }
+
   function pickSupportedMimeType() {
-    const candidates = [
-      "audio/mp4",
-      "audio/webm;codecs=opus",
-      "audio/webm",
-      "audio/ogg;codecs=opus",
-    ];
+    const candidates = isIOSDevice()
+      ? ["audio/mp4", "audio/aac"]
+      : ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+
     for (const type of candidates) {
       if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
         return type;
