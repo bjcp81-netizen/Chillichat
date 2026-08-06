@@ -82,7 +82,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const notifySound = document.getElementById("notify-sound");
   const btnfxSound = document.getElementById("btnfx-sound");
   const micSound = document.getElementById("mic-sound");
-  
+  const micSound = document.getElementById("mic-sound");
+  const endSound = document.getElementById("end-sound");
   const connectionBanner = document.getElementById("connection-banner");
   const micBtn = document.getElementById("mic-btn");
   const recordingOverlay = document.getElementById("recording-overlay");
@@ -982,12 +983,12 @@ function isRecordingSupported() {
     }
   }
 
-  function stopRecording(cancelled) {
+ function stopRecording(cancelled) {
     if (!mediaRecorder || mediaRecorder.state === "inactive") return;
 
     wasCancelled = cancelled;
     mediaRecorder.stop();
-    playSound(notifySound);
+    playSound(endSound);
 
     if (navigator.vibrate) {
       navigator.vibrate(20);
@@ -1049,7 +1050,7 @@ function isRecordingSupported() {
     audio.addEventListener("ended", () => {
       isPlaying = false;
       playBtn.textContent = "▶";
-      playSound(notifySound);
+      playSound(endSound);
     });
 
     const meta = document.createElement("div");
