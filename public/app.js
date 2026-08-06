@@ -81,6 +81,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const sendSound = document.getElementById("send-sound");
   const notifySound = document.getElementById("notify-sound");
   const btnfxSound = document.getElementById("btnfx-sound");
+  const micSound = document.getElementById("mic-sound");
+  
   const connectionBanner = document.getElementById("connection-banner");
   const micBtn = document.getElementById("mic-btn");
   const recordingOverlay = document.getElementById("recording-overlay");
@@ -956,7 +958,7 @@ function isRecordingSupported() {
       recordingOverlay.classList.remove("hidden");
       updateRecordingTimer();
 
-      playSound(sendSound);
+     playSound(micSound);
 
       if (navigator.vibrate) {
         navigator.vibrate(40);
