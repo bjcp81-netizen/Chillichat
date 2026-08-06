@@ -27,6 +27,11 @@ document.addEventListener("DOMContentLoaded", function () {
     nunito: "'Nunito', sans-serif",
     poppins: "'Poppins', sans-serif",
     worksans: "'Work Sans', sans-serif",
+    quicksand: "'Quicksand', sans-serif",
+    spacegrotesk: "'Space Grotesk', sans-serif",
+    manrope: "'Manrope', sans-serif",
+    dmsans: "'DM Sans', sans-serif",
+    jakarta: "'Plus Jakarta Sans', sans-serif",
   };
 
   const FONT_SIZE_MAP = {
@@ -114,6 +119,11 @@ document.addEventListener("DOMContentLoaded", function () {
     nunito: "Nunito",
     poppins: "Poppins",
     worksans: "Work Sans",
+    quicksand: "Quicksand",
+    spacegrotesk: "Space Grotesk",
+    manrope: "Manrope",
+    dmsans: "DM Sans",
+    jakarta: "Plus Jakarta Sans",
   };
 
   function setFontUI(value) {
