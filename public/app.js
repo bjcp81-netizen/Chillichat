@@ -1020,16 +1020,6 @@ audio.addEventListener("error", () => {
     audio.addEventListener("error", () => {
       console.error("Voice clip audio error:", audio.error);
     });
-
-    audio.addEventListener("loadedmetadata", () => {
-      if (audio.duration === Infinity || isNaN(audio.duration)) {
-        audio.currentTime = 1e101;
-        audio.addEventListener("timeupdate", function fixDuration() {
-          audio.removeEventListener("timeupdate", fixDuration);
-          audio.currentTime = 0;
-        });
-      }
-    });  
   playBtn.addEventListener("click", () => {
       if (isPlaying) {
         audio.pause();
