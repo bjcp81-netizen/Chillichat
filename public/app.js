@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let myIsModerator = false;
   let lastActivityTime = Date.now();
   let isIdle = false;
-  let hasJoinedOnce = false;
+
   let hasJoinedOnce = false;
   let isLoadingHistory = false;
   const handleInput = document.getElementById("handle-input");
@@ -908,9 +908,7 @@ fontBtn.addEventListener("click", () => {
   function isRecordingSupported() {
     return !!(navigator.mediaDevices && window.MediaRecorder);
   }
-function isRecordingSupported() {
-    return !!(navigator.mediaDevices && window.MediaRecorder);
-  }
+
 
   function isIOSDevice() {
     const ua = navigator.userAgent;
@@ -1043,9 +1041,7 @@ audio.addEventListener("error", () => {
     });
 
    
-    audio.addEventListener("error", () => {
-      console.error("Voice clip audio error:", audio.error);
-    });
+   
   playBtn.addEventListener("click", () => {
       if (isPlaying) {
         audio.pause();
