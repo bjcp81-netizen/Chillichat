@@ -62,7 +62,8 @@ document.addEventListener("DOMContentLoaded", function () {
   let lastActivityTime = Date.now();
   let isIdle = false;
   let hasJoinedOnce = false;
-
+  let hasJoinedOnce = false;
+  let isLoadingHistory = false;
   const handleInput = document.getElementById("handle-input");
   const colorSwatches = document.querySelectorAll(".color-swatch");
   const termsCheckbox = document.getElementById("terms-checkbox");
@@ -415,6 +416,7 @@ fontBtn.addEventListener("click", () => {
     myColor = color;
     myIsModerator = !!isModerator;
     hasJoinedOnce = true;
+    isLoadingHistory = true;
 
     localStorage.setItem(STORAGE_HANDLE_KEY, myHandle);
     localStorage.setItem(STORAGE_COLOR_KEY, myColor);
@@ -465,8 +467,12 @@ fontBtn.addEventListener("click", () => {
     showSystemMessage("⚠️ " + message);
   });
 
-  socket.on("badgeUnlocked", ({ emoji, name }) => {
+ socket.on("badgeUnlocked", ({ emoji, name }) => {
     showSystemMessage("🏅 Badge unlocked: " + emoji + " " + name + "!");
+  });
+
+  socket.on("historyComplete", () => {
+    isLoadingHistory = false;
   });
 
   socket.on("heatNotification", (message) => {
@@ -843,8 +849,8 @@ fontBtn.addEventListener("click", () => {
 
     messagesBox.scrollTop = messagesBox.scrollHeight;
 
-    const isOwnMessage = data.handle === myHandle;
-    if (!isOwnMessage) {
+  const isOwnMessage = data.handle === myHandle;
+    if (!isOwnMessage && !isLoadingHistory) {
       playSound(notifySound);
     }
   });
@@ -1104,7 +1110,7 @@ audio.addEventListener("error", () => {
     messagesBox.appendChild(msgEl);
     messagesBox.scrollTop = messagesBox.scrollHeight;
 
-    if (data.handle !== myHandle) {
+    if (data.handle !== myHandle && !isLoadingHistory) {
       playSound(notifySound);
     }
   });
@@ -1183,10 +1189,10 @@ audio.addEventListener("error", () => {
     messagesBox.appendChild(msgEl);
     messagesBox.scrollTop = messagesBox.scrollHeight;
 
-    if (data.handle !== myHandle) {
+   if (data.handle !== myHandle && !isLoadingHistory) {
       playSound(notifySound);
     }
-  });
+  }); 
 
   function renderActiveThumb(msgEl, handle, color, photoId) {
     msgEl.innerHTML = "";

@@ -500,7 +500,7 @@ async function sendMessageHistory(socket, viewerHandle) {
       (a, b) => new Date(a.created_at) - new Date(b.created_at)
     );
 
-    merged.forEach((item) => {
+   merged.forEach((item) => {
       if (item.type === "text") {
         socket.emit("chatMessage", item.payload);
       } else if (item.type === "voice") {
@@ -509,10 +509,13 @@ async function sendMessageHistory(socket, viewerHandle) {
         socket.emit("photoNew", item.payload);
       }
     });
+
+    socket.emit("historyComplete");
   } catch (err) {
     console.error("Failed to load message history:", err);
+    socket.emit("historyComplete");
   }
-}
+} 
 
 function findSocketIdByHandle(handle) {
   return Object.keys(connectedUsers).find(
