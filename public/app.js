@@ -130,8 +130,8 @@ const lastKnownCounts = {};
   const profileHandle = document.getElementById("profile-handle");
   const profileRank = document.getElementById("profile-rank");
   const profileReactions = document.getElementById("profile-reactions");
+  const profileBio = document.getElementById("profile-bio");
   const profileBadgesGrid = document.getElementById("profile-badges-grid");
-
   const optionsToggleBtn = document.getElementById("options-toggle-btn");
   const optionsDropdown = document.getElementById("options-dropdown");
   const fontBtn = document.getElementById("font-btn");
@@ -165,6 +165,8 @@ const lastKnownCounts = {};
   const fontColorSwatches = document.querySelectorAll(".font-color-swatch");
   const boldToggle = document.getElementById("bold-toggle");
   const soundToggle = document.getElementById("sound-toggle");
+  const bioInput = document.getElementById("bio-input");
+  const bioSaveBtn = document.getElementById("bio-save-btn");
   const fontSizeBtn = document.getElementById("font-size-btn");
   const fontSizeList = document.getElementById("font-size-list");
 
@@ -510,13 +512,34 @@ socket.on("historyComplete", () => {
   function openUserProfile(targetHandle) {
     socket.emit("getUserProfile", { targetHandle });
   }
+function openUserProfile(targetHandle) {
+    socket.emit("getUserProfile", { targetHandle });
+  }
 
+  bioSaveBtn.addEventListener("click", () => {
+    socket.emit("updateBio", { bio: bioInput.value.trim() });
+    buzz();
+  });
+
+  socket.on("bioUpdateResult", ({ success, bio }) => {
+    if (success) {
+      showSystemMessage("✅ Bio saved.");
+      bioInput.value = bio;
+    } else {
+      showSystemMessage("⚠️ Couldn't save bio, try again.");
+    }
+  });
   socket.on("userProfileResult", (data) => {
     profileHandle.textContent = data.handle;
-    profileRank.textContent = data.rankEmoji + " " + data.rankName + " — " + data.scho.toLocaleString() + " Scho";
+profileRank.textContent = data.rankEmoji + " " + data.rankName + " — " + data.scho.toLocaleString() + " Scho";
+    profileBio.textContent = data.bio ? "\"" + data.bio + "\"" : (data.isOwn ? "No bio set yet — add one in Options!" : "");
+
+    if (data.isOwn) {
+      bioInput.value = data.bio || "";
+    }
 
     profileReactions.innerHTML = "";
-    const reactionLabels = [
+ const reactionLabels = [
       { key: "chilli", emoji: "🌶️" },
       { key: "heart", emoji: "❤️" },
       { key: "laugh", emoji: "😂" },

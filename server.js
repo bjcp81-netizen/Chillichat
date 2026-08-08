@@ -136,6 +136,8 @@ async function setupDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_date TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (
       id SERIAL PRIMARY KEY,
@@ -843,7 +845,7 @@ io.on("connection", (socket) => {
 socket.on("getUserProfile", async ({ targetHandle }) => {
     try {
       const userResult = await pool.query(
-        "SELECT scho_total, hearts_received, laughs_received, chilli_received, down_received, equipped_badge FROM users WHERE handle = $1",
+        "SELECT scho_total, hearts_received, laughs_received, chilli_received, down_received, equipped_badge, bio FROM users WHERE handle = $1",
         [targetHandle]
       );
       if (userResult.rows.length === 0) return;
@@ -870,15 +872,34 @@ socket.on("getUserProfile", async ({ targetHandle }) => {
           chilli: u.chilli_received,
           down: u.down_received,
         },
-        unlockedKeys,
+       unlockedKeys,
         equippedBadge: u.equipped_badge,
+        bio: u.bio || "",
         isOwn: !!me && me.handle === targetHandle,
-      });
+      }); 
     } catch (err) {
       console.error("Get user profile error:", err);
     }
   });
+socket.on("updateBio", async ({ bio }) => {
+    const me = connectedUsers[socket.id];
+    if (!me) return;
 
+    const trimmed = (bio || "").slice(0, 150); // hard cap, matches client-side maxlength
+
+    try {
+      await pool.query(
+        "UPDATE users SET bio = $1 WHERE handle = $2",
+        [trimmed, me.handle]
+      );
+      socket.emit("bioUpdateResult", { success: true, bio: trimmed });
+    } catch (err) {
+      console.error("Update bio error:", err);
+      socket.emit("bioUpdateResult", { success: false });
+    }
+  });
+
+ 
   socket.on("equipBadge", async ({ badgeKey }) => {
     const me = connectedUsers[socket.id];
     if (!me) return;

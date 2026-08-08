@@ -144,6 +144,16 @@
           <span>Sound</span>
           <input type="checkbox" id="sound-toggle" checked />
         </label>
+        <label class="options-row">
+          <span>Sound</span>
+          <input type="checkbox" id="sound-toggle" checked />
+        </label>
+
+        <div class="options-row options-row-column">
+          <span>My Bio (age, location, motto — max 150 chars)</span>
+          <textarea id="bio-input" class="bio-textarea" maxlength="150" placeholder="e.g. 28, London. 'Bring the heat.'"></textarea>
+          <button id="bio-save-btn" class="bio-save-btn">Save Bio</button>
+        </div>
       </div>
     </div>
 
@@ -197,6 +207,7 @@
       <button id="profile-close-btn" class="cancel-recording-btn profile-close-btn">✕</button>
       <h2 id="profile-handle" class="profile-handle"></h2>
       <p id="profile-rank" class="profile-rank"></p>
+      <p id="profile-bio" class="profile-bio"></p>
       <div id="profile-reactions" class="profile-reactions"></div>
       <p class="profile-badges-title">Badges</p>
       <div id="profile-badges-grid" class="profile-badges-grid"></div>

@@ -1164,3 +1164,43 @@ html {
   margin-top: 2px;
   color: #39ff14;
 }
+.bio-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  background-color: #000000;
+  color: #39ff14;
+  border: 1px solid #39ff14;
+  border-radius: 4px;
+  font-family: var(--app-font-family);
+  font-size: 12px;
+  resize: vertical;
+}
+
+.bio-textarea::placeholder {
+  color: #1f7a0d;
+}
+
+.bio-save-btn {
+  align-self: flex-start;
+  padding: 6px 14px;
+  background-color: #000000;
+  color: #39ff14;
+  border: 1px solid #39ff14;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.bio-save-btn:hover {
+  background-color: #39ff14;
+  color: #000000;
+}
+
+.profile-bio {
+  font-size: 13px;
+  color: #a8ffb0;
+  font-style: italic;
+  margin-bottom: 16px;
+  padding: 0 8px;
+}
