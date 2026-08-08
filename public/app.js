@@ -13,8 +13,30 @@ document.addEventListener("DOMContentLoaded", function () {
     { key: "down", emoji: "👎" },
   ];
 
-  const lastKnownCounts = {};
 
+const lastKnownCounts = {};
+
+  const BADGE_DEFS_CLIENT = {
+    fresh_face: { emoji: "🌱", name: "Fresh Face" },
+    ice_breaker: { emoji: "💬", name: "Ice Breaker" },
+    first_burn: { emoji: "🌶️", name: "First Burn" },
+    well_liked: { emoji: "❤️", name: "Well Liked" },
+    crowd_pleaser: { emoji: "😂", name: "Crowd Pleaser" },
+    spice_merchant: { emoji: "🌶️", name: "Spice Merchant" },
+    friendly_flame: { emoji: "🤝", name: "Friendly Flame" },
+    top_banter: { emoji: "💡", name: "Top Banter" },
+    fire_extinguisher: { emoji: "🧯", name: "Fire Extinguisher" },
+    melted_keyboard: { emoji: "🫠", name: "Melted Keyboard" },
+    meme_machine: { emoji: "🤣", name: "Meme Machine" },
+    heartbreaker: { emoji: "❤️", name: "Heartbreaker" },
+    spice_lord: { emoji: "🌶️", name: "Spice Lord" },
+    pepper_royalty: { emoji: "👑", name: "Pepper Royalty" },
+    beta_tester: { emoji: "🚀", name: "Beta Tester" },
+    lightning_fingers: { emoji: "⚡", name: "Lightning Fingers" },
+    streak_7: { emoji: "🔥", name: "7-Day Streak" },
+    streak_30: { emoji: "🌋", name: "30-Day Streak" },
+    streak_100: { emoji: "☄️", name: "100-Day Streak" },
+  };
   const FONT_MAP = {
     default: "'Courier New', Courier, monospace",
     inter: "'Inter', sans-serif",
@@ -103,6 +125,13 @@ document.addEventListener("DOMContentLoaded", function () {
   const photoViewerImg = document.getElementById("photo-viewer-img");
   const photoCountdownFill = document.getElementById("photo-countdown-fill");
   const photoCountdownText = document.getElementById("photo-countdown-text");
+  const profileOverlay = document.getElementById("profile-overlay");
+  const profileCloseBtn = document.getElementById("profile-close-btn");
+  const profileHandle = document.getElementById("profile-handle");
+  const profileRank = document.getElementById("profile-rank");
+  const profileReactions = document.getElementById("profile-reactions");
+  const profileBadgesGrid = document.getElementById("profile-badges-grid");
+
   const optionsToggleBtn = document.getElementById("options-toggle-btn");
   const optionsDropdown = document.getElementById("options-dropdown");
   const fontBtn = document.getElementById("font-btn");
@@ -474,7 +503,65 @@ fontBtn.addEventListener("click", () => {
   socket.on("historyComplete", () => {
     isLoadingHistory = false;
   });
+socket.on("historyComplete", () => {
+    isLoadingHistory = false;
+  });
 
+  function openUserProfile(targetHandle) {
+    socket.emit("getUserProfile", { targetHandle });
+  }
+
+  socket.on("userProfileResult", (data) => {
+    profileHandle.textContent = data.handle;
+    profileRank.textContent = data.rankEmoji + " " + data.rankName + " — " + data.scho.toLocaleString() + " Scho";
+
+    profileReactions.innerHTML = "";
+    const reactionLabels = [
+      { key: "chilli", emoji: "🌶️" },
+      { key: "heart", emoji: "❤️" },
+      { key: "laugh", emoji: "😂" },
+      { key: "down", emoji: "👎" },
+    ];
+    reactionLabels.forEach(r => {
+      const pill = document.createElement("span");
+      pill.className = "profile-reaction-pill";
+      pill.textContent = r.emoji + " " + (data.reactions[r.key] || 0);
+      profileReactions.appendChild(pill);
+    });
+
+    profileBadgesGrid.innerHTML = "";
+    Object.keys(BADGE_DEFS_CLIENT).forEach(key => {
+      const def = BADGE_DEFS_CLIENT[key];
+      const isUnlocked = data.unlockedKeys.includes(key);
+      const isEquipped = data.equippedBadge === key;
+
+      const cell = document.createElement("div");
+      cell.className = "profile-badge" + (isUnlocked ? " unlocked" : "") + (isEquipped ? " equipped" : "");
+      cell.innerHTML = def.emoji + '<span class="badge-name">' + def.name + "</span>";
+
+      if (isUnlocked && data.isOwn) {
+        cell.addEventListener("click", () => {
+          buzz();
+          const newEquipped = isEquipped ? null : key; // tap equipped badge again to unequip
+          socket.emit("equipBadge", { badgeKey: newEquipped });
+        });
+      }
+
+     profileBadgesGrid.appendChild(cell);
+    });
+
+    profileOverlay.classList.remove("hidden");
+  });
+
+  profileCloseBtn.addEventListener("click", () => {
+    profileOverlay.classList.add("hidden");
+  });
+
+  profileOverlay.addEventListener("click", (e) => {
+    if (e.target === profileOverlay) {
+      profileOverlay.classList.add("hidden");
+    }
+  });
   socket.on("heatNotification", (message) => {
     showHeatNotification(message);
   });
@@ -534,7 +621,7 @@ fontBtn.addEventListener("click", () => {
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
 
-  socket.on("userList", (users) => {
+socket.on("userList", (users) => {
     usersToggleBtn.textContent = "Users (" + users.length + ") ▾";
     usersList.innerHTML = "";
     users.forEach(user => {
@@ -548,10 +635,14 @@ fontBtn.addEventListener("click", () => {
       dot.className = "status-dot " + user.status;
 
       const name = document.createElement("span");
+      name.className = "clickable-handle";
       const rankPrefix = user.rankEmoji ? user.rankEmoji + " " : "";
-      const badgeStr = (user.badges && user.badges.length > 0) ? " " + user.badges.join("") : "";
-      name.textContent = (user.isModerator ? "🛡️ " : "") + rankPrefix + user.handle + badgeStr;
+      const equippedStr = user.equippedBadgeEmoji ? " " + user.equippedBadgeEmoji : "";
+      name.textContent = (user.isModerator ? "🛡️ " : "") + rankPrefix + user.handle + equippedStr;
       name.style.color = user.color;
+      name.addEventListener("click", () => {
+        openUserProfile(user.handle);
+      });
 
       const schoLabel = document.createElement("span");
       schoLabel.className = "scho-label";
@@ -560,20 +651,26 @@ fontBtn.addEventListener("click", () => {
       row.appendChild(dot);
       row.appendChild(name);
       row.appendChild(schoLabel);
-      li.appendChild(row);
 
       const canModerate = myIsModerator && user.handle !== myHandle;
 
       if (canModerate) {
-        name.classList.add("clickable-handle");
+        const modToggleBtn = document.createElement("button");
+        modToggleBtn.className = "mod-delete-btn";
+        modToggleBtn.textContent = "🛡️";
+        modToggleBtn.title = "Moderate " + user.handle;
+        row.appendChild(modToggleBtn);
 
         const panel = buildModPanel(user.handle);
         panel.classList.add("hidden");
+        li.appendChild(row);
         li.appendChild(panel);
 
-        name.addEventListener("click", () => {
+        modToggleBtn.addEventListener("click", () => {
           panel.classList.toggle("hidden");
         });
+      } else {
+        li.appendChild(row);
       }
 
       usersList.appendChild(li);
@@ -823,9 +920,12 @@ fontBtn.addEventListener("click", () => {
     const textLine = document.createElement("p");
 
     const handleSpan = document.createElement("span");
-    handleSpan.className = "msg-handle";
+    handleSpan.className = "msg-handle clickable-handle";
     handleSpan.textContent = data.handle + ":";
     handleSpan.style.color = data.color;
+    handleSpan.addEventListener("click", () => {
+      openUserProfile(data.handle);
+    });
 
     const textSpan = document.createElement("span");
     textSpan.textContent = " " + data.text;
@@ -1070,10 +1170,14 @@ audio.addEventListener("error", () => {
     const meta = document.createElement("div");
     meta.className = "voice-meta";
 
-    const handleLine = document.createElement("span");
+   const handleLine = document.createElement("span");
+    handleLine.className = "clickable-handle";
     handleLine.textContent = data.handle;
     handleLine.style.color = data.color;
     handleLine.style.fontWeight = "bold";
+    handleLine.addEventListener("click", () => {
+      openUserProfile(data.handle);
+    });
 
     const durationLine = document.createElement("span");
     durationLine.textContent = (data.durationMs / 1000).toFixed(1) + "s voice clip";
@@ -1202,9 +1306,13 @@ audio.addEventListener("error", () => {
     meta.className = "photo-thumb-meta";
 
     const handleLine = document.createElement("span");
-    handleLine.className = "photo-thumb-handle";
+    handleLine.className = "photo-thumb-handle clickable-handle";
     handleLine.textContent = handle;
     handleLine.style.color = color;
+    handleLine.addEventListener("click", (e) => {
+      e.stopPropagation(); // don't trigger the photo-reveal click underneath
+      openUserProfile(handle);
+    });
 
     const hint = document.createElement("span");
     hint.className = "photo-thumb-hint";

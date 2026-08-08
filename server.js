@@ -135,7 +135,7 @@ async function setupDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS messages_since_idle INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_date TEXT`);
-
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (
       id SERIAL PRIMARY KEY,
@@ -392,13 +392,15 @@ async function buildEnrichedUserList() {
 
   const handles = users.map((u) => u.handle);
   const result = await pool.query(
-    "SELECT handle, scho_total FROM users WHERE handle = ANY($1)",
+    "SELECT handle, scho_total, equipped_badge FROM users WHERE handle = ANY($1)",
     [handles]
   );
 
   const schoByHandle = {};
+  const equippedByHandle = {};
   result.rows.forEach((row) => {
     schoByHandle[row.handle] = row.scho_total;
+    equippedByHandle[row.handle] = row.equipped_badge;
   });
 
   const badgesByHandle = await getBadgesForHandles(handles);
@@ -406,12 +408,15 @@ async function buildEnrichedUserList() {
   return users.map((u) => {
     const scho = schoByHandle[u.handle] || 0;
     const rank = computeScovilleRank(scho);
+    const equippedKey = equippedByHandle[u.handle];
+    const equippedDef = equippedKey ? BADGE_DEFS[equippedKey] : null;
     return {
       ...u,
       scho,
       rankName: rank.name,
       rankEmoji: rank.emoji,
       badges: badgesByHandle[u.handle] || [],
+      equippedBadgeEmoji: equippedDef ? equippedDef.emoji : null,
     };
   });
 }
@@ -833,6 +838,68 @@ io.on("connection", (socket) => {
       socket.emit("highrollersResult", { period, entries: top5 });
     } catch (err) {
       console.error("Highrollers error:", err);
+    }
+  });
+socket.on("getUserProfile", async ({ targetHandle }) => {
+    try {
+      const userResult = await pool.query(
+        "SELECT scho_total, hearts_received, laughs_received, chilli_received, down_received, equipped_badge FROM users WHERE handle = $1",
+        [targetHandle]
+      );
+      if (userResult.rows.length === 0) return;
+
+      const u = userResult.rows[0];
+      const rank = computeScovilleRank(u.scho_total);
+
+      const badgeResult = await pool.query(
+        "SELECT badge_key FROM badges WHERE handle = $1",
+        [targetHandle]
+      );
+      const unlockedKeys = badgeResult.rows.map((r) => r.badge_key);
+
+      const me = connectedUsers[socket.id];
+
+      socket.emit("userProfileResult", {
+        handle: targetHandle,
+        rankName: rank.name,
+        rankEmoji: rank.emoji,
+        scho: u.scho_total,
+        reactions: {
+          heart: u.hearts_received,
+          laugh: u.laughs_received,
+          chilli: u.chilli_received,
+          down: u.down_received,
+        },
+        unlockedKeys,
+        equippedBadge: u.equipped_badge,
+        isOwn: !!me && me.handle === targetHandle,
+      });
+    } catch (err) {
+      console.error("Get user profile error:", err);
+    }
+  });
+
+  socket.on("equipBadge", async ({ badgeKey }) => {
+    const me = connectedUsers[socket.id];
+    if (!me) return;
+
+    try {
+      if (badgeKey !== null) {
+        const owns = await pool.query(
+          "SELECT id FROM badges WHERE handle = $1 AND badge_key = $2",
+          [me.handle, badgeKey]
+        );
+        if (owns.rows.length === 0) return; // can't equip a badge you haven't earned
+      }
+
+      await pool.query(
+        "UPDATE users SET equipped_badge = $1 WHERE handle = $2",
+        [badgeKey, me.handle]
+      );
+
+      await broadcastUserList();
+    } catch (err) {
+      console.error("Equip badge error:", err);
     }
   });
 
