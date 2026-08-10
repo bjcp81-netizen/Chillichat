@@ -193,22 +193,8 @@ body {
   text-shadow: 0 0 8px #39ff14;
 }
 
-.users-toggle-btn {
-  background-color: #000000;
-  color: #39ff14;
-  border: 1px solid #39ff14;
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  font-family: var(--app-font-family);
-}
 
 
-.users-toggle-btn:hover {
-  background-color: #39ff14;
-  color: #000000;
-}
 
 .users-dropdown {
   max-height: 0;
@@ -244,7 +230,7 @@ body {
 }
 
 .system-msg {
-  color: #1f7a0d;
+  color: #39ff14 !important;
   font-style: italic;
   margin-bottom: 8px;
 }
@@ -440,16 +426,7 @@ body {
   color: #ff9100;
   margin-left: 4px;
 }
-.highrollers-toggle-btn {
-  background-color: #000000;
-  color: #ff9100;
-  border: 1px solid #ff9100;
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  font-family: var(--app-font-family);
-}
+
 
 .highrollers-toggle-btn:hover {
   background-color: #ff9100;
@@ -885,11 +862,10 @@ body.bold-text {
 .join-title-block h1,
 .field-label,
 .chat-message,
-.system-msg,
 .typing-indicator,
 .highrollers-text,
 .scho-label {
-  color: var(--app-text-color);
+  color: var(--app-text-color) !important;
 }
 
 .chat-message,
@@ -899,21 +875,8 @@ body.bold-text {
   font-size: var(--app-font-size);
 }
 
-.options-toggle-btn {
-  background-color: #000000;
-  color: #00eeff;
-  border: 1px solid #00eeff;
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  font-family: var(--app-font-family);
-}
 
-.options-toggle-btn:hover {
-  background-color: #00eeff;
-  color: #000000;
-}
+
 
 .options-panel {
   display: flex;
@@ -1236,4 +1199,49 @@ html {
 
 .switch-checkbox:checked::before {
   transform: translateX(20px);
+}
+:root {
+  --accent-color: #39ff14;
+}
+
+.top-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #0a0a0a;
+  color: #39ff14;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-family: var(--app-font-family);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease, color 150ms ease;
+}
+
+.top-btn-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: inherit;
+  transition: color 150ms ease;
+}
+
+.top-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-color) 40%, transparent);
+}
+
+.top-btn:active {
+  transform: scale(0.96);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+.heat-notification {
+  color: #39ff14;
+  font-weight: bold;
+  margin-bottom: 8px;
 }

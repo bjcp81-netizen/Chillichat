@@ -277,11 +277,16 @@ fontBtn.addEventListener("click", () => {
 
   applyOptions();
 
+  function applyAccentColor(color) {
+    document.documentElement.style.setProperty("--accent-color", color);
+  }
+
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("selected"));
       swatch.classList.add("selected");
       myColor = swatch.dataset.color;
+      applyAccentColor(myColor);
     });
   });
 
@@ -445,6 +450,7 @@ fontBtn.addEventListener("click", () => {
   socket.on("joinSuccess", ({ handle, color, deviceToken, isModerator }) => {
     myHandle = handle;
     myColor = color;
+    applyAccentColor(color);
     myIsModerator = !!isModerator;
     hasJoinedOnce = true;
     isLoadingHistory = true;
@@ -644,8 +650,8 @@ profileRank.textContent = data.rankEmoji + " " + data.rankName + " — " + data.
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
 
-socket.on("userList", (users) => {
-    usersToggleBtn.textContent = "Users (" + users.length + ") ▾";
+document.getElementById("users-count-label").textContent = "Users (" + users.length + ")";
+   
     usersList.innerHTML = "";
     users.forEach(user => {
       const li = document.createElement("li");
@@ -1449,4 +1455,3 @@ audio.addEventListener("error", () => {
   });
 
   checkReturningUser();
-});
