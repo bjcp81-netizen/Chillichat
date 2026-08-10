@@ -518,9 +518,7 @@ socket.on("historyComplete", () => {
   function openUserProfile(targetHandle) {
     socket.emit("getUserProfile", { targetHandle });
   }
-function openUserProfile(targetHandle) {
-    socket.emit("getUserProfile", { targetHandle });
-  }
+
 
   bioSaveBtn.addEventListener("click", () => {
     socket.emit("updateBio", { bio: bioInput.value.trim() });
@@ -650,8 +648,9 @@ profileRank.textContent = data.rankEmoji + " " + data.rankName + " — " + data.
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
 
-document.getElementById("users-count-label").textContent = "Users (" + users.length + ")";
-   
+socket.on("userList", (users) => {
+    document.getElementById("users-count-label").textContent = "Users (" + users.length + ")";
+
     usersList.innerHTML = "";
     users.forEach(user => {
       const li = document.createElement("li");
