@@ -1245,3 +1245,82 @@ html {
   font-weight: bold;
   margin-bottom: 8px;
 }
+/* ---------- Join screen enhancements ---------- */
+
+.join-screen {
+  position: relative;
+  overflow: hidden;
+}
+
+.ember-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.ember-bg::before,
+.ember-bg::after {
+  content: "";
+  position: absolute;
+  bottom: -20px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff9100;
+  box-shadow: 0 0 8px 2px rgba(255, 145, 0, 0.8);
+  opacity: 0;
+  animation: emberRise 6s linear infinite;
+}
+
+.ember-bg::before {
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.ember-bg::after {
+  left: 70%;
+  animation-delay: 3s;
+  background: #39ff14;
+  box-shadow: 0 0 8px 2px rgba(57, 255, 20, 0.7);
+}
+
+@keyframes emberRise {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(30px);
+    opacity: 0;
+  }
+}
+
+.join-title-block,
+.join-box {
+  position: relative;
+  z-index: 1;
+}
+
+.handle-preview {
+  text-align: center;
+  font-size: 15px;
+  font-weight: bold;
+  min-height: 20px;
+  margin-bottom: 16px;
+  color: #1f7a0d;
+  transition: color 150ms ease;
+}
+
+.color-swatch {
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.color-swatch.selected {
+  transform: scale(1.18);
+  box-shadow: 0 0 12px 2px currentColor;
+}

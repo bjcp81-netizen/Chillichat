@@ -136,7 +136,6 @@ async function setupDatabase() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_date TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge TEXT`);
-  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (

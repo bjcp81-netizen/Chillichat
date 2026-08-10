@@ -14,9 +14,10 @@
   <div id="connection-banner" class="connection-banner hidden">⚠️ Connection lost — reconnecting...</div>
 
   <div id="join-screen" class="join-screen">
+    <div class="ember-bg" id="ember-bg"></div>
     <div class="join-title-block">
       <h1>ChilliChat</h1>
-      <p class="by">by JbnZ</p>
+     <p class="by">$pyhunt3r JbnZ</p>
       <p class="tagline">Pick your identity to enter the lobby</p>
     </div>
 
@@ -25,6 +26,7 @@
       <input type="text" id="handle-input" placeholder="Enter a handle..." maxlength="15" />
 
       <p class="field-label">Colour</p>
+      <p id="handle-preview" class="handle-preview">Pick a colour to preview your handle</p>
      <div id="color-options" class="color-options">
         <div class="color-swatch" data-color="#ff0033" style="background-color:#ff0033"></div>
         <div class="color-swatch" data-color="#ff8800" style="background-color:#ff8800"></div>
@@ -239,11 +241,8 @@
   <audio id="send-sound" src="cbstrt.wav" preload="auto"></audio>
   <audio id="notify-sound" src="cbstop.wav" preload="auto"></audio>
   <audio id="btnfx-sound" src="btnfx.wav" preload="auto"></audio>
-<audio id="btnfx-sound" src="btnfx.wav" preload="auto"></audio>
-  <audio id="mic-sound" src="micbp.wav" preload="auto"></audio>
  <audio id="mic-sound" src="micbp.wav" preload="auto"></audio>
-  <audio id="end-sound" src="endsnd.wav" preload="auto"></audio>
-  <audio id="end-sound" src="endsnd.wav" preload="auto"></audio>
+ <audio id="end-sound" src="endsnd.wav" preload="auto"></audio>
   <audio id="play-sound" src="strtA4.wav" preload="auto"></audio>
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js"></script>
