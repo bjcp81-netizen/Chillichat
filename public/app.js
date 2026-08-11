@@ -2206,13 +2206,19 @@ cancelRecordingBtn.addEventListener(
             "Voice clip audio error:",
             audio.error
           );
+
+          isPlaying = false;
+          playBtn.textContent = "▶";
+
+          showSystemMessage(
+            "⚠️ Couldn't play that voice clip in this browser."
+          );
         }
       );
 
      playBtn.addEventListener(
         "click",
         () => {
-          buzz();
           if (isPlaying) {
             audio.pause();
           } else {
@@ -2226,6 +2232,13 @@ cancelRecordingBtn.addEventListener(
                 console.error(
                   "Voice clip playback failed:",
                   err
+                );
+
+                isPlaying = false;
+                playBtn.textContent = "▶";
+
+                showSystemMessage(
+                  "⚠️ Couldn't play that voice clip in this browser."
                 );
               });
           }
