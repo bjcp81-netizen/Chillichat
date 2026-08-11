@@ -286,6 +286,7 @@
   });
 
   fontBtn.addEventListener("click", () => {
+    buzz();
     fontList.classList.toggle("hidden");
   });
 
@@ -307,6 +308,7 @@
   });
 
   fontSizeBtn.addEventListener("click", () => {
+    buzz();
     fontSizeList.classList.toggle("hidden");
   });
 
@@ -418,6 +420,8 @@
 
   colorSwatches.forEach((swatch) => {
     swatch.addEventListener("click", () => {
+      buzz();
+
       colorSwatches.forEach((s) =>
         s.classList.remove("selected")
       );
@@ -437,6 +441,7 @@
   );
 
   termsCheckbox.addEventListener("change", () => {
+    buzz();
     joinBtn.disabled = !termsCheckbox.checked;
   });
 
@@ -459,19 +464,22 @@
     }
   });
 
-  highrollersTodayBtn.addEventListener("click", () => {
+highrollersTodayBtn.addEventListener("click", () => {
+    buzz();
     playSound(btnfxSound);
     setHighrollersTab("day");
     requestHighrollers("day");
   });
 
   highrollersWeekBtn.addEventListener("click", () => {
+    buzz();
     playSound(btnfxSound);
     setHighrollersTab("week");
     requestHighrollers("week");
   });
 
   highrollersUsersBtn.addEventListener("click", () => {
+    buzz();
     playSound(btnfxSound);
     setHighrollersTab("users");
     socket.emit("getUserLeaderboard");
@@ -798,6 +806,7 @@
   });
 
   function openUserProfile(targetHandle) {
+    buzz();
     socket.emit("getUserProfile", {
       targetHandle,
     });
@@ -920,11 +929,13 @@
   });
 
   profileCloseBtn.addEventListener("click", () => {
+    buzz();
     profileOverlay.classList.add("hidden");
   });
 
   profileOverlay.addEventListener("click", (e) => {
     if (e.target === profileOverlay) {
+      buzz();
       profileOverlay.classList.add("hidden");
     }
   });
@@ -1114,6 +1125,7 @@
         modToggleBtn.addEventListener(
           "click",
           () => {
+            buzz();
             panel.classList.toggle("hidden");
           }
         );
@@ -1150,7 +1162,8 @@
 
     kickBtn.textContent = "🚪 Kick";
 
-    kickBtn.addEventListener("click", () => {
+   kickBtn.addEventListener("click", () => {
+      buzz();
       if (
         confirm(
           "Kick " + targetHandle + "?"
@@ -1193,7 +1206,8 @@
       banBtn.textContent =
         "⛔ " + d.label;
 
-      banBtn.addEventListener("click", () => {
+     banBtn.addEventListener("click", () => {
+        buzz();
         const reason =
           prompt(
             "Reason for banning " +
@@ -1467,6 +1481,7 @@
     addBtn.addEventListener(
       "click",
       () => {
+        buzz();
         picker.classList.toggle("hidden");
       }
     );
@@ -1499,6 +1514,7 @@
       delBtn.addEventListener(
         "click",
         () => {
+          buzz();
           if (
             confirm(
               "Delete this message?"
@@ -2141,9 +2157,10 @@
         }
       );
 
-      playBtn.addEventListener(
+     playBtn.addEventListener(
         "click",
         () => {
+          buzz();
           if (isPlaying) {
             audio.pause();
           } else {
@@ -2284,6 +2301,7 @@
         delBtn.addEventListener(
           "click",
           () => {
+            buzz();
             if (
               confirm(
                 "Delete this voice clip?"
@@ -2631,6 +2649,7 @@
       delBtn.addEventListener(
         "click",
         (e) => {
+          buzz();
           e.stopPropagation();
 
           if (
@@ -2882,6 +2901,7 @@
   photoViewerOverlay.addEventListener(
     "click",
     () => {
+      buzz();
       closePhotoViewer();
     }
   );
