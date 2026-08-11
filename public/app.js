@@ -140,7 +140,11 @@
   let isLoadingHistory = false;
 
   const handleInput = document.getElementById("handle-input");
-  const colorSwatches = document.querySelectorAll(".color-swatch");
+  const colorWheelWrap = document.getElementById("color-wheel-wrap");
+  const colorWheelList = document.getElementById("color-wheel-list");
+  const colorWheelItems = Array.from(
+    document.querySelectorAll(".color-wheel-item")
+  );
   const termsCheckbox = document.getElementById("terms-checkbox");
   const joinBtn = document.getElementById("join-btn");
   const joinScreen = document.getElementById("join-screen");
@@ -444,22 +448,129 @@
     }
   }
 
-  colorSwatches.forEach((swatch) => {
-    swatch.addEventListener("click", () => {
-      buzz();
+ const WHEEL_ITEM_HEIGHT = 44;
+  let wheelScrollRAF = null;
+  let wheelSettleTimeout = null;
+  let currentWheelColor = null;
 
-      colorSwatches.forEach((s) =>
-        s.classList.remove("selected")
+  function updateWheelVisuals() {
+    const wrapRect =
+      colorWheelWrap.getBoundingClientRect();
+
+    const centerY =
+      wrapRect.top +
+      wrapRect.height / 2;
+
+    let closestItem = null;
+    let closestDist = Infinity;
+
+    colorWheelItems.forEach((item) => {
+      const rect =
+        item.getBoundingClientRect();
+
+      const itemCenter =
+        rect.top +
+        rect.height / 2;
+
+      const dist = Math.abs(
+        itemCenter - centerY
       );
 
-      swatch.classList.add("selected");
+      const normalized = Math.min(
+        dist /
+          (WHEEL_ITEM_HEIGHT * 2),
+        1
+      );
 
-      myColor = swatch.dataset.color;
+      const opacity =
+        1 - normalized * 0.7;
+
+      const scale =
+        1 - normalized * 0.35;
+
+      item.style.opacity = opacity;
+      item.style.transform =
+        "scale(" + scale + ")";
+
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestItem = item;
+      }
+    });
+
+    return closestItem;
+  }
+
+  function settleWheel() {
+    const centerItem =
+      updateWheelVisuals();
+
+    if (!centerItem) return;
+
+    colorWheelItems.forEach((item) =>
+      item.classList.remove(
+        "selected"
+      )
+    );
+
+    centerItem.classList.add(
+      "selected"
+    );
+
+    const color =
+      centerItem.dataset.color;
+
+    if (color !== currentWheelColor) {
+      currentWheelColor = color;
+      myColor = color;
 
       applyAccentColor(myColor);
       updateHandlePreview();
-    });
+      buzz(15);
+    }
+  }
+
+  function onWheelScroll() {
+    if (!wheelScrollRAF) {
+      wheelScrollRAF =
+        requestAnimationFrame(
+          () => {
+            updateWheelVisuals();
+            wheelScrollRAF = null;
+          }
+        );
+    }
+
+    clearTimeout(
+      wheelSettleTimeout
+    );
+
+    wheelSettleTimeout =
+      setTimeout(
+        settleWheel,
+        120
+      );
+  }
+
+  colorWheelList.addEventListener(
+    "scroll",
+    onWheelScroll,
+    { passive: true }
+  );
+
+  colorWheelItems.forEach((item) => {
+    item.addEventListener(
+      "click",
+      () => {
+        item.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    );
   });
+
+  settleWheel();
 
   handleInput.addEventListener(
     "input",
