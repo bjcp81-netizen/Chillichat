@@ -104,6 +104,30 @@
     sound.play().catch(() => {});
   }
 
+  function dataUrlToBlobUrl(dataUrl) {
+    try {
+      const [header, base64] = dataUrl.split(",");
+      const mimeMatch = header.match(/data:(.*?);base64/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "audio/webm";
+
+      const byteString = atob(base64);
+      const bytes = new Uint8Array(byteString.length);
+
+      for (let i = 0; i < byteString.length; i++) {
+        bytes[i] = byteString.charCodeAt(i);
+      }
+
+      const blob = new Blob([bytes], { type: mimeType });
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      console.error(
+        "Failed to convert voice clip to blob URL:",
+        err
+      );
+      return dataUrl;
+    }
+  }
+
   const socket = io();
 
   let myHandle = "";
@@ -2194,7 +2218,7 @@ cancelRecordingBtn.addEventListener(
 
       const audio =
         new Audio(
-          data.audioData
+          dataUrlToBlobUrl(data.audioData)
         );
 
       let isPlaying = false;
@@ -2202,17 +2226,27 @@ cancelRecordingBtn.addEventListener(
       audio.addEventListener(
         "error",
         () => {
+          const err = audio.error;
+
           console.error(
-            "Voice clip audio error:",
-            audio.error
+            "Voice clip error — code:",
+            err ? err.code : "none",
+            "| message:",
+            err ? err.message : "none",
+            "| clip id:",
+            data.id,
+            "| src length:",
+            data.audioData
+              ? data.audioData.length
+              : "none",
+            "| src prefix:",
+            data.audioData
+              ? data.audioData.slice(0, 30)
+              : "none"
           );
 
           isPlaying = false;
           playBtn.textContent = "▶";
-
-          showSystemMessage(
-            "⚠️ Couldn't play that voice clip in this browser."
-          );
         }
       );
 
