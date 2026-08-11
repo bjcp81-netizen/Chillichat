@@ -152,6 +152,8 @@
   const recordingTimer = document.getElementById("recording-timer");
   const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
 
+  const pttBtn = document.getElementById("ptt-btn");
+  const pttBtnLabel = document.getElementById("ptt-btn-label");
   const photoBtn = document.getElementById("photo-btn");
   const photoFileInput = document.getElementById("photo-file-input");
   const photoViewerOverlay = document.getElementById("photo-viewer-overlay");
@@ -1839,6 +1841,7 @@ highrollersTodayBtn.addEventListener("click", () => {
   let recordStartTime = 0;
   let recordTimerInterval = null;
   let wasCancelled = false;
+  let activeMicSource = null;
 
   function isRecordingSupported() {
     return !!(
@@ -1880,7 +1883,9 @@ highrollersTodayBtn.addEventListener("click", () => {
       : "";
   }
 
-  async function startRecording() {
+ async function startRecording(source) {
+    activeMicSource = source || "mic";
+
     if (!isRecordingSupported()) {
       alert(
         "Voice recording isn't supported in this browser."
@@ -1934,13 +1939,20 @@ highrollersTodayBtn.addEventListener("click", () => {
           recordTimerInterval
         );
 
-        recordingOverlay.classList.add(
+       recordingOverlay.classList.add(
           "hidden"
         );
 
         micBtn.classList.remove(
           "recording"
         );
+
+        pttBtn.classList.remove(
+          "transmitting"
+        );
+
+        pttBtnLabel.textContent =
+          "📻 PUSH TO TALK";
 
         if (wasCancelled) return;
 
@@ -1991,15 +2003,19 @@ highrollersTodayBtn.addEventListener("click", () => {
           audioBlob
         );
       };
-
-      mediaRecorder.start();
+mediaRecorder.start();
 
       recordStartTime =
         Date.now();
 
-      micBtn.classList.add(
-        "recording"
-      );
+      if (activeMicSource === "ptt") {
+        pttBtn.classList.add("transmitting");
+        pttBtnLabel.textContent = "🔴 TRANSMITTING...";
+      } else {
+        micBtn.classList.add(
+          "recording"
+        );
+      }
 
       recordingOverlay.classList.remove(
         "hidden"
@@ -2079,16 +2095,16 @@ highrollersTodayBtn.addEventListener("click", () => {
     buzz(20);
   }
 
-  micBtn.addEventListener(
+ micBtn.addEventListener(
     "mousedown",
-    startRecording
+    () => startRecording("mic")
   );
 
   micBtn.addEventListener(
     "touchstart",
     (e) => {
       e.preventDefault();
-      startRecording();
+      startRecording("mic");
     }
   );
 
@@ -2114,10 +2130,46 @@ highrollersTodayBtn.addEventListener("click", () => {
     "touchend",
     () => stopRecording(false)
   );
-
-  cancelRecordingBtn.addEventListener(
+cancelRecordingBtn.addEventListener(
     "click",
     () => stopRecording(true)
+  );
+
+  pttBtn.addEventListener(
+    "mousedown",
+    () => startRecording("ptt")
+  );
+
+  pttBtn.addEventListener(
+    "touchstart",
+    (e) => {
+      e.preventDefault();
+      startRecording("ptt");
+    }
+  );
+
+  pttBtn.addEventListener(
+    "mouseup",
+    () => stopRecording(false)
+  );
+
+  pttBtn.addEventListener(
+    "mouseleave",
+    () => {
+      if (
+        mediaRecorder &&
+        mediaRecorder.state ===
+          "recording" &&
+        activeMicSource === "ptt"
+      ) {
+        stopRecording(false);
+      }
+    }
+  );
+
+  pttBtn.addEventListener(
+    "touchend",
+    () => stopRecording(false)
   );
 
   socket.on(
