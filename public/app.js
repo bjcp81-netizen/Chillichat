@@ -1952,7 +1952,7 @@ highrollersTodayBtn.addEventListener("click", () => {
           }
         };
 
-      mediaRecorder.onstop = () => {
+   mediaRecorder.onstop = () => {
         stream
           .getTracks()
           .forEach((track) =>
@@ -1963,7 +1963,7 @@ highrollersTodayBtn.addEventListener("click", () => {
           recordTimerInterval
         );
 
-       recordingOverlay.classList.add(
+        recordingOverlay.classList.add(
           "hidden"
         );
 
@@ -1988,44 +1988,69 @@ highrollersTodayBtn.addEventListener("click", () => {
           return;
         }
 
+        const rawType =
+          mediaRecorder.mimeType.split(
+            ";"
+          )[0] ||
+          "audio/webm";
+
         const audioBlob =
           new Blob(
             audioChunks,
             {
-              type:
-                mediaRecorder.mimeType.split(
-                  ";"
-                )[0] ||
-                "audio/webm",
+              type: rawType,
             }
           );
 
-        const reader =
-          new FileReader();
+        const sendClip = (finalBlob) => {
+          const reader =
+            new FileReader();
 
-        reader.onloadend = () => {
-          const base64Audio =
-            reader.result;
+          reader.onloadend = () => {
+            const base64Audio =
+              reader.result;
 
-          socket.emit(
-            "voiceClip",
-            {
-              handle: myHandle,
-              color: myColor,
-              audioData:
-                base64Audio,
-              durationMs:
-                Math.min(
-                  durationMs,
-                  MAX_RECORD_MS
-                ),
-            }
+            socket.emit(
+              "voiceClip",
+              {
+                handle: myHandle,
+                color: myColor,
+                audioData:
+                  base64Audio,
+                durationMs:
+                  Math.min(
+                    durationMs,
+                    MAX_RECORD_MS
+                  ),
+              }
+            );
+          };
+
+          reader.readAsDataURL(
+            finalBlob
           );
         };
 
-        reader.readAsDataURL(
-          audioBlob
-        );
+        if (
+          rawType.includes("webm") &&
+          window.ysFixWebmDuration
+        ) {
+          ysFixWebmDuration(
+            audioBlob,
+            durationMs,
+            { logger: false }
+          )
+            .then(sendClip)
+            .catch((err) => {
+              console.error(
+                "Failed to fix webm duration, sending as-is:",
+                err
+              );
+              sendClip(audioBlob);
+            });
+        } else {
+          sendClip(audioBlob);
+        }
       };
 mediaRecorder.start();
 
