@@ -575,6 +575,7 @@ fontBtn.addEventListener("click", () => {
     let scrollRAF = null;
     let settleTimeout = null;
     let currentValue = null;
+    let lastTickItem = null;
 
     function updateVisuals() {
       const wrapRect =
@@ -624,11 +625,28 @@ fontBtn.addEventListener("click", () => {
       return closestItem;
     }
 
+    function updateVisualsWithTick() {
+      const closestItem =
+        updateVisuals();
+
+      if (
+        closestItem &&
+        closestItem !== lastTickItem
+      ) {
+        lastTickItem = closestItem;
+        buzz(4);
+      }
+
+      return closestItem;
+    }
+
     function settle() {
       const centerItem =
         updateVisuals();
 
       if (!centerItem) return;
+
+      lastTickItem = centerItem;
 
       items.forEach((item) =>
         item.classList.remove(
@@ -655,7 +673,7 @@ fontBtn.addEventListener("click", () => {
         scrollRAF =
           requestAnimationFrame(
             () => {
-              updateVisuals();
+              updateVisualsWithTick();
               scrollRAF = null;
             }
           );
