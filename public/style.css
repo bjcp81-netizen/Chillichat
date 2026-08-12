@@ -351,28 +351,7 @@ body {
   color: #000000;
 }
 
-.ptt-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 8px;
-  padding: 14px;
-  background-color: #000000;
-  color: #ff9100;
-  border: 2px solid #ff9100;
-  border-radius: 6px;
-  font-family: var(--app-font-family);
-  font-size: 15px;
-  font-weight: bold;
-  letter-spacing: 1px;
-  text-align: center;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
-}
+
 
 .ptt-btn:hover {
   background-color: #ff9100;
