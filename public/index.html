@@ -93,7 +93,7 @@
           <span>Highrollers</span>
         </button>
       </div>
-    </header>
+   </header>
 
     <div id="options-dropdown" class="users-dropdown">
       <div class="options-panel">
@@ -101,50 +101,59 @@
           <span>Font</span>
           <div class="custom-select-wrap" id="font-wrap">
             <button type="button" id="font-btn" class="custom-select-btn">Default (Retro) ▾</button>
-            <ul id="font-list" class="custom-select-list hidden">
-              <li data-value="default">Default (Retro)</li>
-              <li data-value="inter">Inter</li>
-              <li data-value="atkinson">Atkinson Hyperlegible</li>
-              <li data-value="noto">Noto Sans</li>
-              <li data-value="roboto">Roboto</li>
-              <li data-value="sfpro">SF Pro</li>
-              <li data-value="segoe">Segoe UI</li>
-              <li data-value="source">Source Sans 3</li>
-              <li data-value="nunito">Nunito</li>
-              <li data-value="poppins">Poppins</li>
-              <li data-value="worksans">Work Sans</li>
-              <li data-value="quicksand">Quicksand</li>
-              <li data-value="spacegrotesk">Space Grotesk</li>
-              <li data-value="manrope">Manrope</li>
-              <li data-value="dmsans">DM Sans</li>
-              <li data-value="jakarta">Plus Jakarta Sans</li>
-            </ul>
+            <div id="font-wheel-panel" class="wheel-panel hidden">
+              <div class="wheel-highlight"></div>
+              <ul id="font-wheel-list" class="wheel-list">
+                <li class="wheel-item" data-value="default" style="font-family:'Courier New', Courier, monospace;">Default (Retro)</li>
+                <li class="wheel-item" data-value="inter" style="font-family:'Inter', sans-serif;">Inter</li>
+                <li class="wheel-item" data-value="atkinson" style="font-family:'Atkinson Hyperlegible', sans-serif;">Atkinson Hyperlegible</li>
+                <li class="wheel-item" data-value="noto" style="font-family:'Noto Sans', sans-serif;">Noto Sans</li>
+                <li class="wheel-item" data-value="roboto" style="font-family:'Roboto', sans-serif;">Roboto</li>
+                <li class="wheel-item" data-value="sfpro" style="font-family:-apple-system, 'SF Pro Display', 'SF Pro Text', sans-serif;">SF Pro</li>
+                <li class="wheel-item" data-value="segoe" style="font-family:'Segoe UI', Tahoma, sans-serif;">Segoe UI</li>
+                <li class="wheel-item" data-value="source" style="font-family:'Source Sans 3', sans-serif;">Source Sans 3</li>
+                <li class="wheel-item" data-value="nunito" style="font-family:'Nunito', sans-serif;">Nunito</li>
+                <li class="wheel-item" data-value="poppins" style="font-family:'Poppins', sans-serif;">Poppins</li>
+                <li class="wheel-item" data-value="worksans" style="font-family:'Work Sans', sans-serif;">Work Sans</li>
+                <li class="wheel-item" data-value="quicksand" style="font-family:'Quicksand', sans-serif;">Quicksand</li>
+                <li class="wheel-item" data-value="spacegrotesk" style="font-family:'Space Grotesk', sans-serif;">Space Grotesk</li>
+                <li class="wheel-item" data-value="manrope" style="font-family:'Manrope', sans-serif;">Manrope</li>
+                <li class="wheel-item" data-value="dmsans" style="font-family:'DM Sans', sans-serif;">DM Sans</li>
+                <li class="wheel-item" data-value="jakarta" style="font-family:'Plus Jakarta Sans', sans-serif;">Plus Jakarta Sans</li>
+              </ul>
+            </div>
           </div>
         </label> 
 
         <div class="options-row options-row-column">
           <span>Font Colour</span>
-          <div id="font-color-options" class="color-options options-color-grid">
-            <div class="color-swatch font-color-swatch" data-color="#39ff14" style="background-color:#39ff14"></div>
-            <div class="color-swatch font-color-swatch" data-color="#ffffff" style="background-color:#ffffff"></div>
-            <div class="color-swatch font-color-swatch" data-color="#00eeff" style="background-color:#00eeff"></div>
-            <div class="color-swatch font-color-swatch" data-color="#ffee00" style="background-color:#ffee00"></div>
-            <div class="color-swatch font-color-swatch" data-color="#ff8800" style="background-color:#ff8800"></div>
-            <div class="color-swatch font-color-swatch" data-color="#ff0088" style="background-color:#ff0088"></div>
-            <div class="color-swatch font-color-swatch" data-color="#c0c0c0" style="background-color:#c0c0c0"></div>
-            <div class="color-swatch font-color-swatch" data-color="#7fffd4" style="background-color:#7fffd4"></div>
-            <div class="color-swatch font-color-swatch" data-color="#ff0033" style="background-color:#ff0033"></div>
-            <div class="color-swatch font-color-swatch" data-color="#99ff00" style="background-color:#99ff00"></div>
-            <div class="color-swatch font-color-swatch" data-color="#00ff99" style="background-color:#00ff99"></div>
-            <div class="color-swatch font-color-swatch" data-color="#0099ff" style="background-color:#0099ff"></div>
-            <div class="color-swatch font-color-swatch" data-color="#4d5eff" style="background-color:#4d5eff"></div>
-            <div class="color-swatch font-color-swatch" data-color="#9900ff" style="background-color:#9900ff"></div>
-            <div class="color-swatch font-color-swatch" data-color="#ff00dd" style="background-color:#ff00dd"></div>
-            <div class="color-swatch font-color-swatch" data-color="#ffd700" style="background-color:#ffd700"></div>
-            <div class="color-swatch font-color-swatch" data-color="#40e0d0" style="background-color:#40e0d0"></div>
-            <div class="color-swatch font-color-swatch" data-color="#ff6347" style="background-color:#ff6347"></div>
-            <div class="color-swatch font-color-swatch" data-color="#da70d6" style="background-color:#da70d6"></div>
-            <div class="color-swatch font-color-swatch" data-color="#f0e68c" style="background-color:#f0e68c"></div>
+          <div class="custom-select-wrap" id="font-color-wrap">
+            <button type="button" id="font-color-btn" class="custom-select-btn">Neon Green ▾</button>
+            <div id="font-color-wheel-panel" class="wheel-panel hidden">
+              <div class="wheel-highlight"></div>
+              <ul id="font-color-wheel-list" class="wheel-list">
+                <li class="wheel-item" data-color="#39ff14" style="color:#39ff14">Neon Green</li>
+                <li class="wheel-item" data-color="#ffffff" style="color:#ffffff">White</li>
+                <li class="wheel-item" data-color="#00eeff" style="color:#00eeff">Cyan</li>
+                <li class="wheel-item" data-color="#ffee00" style="color:#ffee00">Yellow</li>
+                <li class="wheel-item" data-color="#ff8800" style="color:#ff8800">Orange</li>
+                <li class="wheel-item" data-color="#ff0088" style="color:#ff0088">Rose</li>
+                <li class="wheel-item" data-color="#c0c0c0" style="color:#c0c0c0">Silver</li>
+                <li class="wheel-item" data-color="#7fffd4" style="color:#7fffd4">Aquamarine</li>
+                <li class="wheel-item" data-color="#ff0033" style="color:#ff0033">Red</li>
+                <li class="wheel-item" data-color="#99ff00" style="color:#99ff00">Chartreuse</li>
+                <li class="wheel-item" data-color="#00ff99" style="color:#00ff99">Spring Green</li>
+                <li class="wheel-item" data-color="#0099ff" style="color:#0099ff">Sky Blue</li>
+                <li class="wheel-item" data-color="#4d5eff" style="color:#4d5eff">Indigo</li>
+                <li class="wheel-item" data-color="#9900ff" style="color:#9900ff">Purple</li>
+                <li class="wheel-item" data-color="#ff00dd" style="color:#ff00dd">Magenta</li>
+                <li class="wheel-item" data-color="#ffd700" style="color:#ffd700">Gold</li>
+                <li class="wheel-item" data-color="#40e0d0" style="color:#40e0d0">Turquoise</li>
+                <li class="wheel-item" data-color="#ff6347" style="color:#ff6347">Tomato</li>
+                <li class="wheel-item" data-color="#da70d6" style="color:#da70d6">Orchid</li>
+                <li class="wheel-item" data-color="#f0e68c" style="color:#f0e68c">Khaki</li>
+              </ul>
+            </div>
           </div>
         </div>
         <label class="options-row">

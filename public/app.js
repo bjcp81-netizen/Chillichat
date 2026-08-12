@@ -5,6 +5,7 @@
   const STORAGE_HANDLE_KEY = "chillichat_handle";
   const STORAGE_COLOR_KEY = "chillichat_color";
   const STORAGE_TOKEN_KEY = "chillichat_device_token";
+  const WHEEL_ITEM_HEIGHT = 44;
 
   const REACTIONS = [
     { key: "chilli", emoji: "🌶️" },
@@ -65,12 +66,41 @@
 
   let soundEnabled = true;
 
-  function buzz(ms) {
+ function buzz(ms) {
     if (navigator.vibrate) {
       navigator.vibrate(ms || 15);
     }
   }
 
+  function positionWheelPanel(btn, panel) {
+    const rect =
+      btn.getBoundingClientRect();
+
+    const panelWidth =
+      panel.offsetWidth || 200;
+
+    const margin = 8;
+
+    let left =
+      rect.right - panelWidth;
+
+    if (left < margin) {
+      left = margin;
+    }
+
+    const maxLeft =
+      window.innerWidth -
+      panelWidth -
+      margin;
+
+    if (left > maxLeft) {
+      left = maxLeft;
+    }
+
+    panel.style.left = left + "px";
+    panel.style.top =
+      rect.bottom + 4 + "px";
+  }
   const safeStorage = {
     getItem(key) {
       try {
@@ -200,7 +230,11 @@
   const optionsToggleBtn = document.getElementById("options-toggle-btn");
   const optionsDropdown = document.getElementById("options-dropdown");
   const fontBtn = document.getElementById("font-btn");
-  const fontList = document.getElementById("font-list");
+  const fontWheelPanel = document.getElementById("font-wheel-panel");
+  const fontWheelList = document.getElementById("font-wheel-list");
+  const fontWheelItems = Array.from(
+    document.querySelectorAll("#font-wheel-list .wheel-item")
+  );
 
   const FONT_LABELS = {
     default: "Default (Retro)",
@@ -221,17 +255,39 @@
     jakarta: "Plus Jakarta Sans",
   };
 
-  function setFontUI(value) {
-    fontBtn.textContent =
-      (FONT_LABELS[value] || FONT_LABELS.default) + " ▾";
+ function updateFontButtonLabel(value) {
+    const match = fontWheelItems.find(
+      (item) => item.dataset.value === value
+    );
 
-    fontList.querySelectorAll("li").forEach((li) => {
-      li.classList.toggle("active", li.dataset.value === value);
-    });
+    fontBtn.textContent =
+      (match
+        ? match.textContent
+        : FONT_LABELS.default) + " ▾";
   }
 
-  const fontColorSwatches =
-    document.querySelectorAll(".font-color-swatch");
+  const fontColorBtn = document.getElementById("font-color-btn");
+  const fontColorWheelPanel = document.getElementById(
+    "font-color-wheel-panel"
+  );
+  const fontColorWheelList = document.getElementById(
+    "font-color-wheel-list"
+  );
+  const fontColorWheelItems = Array.from(
+    document.querySelectorAll(
+      "#font-color-wheel-list .wheel-item"
+    )
+  );
+
+  function updateFontColorButtonLabel(color) {
+    const match = fontColorWheelItems.find(
+      (item) => item.dataset.color === color
+    );
+
+    fontColorBtn.textContent =
+      (match ? match.textContent : "Neon Green") +
+      " ▾";
+  }
 
   const boldToggle = document.getElementById("bold-toggle");
   const soundToggle = document.getElementById("sound-toggle");
@@ -291,17 +347,12 @@
 
     document.body.classList.toggle("bold-text", savedBold);
 
-    setFontUI(savedFont);
+    updateFontButtonLabel(savedFont);
     setFontSizeUI(savedFontSize);
 
     boldToggle.checked = savedBold;
 
-    fontColorSwatches.forEach((s) => {
-      s.classList.toggle(
-        "selected",
-        s.dataset.color === savedColor
-      );
-    });
+    updateFontColorButtonLabel(savedColor);
 
     soundEnabled =
       savedSound === null ? true : savedSound === "true";
@@ -315,15 +366,12 @@
     optionsDropdown.classList.toggle("open");
   });
 
-  fontBtn.addEventListener("click", () => {
-    buzz();
-    fontList.classList.toggle("hidden");
-  });
-
-  fontList.querySelectorAll("li").forEach((li) => {
-    li.addEventListener("click", () => {
-      const value = li.dataset.value;
-
+  const fontWheel = createWheel({
+    wrap: fontWheelPanel,
+    list: fontWheelList,
+    items: fontWheelItems,
+    getValue: (item) => item.dataset.value,
+    onChange: (value, itemEl) => {
       safeStorage.setItem("chillichat_font", value);
 
       document.documentElement.style.setProperty(
@@ -331,10 +379,39 @@
         FONT_MAP[value] || FONT_MAP.default
       );
 
-      setFontUI(value);
-      fontList.classList.add("hidden");
-      buzz();
-    });
+      fontBtn.textContent =
+        itemEl.textContent + " ▾";
+    },
+  });
+fontBtn.addEventListener("click", () => {
+    buzz();
+
+    const opening =
+      fontWheelPanel.classList.contains(
+        "hidden"
+      );
+
+    fontWheelPanel.classList.toggle(
+      "hidden"
+    );
+
+    if (opening) {
+      positionWheelPanel(
+        fontBtn,
+        fontWheelPanel
+      );
+
+      const savedFont =
+        safeStorage.getItem(
+          "chillichat_font"
+        ) || "default";
+
+      fontWheel.scrollToValue(
+        savedFont
+      );
+
+      fontWheel.settle();
+    }
   });
 
   fontSizeBtn.addEventListener("click", () => {
@@ -359,7 +436,7 @@
     });
   });
 
-  document.addEventListener("click", (e) => {
+ document.addEventListener("click", (e) => {
     if (
       !fontSizeBtn.contains(e.target) &&
       !fontSizeList.contains(e.target)
@@ -369,31 +446,71 @@
 
     if (
       !fontBtn.contains(e.target) &&
-      !fontList.contains(e.target)
+      !fontWheelPanel.contains(e.target)
     ) {
-      fontList.classList.add("hidden");
+      fontWheelPanel.classList.add("hidden");
+    }
+
+    if (
+      !fontColorBtn.contains(e.target) &&
+      !fontColorWheelPanel.contains(e.target)
+    ) {
+      fontColorWheelPanel.classList.add(
+        "hidden"
+      );
     }
   });
 
-  fontColorSwatches.forEach((swatch) => {
-    swatch.addEventListener("click", () => {
-      fontColorSwatches.forEach((s) =>
-        s.classList.remove("selected")
+ const fontColorWheel = createWheel({
+    wrap: fontColorWheelPanel,
+    list: fontColorWheelList,
+    items: fontColorWheelItems,
+    getValue: (item) => item.dataset.color,
+    onChange: (color, itemEl) => {
+      safeStorage.setItem(
+        "chillichat_font_color",
+        color
       );
-
-      swatch.classList.add("selected");
-
-      const color = swatch.dataset.color;
-
-      safeStorage.setItem("chillichat_font_color", color);
 
       document.documentElement.style.setProperty(
         "--app-text-color",
         color
       );
 
-      buzz();
-    });
+      fontColorBtn.textContent =
+        itemEl.textContent + " ▾";
+    },
+  });
+
+ fontColorBtn.addEventListener("click", () => {
+    buzz();
+
+    const opening =
+      fontColorWheelPanel.classList.contains(
+        "hidden"
+      );
+
+    fontColorWheelPanel.classList.toggle(
+      "hidden"
+    );
+
+    if (opening) {
+      positionWheelPanel(
+        fontColorBtn,
+        fontColorWheelPanel
+      );
+
+      const savedColor =
+        safeStorage.getItem(
+          "chillichat_font_color"
+        ) || "#39ff14";
+
+      fontColorWheel.scrollToValue(
+        savedColor
+      );
+
+      fontColorWheel.settle();
+    }
   });
 
   boldToggle.addEventListener("change", () => {
@@ -448,129 +565,180 @@
     }
   }
 
- const WHEEL_ITEM_HEIGHT = 44;
-  let wheelScrollRAF = null;
-  let wheelSettleTimeout = null;
-  let currentWheelColor = null;
+ function createWheel({
+    wrap,
+    list,
+    items,
+    getValue,
+    onChange,
+  }) {
+    let scrollRAF = null;
+    let settleTimeout = null;
+    let currentValue = null;
 
-  function updateWheelVisuals() {
-    const wrapRect =
-      colorWheelWrap.getBoundingClientRect();
+    function updateVisuals() {
+      const wrapRect =
+        wrap.getBoundingClientRect();
 
-    const centerY =
-      wrapRect.top +
-      wrapRect.height / 2;
+      const centerY =
+        wrapRect.top +
+        wrapRect.height / 2;
 
-    let closestItem = null;
-    let closestDist = Infinity;
+      let closestItem = null;
+      let closestDist = Infinity;
 
-    colorWheelItems.forEach((item) => {
-      const rect =
-        item.getBoundingClientRect();
+      items.forEach((item) => {
+        const rect =
+          item.getBoundingClientRect();
 
-      const itemCenter =
-        rect.top +
-        rect.height / 2;
+        const itemCenter =
+          rect.top +
+          rect.height / 2;
 
-      const dist = Math.abs(
-        itemCenter - centerY
+        const dist = Math.abs(
+          itemCenter - centerY
+        );
+
+        const normalized = Math.min(
+          dist /
+            (WHEEL_ITEM_HEIGHT * 2),
+          1
+        );
+
+        const opacity =
+          1 - normalized * 0.7;
+
+        const scale =
+          1 - normalized * 0.35;
+
+        item.style.opacity = opacity;
+        item.style.transform =
+          "scale(" + scale + ")";
+
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestItem = item;
+        }
+      });
+
+      return closestItem;
+    }
+
+    function settle() {
+      const centerItem =
+        updateVisuals();
+
+      if (!centerItem) return;
+
+      items.forEach((item) =>
+        item.classList.remove(
+          "selected"
+        )
       );
 
-      const normalized = Math.min(
-        dist /
-          (WHEEL_ITEM_HEIGHT * 2),
-        1
+      centerItem.classList.add(
+        "selected"
       );
 
-      const opacity =
-        1 - normalized * 0.7;
+      const value =
+        getValue(centerItem);
 
-      const scale =
-        1 - normalized * 0.35;
-
-      item.style.opacity = opacity;
-      item.style.transform =
-        "scale(" + scale + ")";
-
-      if (dist < closestDist) {
-        closestDist = dist;
-        closestItem = item;
+      if (value !== currentValue) {
+        currentValue = value;
+        onChange(value, centerItem);
+        buzz(15);
       }
+    }
+
+    function onScroll() {
+      if (!scrollRAF) {
+        scrollRAF =
+          requestAnimationFrame(
+            () => {
+              updateVisuals();
+              scrollRAF = null;
+            }
+          );
+      }
+
+      clearTimeout(
+        settleTimeout
+      );
+
+      settleTimeout = setTimeout(
+        settle,
+        120
+      );
+    }
+
+   list.addEventListener(
+      "scroll",
+      onScroll,
+      { passive: true }
+    );
+
+    list.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+
+        const direction =
+          e.deltaY > 0 ? 1 : -1;
+
+        list.scrollBy({
+          top:
+            direction *
+            WHEEL_ITEM_HEIGHT,
+          behavior: "smooth",
+        });
+      },
+      { passive: false }
+    );
+
+    items.forEach((item) => {
+      item.addEventListener(
+        "click",
+        () => {
+          item.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      );
     });
 
-    return closestItem;
+    return {
+      settle,
+      scrollToValue(value) {
+        const target = items.find(
+          (item) =>
+            getValue(item) === value
+        );
+
+        if (target) {
+          target.scrollIntoView({
+            block: "center",
+          });
+        }
+      },
+    };
   }
 
-  function settleWheel() {
-    const centerItem =
-      updateWheelVisuals();
-
-    if (!centerItem) return;
-
-    colorWheelItems.forEach((item) =>
-      item.classList.remove(
-        "selected"
-      )
-    );
-
-    centerItem.classList.add(
-      "selected"
-    );
-
-    const color =
-      centerItem.dataset.color;
-
-    if (color !== currentWheelColor) {
-      currentWheelColor = color;
+  const joinColorWheel = createWheel({
+    wrap: colorWheelWrap,
+    list: colorWheelList,
+    items: colorWheelItems,
+    getValue: (item) =>
+      item.dataset.color,
+    onChange: (color) => {
       myColor = color;
 
       applyAccentColor(myColor);
       updateHandlePreview();
-      buzz(15);
-    }
-  }
-
-  function onWheelScroll() {
-    if (!wheelScrollRAF) {
-      wheelScrollRAF =
-        requestAnimationFrame(
-          () => {
-            updateWheelVisuals();
-            wheelScrollRAF = null;
-          }
-        );
-    }
-
-    clearTimeout(
-      wheelSettleTimeout
-    );
-
-    wheelSettleTimeout =
-      setTimeout(
-        settleWheel,
-        120
-      );
-  }
-
-  colorWheelList.addEventListener(
-    "scroll",
-    onWheelScroll,
-    { passive: true }
-  );
-
-  colorWheelItems.forEach((item) => {
-    item.addEventListener(
-      "click",
-      () => {
-        item.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-    );
+    },
   });
 
-  settleWheel();
+  joinColorWheel.settle();
 
   handleInput.addEventListener(
     "input",

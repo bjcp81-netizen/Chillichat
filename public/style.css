@@ -1091,6 +1091,79 @@ body.bold-text {
   background-color: #39ff14;
   color: #000000;
 }
+
+/* ---------- Compact scroll-wheel pickers (Options panel) ---------- */
+
+.wheel-panel {
+  position: fixed;
+  z-index: 20;
+  background-color: #000000;
+  border: 1px solid #39ff14;
+  border-radius: 4px;
+  width: 200px;
+}
+
+.wheel-panel.hidden {
+  display: none;
+}
+
+.wheel-list {
+  list-style: none;
+  height: 132px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  padding: 44px 0;
+  margin: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 70%, transparent 100%);
+}
+
+.wheel-list::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #39ff14;
+  opacity: 0.3;
+  transform: scale(0.8);
+  cursor: pointer;
+  transition: text-shadow 150ms ease;
+  text-align: center;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wheel-item.selected {
+  text-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
+}
+
+.wheel-highlight {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 44px;
+  transform: translateY(-50%);
+  border-top: 1px solid rgba(57, 255, 20, 0.35);
+  border-bottom: 1px solid rgba(57, 255, 20, 0.35);
+  pointer-events: none;
+}
 ::-webkit-scrollbar {
   width: 8px;
 }
