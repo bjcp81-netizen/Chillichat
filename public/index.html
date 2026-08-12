@@ -156,18 +156,10 @@
             </div>
           </div>
         </div>
-        <label class="options-row">
-          <span>Font Size</span>
-          <div class="custom-select-wrap" id="font-size-wrap">
-            <button type="button" id="font-size-btn" class="custom-select-btn">Medium ▾</button>
-            <ul id="font-size-list" class="custom-select-list hidden">
-              <li data-value="small">Small</li>
-              <li data-value="medium">Medium</li>
-              <li data-value="large">Large</li>
-              <li data-value="xlarge">Extra Large</li>
-            </ul>
-          </div>
-        </label>
+       <div class="options-row options-row-column">
+          <span>Font Size — <span id="font-size-label">Medium</span></span>
+          <input type="range" id="font-size-slider" class="size-slider" min="0" max="3" step="1" value="1" />
+        </div>
 
        <label class="options-row">
           <span>Bold Text</span>

@@ -1351,6 +1351,51 @@ html {
 .switch-checkbox:checked::before {
   transform: translateX(20px);
 }
+
+.size-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #1f7a0d;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.size-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #1f7a0d;
+}
+
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #39ff14;
+  box-shadow: 0 0 6px rgba(57, 255, 20, 0.8);
+  cursor: pointer;
+}
+
+.size-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #1f7a0d;
+}
+
+.size-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: #39ff14;
+  box-shadow: 0 0 6px rgba(57, 255, 20, 0.8);
+  cursor: pointer;
+}
 :root {
   --accent-color: #39ff14;
 }

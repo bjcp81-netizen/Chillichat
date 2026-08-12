@@ -295,8 +295,15 @@
   const bioInput = document.getElementById("bio-input");
   const bioSaveBtn = document.getElementById("bio-save-btn");
 
-  const fontSizeBtn = document.getElementById("font-size-btn");
-  const fontSizeList = document.getElementById("font-size-list");
+  const fontSizeSlider = document.getElementById("font-size-slider");
+  const fontSizeLabel = document.getElementById("font-size-label");
+
+  const FONT_SIZE_STEPS = [
+    "small",
+    "medium",
+    "large",
+    "xlarge",
+  ];
 
   const FONT_SIZE_LABELS = {
     small: "Small",
@@ -305,13 +312,20 @@
     xlarge: "Extra Large",
   };
 
-  function setFontSizeUI(value) {
-    fontSizeBtn.textContent =
-      (FONT_SIZE_LABELS[value] || FONT_SIZE_LABELS.medium) + " ▾";
+  let lastFontSizeStep = null;
 
-    fontSizeList.querySelectorAll("li").forEach((li) => {
-      li.classList.toggle("active", li.dataset.value === value);
-    });
+  function setFontSizeUI(value) {
+    const stepIndex =
+      FONT_SIZE_STEPS.indexOf(value);
+
+    fontSizeSlider.value =
+      stepIndex === -1 ? 1 : stepIndex;
+
+    fontSizeLabel.textContent =
+      FONT_SIZE_LABELS[value] ||
+      FONT_SIZE_LABELS.medium;
+
+    lastFontSizeStep = fontSizeSlider.value;
   }
 
   function applyOptions() {
@@ -414,36 +428,46 @@ fontBtn.addEventListener("click", () => {
     }
   });
 
-  fontSizeBtn.addEventListener("click", () => {
-    buzz();
-    fontSizeList.classList.toggle("hidden");
+ fontSizeSlider.addEventListener("input", () => {
+    const value =
+      FONT_SIZE_STEPS[
+        fontSizeSlider.value
+      ] || "medium";
+
+    document.documentElement.style.setProperty(
+      "--app-font-size",
+      FONT_SIZE_MAP[value] || FONT_SIZE_MAP.medium
+    );
+
+    fontSizeLabel.textContent =
+      FONT_SIZE_LABELS[value];
+
+    if (
+      fontSizeSlider.value !==
+      lastFontSizeStep
+    ) {
+      lastFontSizeStep =
+        fontSizeSlider.value;
+
+      buzz(10);
+    }
   });
 
-  fontSizeList.querySelectorAll("li").forEach((li) => {
-    li.addEventListener("click", () => {
-      const value = li.dataset.value;
+  fontSizeSlider.addEventListener("change", () => {
+    const value =
+      FONT_SIZE_STEPS[
+        fontSizeSlider.value
+      ] || "medium";
 
-      safeStorage.setItem("chillichat_font_size", value);
+    safeStorage.setItem(
+      "chillichat_font_size",
+      value
+    );
 
-      document.documentElement.style.setProperty(
-        "--app-font-size",
-        FONT_SIZE_MAP[value] || FONT_SIZE_MAP.medium
-      );
-
-      setFontSizeUI(value);
-      fontSizeList.classList.add("hidden");
-      buzz();
-    });
+    buzz(15);
   });
 
  document.addEventListener("click", (e) => {
-    if (
-      !fontSizeBtn.contains(e.target) &&
-      !fontSizeList.contains(e.target)
-    ) {
-      fontSizeList.classList.add("hidden");
-    }
-
     if (
       !fontBtn.contains(e.target) &&
       !fontWheelPanel.contains(e.target)
