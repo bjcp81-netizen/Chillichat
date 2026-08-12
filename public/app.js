@@ -38,7 +38,7 @@
     streak_100: { emoji: "☄️", name: "100-Day Streak" },
   };
 
-  const FONT_MAP = {
+ const FONT_MAP = {
     default: "'Courier New', Courier, monospace",
     inter: "'Inter', sans-serif",
     atkinson: "'Atkinson Hyperlegible', sans-serif",
@@ -55,6 +55,16 @@
     manrope: "'Manrope', sans-serif",
     dmsans: "'DM Sans', sans-serif",
     jakarta: "'Plus Jakarta Sans', sans-serif",
+    oswald: "'Oswald', sans-serif",
+    rubik: "'Rubik', sans-serif",
+    bebasneue: "'Bebas Neue', sans-serif",
+    righteous: "'Righteous', sans-serif",
+    bangers: "'Bangers', cursive",
+    archivoblack: "'Archivo Black', sans-serif",
+    permanentmarker: "'Permanent Marker', cursive",
+    caveat: "'Caveat', cursive",
+    jetbrainsmono: "'JetBrains Mono', monospace",
+    firacode: "'Fira Code', monospace",
   };
 
   const FONT_SIZE_MAP = {
@@ -68,7 +78,11 @@
 
  function buzz(ms) {
     if (navigator.vibrate) {
-      navigator.vibrate(ms || 15);
+      try {
+        navigator.vibrate(ms || 15);
+      } catch (e) {
+        // Ignore — browser blocked vibrate before a user gesture.
+      }
     }
   }
 
@@ -236,7 +250,7 @@
     document.querySelectorAll("#font-wheel-list .wheel-item")
   );
 
-  const FONT_LABELS = {
+const FONT_LABELS = {
     default: "Default (Retro)",
     inter: "Inter",
     atkinson: "Atkinson Hyperlegible",
@@ -253,8 +267,17 @@
     manrope: "Manrope",
     dmsans: "DM Sans",
     jakarta: "Plus Jakarta Sans",
+    oswald: "Oswald",
+    rubik: "Rubik",
+    bebasneue: "Bebas Neue",
+    righteous: "Righteous",
+    bangers: "Bangers",
+    archivoblack: "Archivo Black",
+    permanentmarker: "Permanent Marker",
+    caveat: "Caveat",
+    jetbrainsmono: "JetBrains Mono",
+    firacode: "Fira Code",
   };
-
  function updateFontButtonLabel(value) {
     const match = fontWheelItems.find(
       (item) => item.dataset.value === value
