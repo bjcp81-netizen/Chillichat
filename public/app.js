@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const STORAGE_HANDLE_KEY = "chillichat_handle";
   const STORAGE_COLOR_KEY = "chillichat_color";
   const STORAGE_TOKEN_KEY = "chillichat_device_token";
-  const WHEEL_ITEM_HEIGHT = 44;
+  const WHEEL_ITEM_HEIGHT = 32;
 
   const REACTIONS = [
     { key: "chilli", emoji: "🌶️" },
@@ -609,183 +609,299 @@ fontBtn.addEventListener("click", () => {
     }
   }
 
- function createWheel({
+function createWheel({
     wrap,
     list,
     items,
     getValue,
     onChange,
   }) {
-    let scrollRAF = null;
-    let settleTimeout = null;
+    const itemCount = items.length;
+    let offset = 0;
+    let velocity = 0;
+    let isDragging = false;
+    let lastMoveY = 0;
+    let lastMoveTime = 0;
+    let momentumRAF = null;
     let currentValue = null;
-    let lastTickItem = null;
+    let lastTickIndex = null;
 
-    function updateVisuals() {
-      const wrapRect =
-        wrap.getBoundingClientRect();
+    function wrapIndex(i) {
+      return ((i % itemCount) + itemCount) % itemCount;
+    }
 
-      const centerY =
-        wrapRect.top +
-        wrapRect.height / 2;
+    function render() {
+      items.forEach((item, i) => {
+        let diff = i - offset;
+        diff =
+          diff -
+          Math.round(diff / itemCount) *
+            itemCount;
 
-      let closestItem = null;
-      let closestDist = Infinity;
-
-      items.forEach((item) => {
-        const rect =
-          item.getBoundingClientRect();
-
-        const itemCenter =
-          rect.top +
-          rect.height / 2;
-
-        const dist = Math.abs(
-          itemCenter - centerY
-        );
-
+        const px = diff * WHEEL_ITEM_HEIGHT;
+        const absDiff = Math.abs(diff);
         const normalized = Math.min(
-          dist /
-            (WHEEL_ITEM_HEIGHT * 2),
+          absDiff / 2,
           1
         );
 
-        const opacity =
-          1 - normalized * 0.7;
-
-        const scale =
-          1 - normalized * 0.35;
-
-        item.style.opacity = opacity;
         item.style.transform =
-          "scale(" + scale + ")";
+          "translateY(" +
+          px +
+          "px) scale(" +
+          (1 - normalized * 0.4) +
+          ")";
 
-        if (dist < closestDist) {
-          closestDist = dist;
-          closestItem = item;
-        }
+        item.style.opacity =
+          1 - normalized * 0.75;
+
+        item.style.zIndex = String(
+          1000 - Math.round(absDiff * 10)
+        );
       });
-
-      return closestItem;
     }
 
-    function updateVisualsWithTick() {
-      const closestItem =
-        updateVisuals();
+    function centerIndex() {
+      return wrapIndex(
+        Math.round(offset)
+      );
+    }
 
-      if (
-        closestItem &&
-        closestItem !== lastTickItem
-      ) {
-        lastTickItem = closestItem;
+    function maybeTick() {
+      const idx = centerIndex();
+
+      if (idx !== lastTickIndex) {
+        lastTickIndex = idx;
         buzz(4);
       }
-
-      return closestItem;
     }
 
-    function settle() {
-      const centerItem =
-        updateVisuals();
+    function commitSelection() {
+      const idx = centerIndex();
+      const item = items[idx];
 
-      if (!centerItem) return;
-
-      lastTickItem = centerItem;
-
-      items.forEach((item) =>
-        item.classList.remove(
-          "selected"
-        )
+      items.forEach((it) =>
+        it.classList.remove("selected")
       );
 
-      centerItem.classList.add(
-        "selected"
-      );
+      item.classList.add("selected");
+      lastTickIndex = idx;
 
-      const value =
-        getValue(centerItem);
+      const value = getValue(item);
 
       if (value !== currentValue) {
         currentValue = value;
-        onChange(value, centerItem);
+        onChange(value, item);
         buzz(15);
       }
     }
 
-    function onScroll() {
-      if (!scrollRAF) {
-        scrollRAF =
-          requestAnimationFrame(
-            () => {
-              updateVisualsWithTick();
-              scrollRAF = null;
-            }
-          );
+    function cancelMomentum() {
+      if (momentumRAF) {
+        cancelAnimationFrame(
+          momentumRAF
+        );
+        momentumRAF = null;
       }
-
-      clearTimeout(
-        settleTimeout
-      );
-
-      settleTimeout = setTimeout(
-        settle,
-        120
-      );
     }
 
-   list.addEventListener(
-      "scroll",
-      onScroll,
-      { passive: true }
+    function animateTo(targetIndex) {
+      cancelMomentum();
+
+      const startOffset = offset;
+      let diff = targetIndex - startOffset;
+      diff =
+        diff -
+        Math.round(diff / itemCount) *
+          itemCount;
+
+      const finalOffset =
+        startOffset + diff;
+      const duration = 220;
+      const startTime = performance.now();
+
+      function step(now) {
+        const t = Math.min(
+          (now - startTime) / duration,
+          1
+        );
+        const eased =
+          1 - Math.pow(1 - t, 3);
+
+        offset =
+          startOffset + diff * eased;
+
+        render();
+        maybeTick();
+
+        if (t < 1) {
+          momentumRAF =
+            requestAnimationFrame(step);
+        } else {
+          offset = wrapIndex(
+            Math.round(finalOffset)
+          );
+
+          render();
+          commitSelection();
+          momentumRAF = null;
+        }
+      }
+
+      momentumRAF =
+        requestAnimationFrame(step);
+    }
+
+    function runMomentum() {
+      const FRICTION = 0.95;
+      const MIN_VELOCITY = 0.0006;
+
+      function step() {
+        offset += velocity * 16;
+        velocity *= FRICTION;
+
+        render();
+        maybeTick();
+
+        if (
+          Math.abs(velocity) >
+          MIN_VELOCITY
+        ) {
+          momentumRAF =
+            requestAnimationFrame(step);
+        } else {
+          animateTo(Math.round(offset));
+        }
+      }
+
+      momentumRAF =
+        requestAnimationFrame(step);
+    }
+
+    function onPointerDown(e) {
+      cancelMomentum();
+      isDragging = true;
+      lastMoveY = e.clientY;
+      lastMoveTime = performance.now();
+      velocity = 0;
+
+      try {
+        list.setPointerCapture(
+          e.pointerId
+        );
+      } catch (err) {}
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+
+      const now = performance.now();
+      const dy = e.clientY - lastMoveY;
+      const dt = Math.max(
+        now - lastMoveTime,
+        1
+      );
+
+      const doffset =
+        -dy / WHEEL_ITEM_HEIGHT;
+
+      offset += doffset;
+      velocity = doffset / dt;
+
+      lastMoveY = e.clientY;
+      lastMoveTime = now;
+
+      render();
+      maybeTick();
+    }
+
+    function onPointerUp(e) {
+      if (!isDragging) return;
+      isDragging = false;
+
+      try {
+        list.releasePointerCapture(
+          e.pointerId
+        );
+      } catch (err) {}
+
+      if (Math.abs(velocity) > 0.015) {
+        runMomentum();
+      } else {
+        animateTo(Math.round(offset));
+      }
+    }
+
+    list.addEventListener(
+      "pointerdown",
+      onPointerDown
+    );
+
+    list.addEventListener(
+      "pointermove",
+      onPointerMove
+    );
+
+    list.addEventListener(
+      "pointerup",
+      onPointerUp
+    );
+
+    list.addEventListener(
+      "pointercancel",
+      onPointerUp
     );
 
     list.addEventListener(
       "wheel",
       (e) => {
         e.preventDefault();
+        cancelMomentum();
 
         const direction =
           e.deltaY > 0 ? 1 : -1;
 
-        list.scrollBy({
-          top:
-            direction *
-            WHEEL_ITEM_HEIGHT,
-          behavior: "smooth",
-        });
+        velocity = direction * 0.03;
+        runMomentum();
       },
       { passive: false }
     );
 
-    items.forEach((item) => {
+    items.forEach((item, i) => {
       item.addEventListener(
         "click",
         () => {
-          item.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
+          if (isDragging) return;
+          animateTo(i);
         }
       );
     });
 
+    render();
+
     return {
-      settle,
+      settle() {
+        cancelMomentum();
+        offset = wrapIndex(
+          Math.round(offset)
+        );
+        render();
+        commitSelection();
+      },
       scrollToValue(value) {
-        const target = items.find(
+        const idx = items.findIndex(
           (item) =>
             getValue(item) === value
         );
 
-        if (target) {
-          target.scrollIntoView({
-            block: "center",
-          });
+        if (idx !== -1) {
+          cancelMomentum();
+          offset = idx;
+          render();
         }
       },
     };
   }
-
   const joinColorWheel = createWheel({
     wrap: colorWheelWrap,
     list: colorWheelList,
