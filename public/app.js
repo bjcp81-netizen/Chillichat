@@ -2337,7 +2337,22 @@ highrollersTodayBtn.addEventListener("click", () => {
             }
           );
 
+        console.log(
+          "Recorded clip — type:",
+          rawType,
+          "| chunks:",
+          audioChunks.length,
+          "| blob size:",
+          audioBlob.size,
+          "bytes"
+        );
+
         const sendClip = (finalBlob) => {
+          console.log(
+            "Sending clip — final blob size:",
+            finalBlob.size,
+            "bytes"
+          );
           const reader =
             new FileReader();
 
@@ -2365,24 +2380,40 @@ highrollersTodayBtn.addEventListener("click", () => {
             finalBlob
           );
         };
-
-        if (
+if (
           rawType.includes("webm") &&
           window.ysFixWebmDuration
         ) {
+          console.log(
+            "Running ysFixWebmDuration..."
+          );
+
           ysFixWebmDuration(
             audioBlob,
             durationMs,
             { logger: false }
           )
-            .then(sendClip)
+            .then((fixedBlob) => {
+              console.log(
+                "ysFixWebmDuration succeeded — fixed size:",
+                fixedBlob.size,
+                "bytes"
+              );
+              sendClip(fixedBlob);
+            })
             .catch((err) => {
               console.error(
-                "Failed to fix webm duration, sending as-is:",
+                "ysFixWebmDuration FAILED, sending unfixed:",
                 err
               );
               sendClip(audioBlob);
             });
+        } else if (rawType.includes("webm")) {
+          console.warn(
+            "ysFixWebmDuration not available — window.ysFixWebmDuration is",
+            window.ysFixWebmDuration
+          );
+          sendClip(audioBlob);
         } else {
           sendClip(audioBlob);
         }
