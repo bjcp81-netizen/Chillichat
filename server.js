@@ -5,6 +5,13 @@ const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 const { Pool } = require("pg");
+const fs = require("fs");
+const os = require("os");
+const crypto = require("crypto");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegPath = require("ffmpeg-static");
+
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 const server = http.createServer(app);
@@ -60,6 +67,50 @@ function computeScovilleRank(scho) {
 
 function generateToken() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function parseAudioDataUrl(dataUrl) {
+  const match = dataUrl.match(/^data:(.+?);base64,(.*)$/s);
+  if (!match) throw new Error("Invalid audio data URL");
+  return { mimeType: match[1], base64: match[2] };
+}
+
+function guessAudioExtension(mimeType) {
+  if (mimeType.includes("webm")) return ".webm";
+  if (mimeType.includes("mp4")) return ".mp4";
+  return "";
+}
+
+async function transcodeVoiceClipToAac(dataUrl) {
+  const { mimeType, base64 } = parseAudioDataUrl(dataUrl);
+  const inputBuffer = Buffer.from(base64, "base64");
+
+  const tmpDir = os.tmpdir();
+  const id = crypto.randomBytes(8).toString("hex");
+  const inputExt = guessAudioExtension(mimeType);
+  const inputPath = path.join(tmpDir, `voice-in-${id}${inputExt}`);
+  const outputPath = path.join(tmpDir, `voice-out-${id}.m4a`);
+
+  fs.writeFileSync(inputPath, inputBuffer);
+
+  try {
+    await new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .audioCodec("aac")
+        .audioBitrate("96k")
+        .audioChannels(1)
+        .format("mp4")
+        .on("error", reject)
+        .on("end", resolve)
+        .save(outputPath);
+    });
+
+    const outputBuffer = fs.readFileSync(outputPath);
+    return "data:audio/mp4;base64," + outputBuffer.toString("base64");
+  } finally {
+    fs.unlink(inputPath, () => {});
+    fs.unlink(outputPath, () => {});
+  }
 }
 
 function computeHeatRating(counts) {
@@ -631,7 +682,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("voiceClip", async ({ handle, color, audioData, durationMs }) => {
+ socket.on("voiceClip", async ({ handle, color, audioData, durationMs }) => {
     const MAX_DURATION_MS = 10000;
     const MAX_SIZE_BYTES = 1024 * 1024; // 1MB safety cap
 
@@ -645,17 +696,25 @@ io.on("connection", (socket) => {
       return;
     }
 
+    let finalAudioData = audioData;
+
+    try {
+      finalAudioData = await transcodeVoiceClipToAac(audioData);
+    } catch (err) {
+      console.error("Voice clip transcoding failed, storing original format:", err);
+    }
+
     try {
       const result = await pool.query(
         "INSERT INTO voice_clips (handle, color, audio_data, duration_ms) VALUES ($1, $2, $3, $4) RETURNING id, created_at",
-        [handle, color, audioData, durationMs]
+        [handle, color, finalAudioData, durationMs]
       );
 
       io.emit("voiceClip", {
         id: result.rows[0].id,
         handle,
         color,
-        audioData,
+        audioData: finalAudioData,
         durationMs,
         createdAt: result.rows[0].created_at,
       });
