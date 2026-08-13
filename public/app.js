@@ -1,6 +1,5 @@
-  document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", function () {
   console.log("ChilliChat app.js loaded");
-
   const IDLE_LIMIT_MS = 5 * 60 * 1000;
   const STORAGE_HANDLE_KEY = "chillichat_handle";
   const STORAGE_COLOR_KEY = "chillichat_color";
@@ -2347,12 +2346,22 @@ highrollersTodayBtn.addEventListener("click", () => {
           "bytes"
         );
 
-        const sendClip = (finalBlob) => {
-          console.log(
-            "Sending clip — final blob size:",
-            finalBlob.size,
-            "bytes"
+        const MIN_VALID_BLOB_BYTES = 500;
+
+        if (audioBlob.size < MIN_VALID_BLOB_BYTES) {
+          console.warn(
+            "Recording came back empty (known Safari MediaRecorder bug) — not sending."
           );
+
+          showSystemMessage(
+            "⚠️ That recording didn't capture any audio (a known Safari issue) — please try again."
+          );
+
+          return;
+        }
+
+        const sendClip = (finalBlob) => {
+          
           const reader =
             new FileReader();
 
@@ -2418,7 +2427,7 @@ if (
           sendClip(audioBlob);
         }
       };
-mediaRecorder.start();
+mediaRecorder.start(250);
 
     recordStartTime =
         Date.now();
