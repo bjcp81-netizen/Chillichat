@@ -2903,9 +2903,9 @@ cancelRecordingBtn.addEventListener(
 
   // ---- Ephemeral photos ----
 
-  const MAX_PHOTO_DIMENSION = 800;
+ const MAX_PHOTO_DIMENSION = 640;
   const MAX_PHOTO_BASE64_LENGTH =
-    1.1 * 1024 * 1024;
+    450 * 1024;
 
   const PHOTO_VIEW_SECONDS = 10;
 
@@ -2996,9 +2996,9 @@ cancelRecordingBtn.addEventListener(
           height
         );
 
-        tryCompress(
+       tryCompress(
           canvas,
-          0.7
+          0.5
         );
       };
 
@@ -3031,14 +3031,14 @@ cancelRecordingBtn.addEventListener(
         quality
       );
 
-    if (
+   if (
       dataUrl.length >
         MAX_PHOTO_BASE64_LENGTH &&
-      quality > 0.3
+      quality > 0.2
     ) {
       tryCompress(
         canvas,
-        quality - 0.15
+        quality - 0.1
       );
 
       return;

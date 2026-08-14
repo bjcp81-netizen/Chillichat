@@ -94,10 +94,11 @@ async function transcodeVoiceClipToAac(dataUrl) {
   fs.writeFileSync(inputPath, inputBuffer);
 
   try {
-    await new Promise((resolve, reject) => {
+   await new Promise((resolve, reject) => {
       ffmpeg(inputPath)
         .audioCodec("aac")
-        .audioBitrate("96k")
+        .audioBitrate("32k")
+        .audioFrequency(22050)
         .audioChannels(1)
         .format("mp4")
         .on("error", reject)
