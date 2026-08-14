@@ -1458,12 +1458,14 @@ highrollersTodayBtn.addEventListener("click", () => {
 
         label =
           "Voice clip removed by moderator";
-      } else {
+    } else {
         selector =
           '[data-photo-id="' + id + '"]';
 
         label =
           "Photo removed by moderator";
+
+        clearPhotoCountdown(id);
       }
 
       const el =
@@ -3065,7 +3067,7 @@ cancelRecordingBtn.addEventListener(
     );
   }
 
-  socket.on(
+socket.on(
     "photoNew",
     (data) => {
       const msgEl =
@@ -3077,10 +3079,7 @@ cancelRecordingBtn.addEventListener(
       msgEl.dataset.photoId =
         data.id;
 
-      if (
-        data.alreadyOpened &&
-        !data.isOwn
-      ) {
+      if (data.expired) {
         renderExpiredThumb(
           msgEl,
           data.handle,
@@ -3091,7 +3090,14 @@ cancelRecordingBtn.addEventListener(
           msgEl,
           data.handle,
           data.color,
-          data.id
+          data.id,
+          data.remainingMs
+        );
+
+        startThumbCountdown(
+          msgEl,
+          data.id,
+          data.remainingMs
         );
       }
 
@@ -3114,11 +3120,12 @@ cancelRecordingBtn.addEventListener(
     }
   );
 
-  function renderActiveThumb(
+function renderActiveThumb(
     msgEl,
     handle,
     color,
-    photoId
+    photoId,
+    remainingMs
   ) {
     msgEl.innerHTML = "";
 
@@ -3173,7 +3180,7 @@ cancelRecordingBtn.addEventListener(
       "photo-thumb-hint";
 
     hint.textContent =
-      "View once photo — tap to reveal (10s)";
+      "Tap to view";
 
     meta.appendChild(
       handleLine
@@ -3183,12 +3190,32 @@ cancelRecordingBtn.addEventListener(
       hint
     );
 
+    const countdown =
+      document.createElement(
+        "span"
+      );
+
+    countdown.className =
+      "photo-thumb-countdown";
+
+    countdown.textContent =
+      "🔥 " +
+      Math.ceil(
+        (remainingMs || 10000) /
+          1000
+      ) +
+      "s";
+
     msgEl.appendChild(
       icon
     );
 
     msgEl.appendChild(
       meta
+    );
+
+    msgEl.appendChild(
+      countdown
     );
 
     if (myIsModerator) {
@@ -3235,11 +3262,7 @@ cancelRecordingBtn.addEventListener(
     msgEl.onclick = () => {
       socket.emit(
         "photoOpen",
-        {
-          photoId,
-          viewerHandle:
-            myHandle,
-        }
+        { photoId }
       );
     };
   }
@@ -3298,7 +3321,7 @@ cancelRecordingBtn.addEventListener(
       "photo-thumb-hint";
 
     hint.textContent =
-      "Photo expired";
+      "🔥 Burned away";
 
     meta.appendChild(
       handleLine
@@ -3320,13 +3343,129 @@ cancelRecordingBtn.addEventListener(
   let photoCountdownInterval =
     null;
 
+  const photoCountdownIntervals = {};
+  let currentlyViewedPhotoId = null;
+
+  function clearPhotoCountdown(photoId) {
+    if (photoCountdownIntervals[photoId]) {
+      clearInterval(
+        photoCountdownIntervals[photoId]
+      );
+      delete photoCountdownIntervals[
+        photoId
+      ];
+    }
+  }
+
+  function startThumbCountdown(
+    msgEl,
+    photoId,
+    remainingMs
+  ) {
+    clearPhotoCountdown(photoId);
+
+    const countdownEl =
+      msgEl.querySelector(
+        ".photo-thumb-countdown"
+      );
+
+    if (!countdownEl) return;
+
+    let msLeft = remainingMs;
+
+    function tick() {
+      const secondsLeft = Math.max(
+        Math.ceil(msLeft / 1000),
+        0
+      );
+
+      countdownEl.textContent =
+        "🔥 " + secondsLeft + "s";
+
+      if (msLeft <= 0) {
+        clearPhotoCountdown(photoId);
+        burnThumb(msgEl, photoId);
+        return;
+      }
+
+      msLeft -= 1000;
+    }
+
+    tick();
+
+    photoCountdownIntervals[photoId] =
+      setInterval(tick, 1000);
+  }
+
+  function burnThumb(msgEl, photoId) {
+    clearPhotoCountdown(photoId);
+
+    if (
+      !msgEl ||
+      !msgEl.classList.contains(
+        "photo-thumb"
+      ) ||
+      msgEl.classList.contains(
+        "burning"
+      ) ||
+      msgEl.classList.contains(
+        "expired"
+      )
+    ) {
+      if (
+        currentlyViewedPhotoId ===
+        photoId
+      ) {
+        closePhotoViewer();
+      }
+      return;
+    }
+
+    msgEl.classList.add("burning");
+
+    const handleColor =
+      msgEl.querySelector(
+        ".photo-thumb-handle"
+      );
+
+    const handleText =
+      handleColor
+        ? handleColor.textContent
+        : "";
+
+    const onBurnEnd = () => {
+      msgEl.removeEventListener(
+        "animationend",
+        onBurnEnd
+      );
+
+      msgEl.classList.remove(
+        "burning"
+      );
+
+      renderExpiredThumb(
+        msgEl,
+        handleText,
+        ""
+      );
+    };
+
+    msgEl.addEventListener(
+      "animationend",
+      onBurnEnd
+    );
+
+    if (
+      currentlyViewedPhotoId ===
+      photoId
+    ) {
+      closePhotoViewer();
+    }
+  }
+
   socket.on(
-    "photoResult",
-    ({
-      photoId,
-      imageData,
-      expired,
-    }) => {
+    "photoExpired",
+    ({ photoId }) => {
       const thumbEl =
         messagesBox.querySelector(
           '[data-photo-id="' +
@@ -3334,116 +3473,59 @@ cancelRecordingBtn.addEventListener(
             '"]'
         );
 
+      burnThumb(thumbEl, photoId);
+    }
+  );
+
+ socket.on(
+    "photoResult",
+    ({
+      photoId,
+      imageData,
+      expired,
+      remainingMs,
+    }) => {
       if (
         expired ||
         !imageData
       ) {
-        if (thumbEl) {
-          const handleColor =
-            thumbEl.querySelector(
-              ".photo-thumb-handle"
-            );
-
-          renderExpiredThumb(
-            thumbEl,
-            handleColor
-              ? handleColor.textContent
-              : "",
-            ""
+        const thumbEl =
+          messagesBox.querySelector(
+            '[data-photo-id="' +
+              photoId +
+              '"]'
           );
-        }
 
+        burnThumb(thumbEl, photoId);
         return;
       }
 
+      currentlyViewedPhotoId =
+        photoId;
+
       openPhotoViewer(
         imageData,
-        () => {
-          if (thumbEl) {
-            const handleColor =
-              thumbEl.querySelector(
-                ".photo-thumb-handle"
-              );
-
-            const handleText =
-              handleColor
-                ? handleColor.textContent
-                : "";
-
-            if (
-              handleText !==
-              myHandle
-            ) {
-              renderExpiredThumb(
-                thumbEl,
-                handleText,
-                ""
-              );
-            }
-          }
-        }
+        Math.max(
+          Math.ceil(
+            (remainingMs || 10000) /
+              1000
+          ),
+          1
+        )
       );
     }
   );
 
-  function openPhotoViewer(
-    imageData,
-    onExpireCallback
-  ) {
-    photoViewerImg.src =
-      imageData;
-
-    photoViewerOverlay.classList.remove(
+ function closePhotoViewer() {
+    photoViewerOverlay.classList.add(
       "hidden"
     );
 
-    let secondsLeft =
-      PHOTO_VIEW_SECONDS;
-
-    photoCountdownText.textContent =
-      secondsLeft + "s";
-
-    photoCountdownFill.style.width =
-      "100%";
+    photoViewerImg.src = "";
 
     clearInterval(
       photoCountdownInterval
     );
-
-    photoCountdownInterval =
-      setInterval(() => {
-        secondsLeft -= 1;
-
-        photoCountdownText.textContent =
-          Math.max(
-            secondsLeft,
-            0
-          ) + "s";
-
-        photoCountdownFill.style.width =
-          Math.max(
-            (secondsLeft /
-              PHOTO_VIEW_SECONDS) *
-              100,
-            0
-          ) + "%";
-
-        if (
-          secondsLeft <= 0
-        ) {
-          clearInterval(
-            photoCountdownInterval
-          );
-
-          closePhotoViewer();
-
-          if (
-            onExpireCallback
-          ) {
-            onExpireCallback();
-          }
-        }
-      }, 1000);
   }
 
   function closePhotoViewer() {
@@ -3456,6 +3538,8 @@ cancelRecordingBtn.addEventListener(
     clearInterval(
       photoCountdownInterval
     );
+
+    currentlyViewedPhotoId = null;
   }
 
   photoViewerOverlay.addEventListener(

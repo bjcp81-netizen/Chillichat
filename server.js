@@ -22,7 +22,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const connectedUsers = {};
 
 const REACTION_SCHO_VALUES = { chilli: 5, heart: 10, laugh: 8, down: -5 };
-
+const PHOTO_LIFETIME_MS = 10000;
 const SCOVILLE_TIERS = [
   { min: 2200000, name: "Pepper X", emoji: "👑" },
   { min: 1641000, name: "Carolina Reaper", emoji: "💀" },
@@ -500,11 +500,9 @@ async function sendMessageHistory(socket, viewerHandle) {
     `);
 
     const photoResult = await pool.query(
-      `SELECT p.id, p.handle, p.color, p.created_at,
-        EXISTS(SELECT 1 FROM photo_views v WHERE v.photo_id = p.id AND v.viewer_handle = $1) AS opened
-       FROM photos p
-       WHERE p.created_at > NOW() - INTERVAL '24 hours' AND p.deleted = FALSE`,
-      [viewerHandle]
+      `SELECT id, handle, color, created_at
+       FROM photos
+       WHERE created_at > NOW() - INTERVAL '24 hours' AND deleted = FALSE`
     );
 
     const textItems = msgResult.rows.map((msg) => {
@@ -542,17 +540,24 @@ async function sendMessageHistory(socket, viewerHandle) {
       },
     }));
 
-    const photoItems = photoResult.rows.map((p) => ({
-      type: "photo",
-      created_at: p.created_at,
-      payload: {
-        id: p.id,
-        handle: p.handle,
-        color: p.color,
-        isOwn: p.handle === viewerHandle,
-        alreadyOpened: p.opened,
-      },
-    }));
+    const photoItems = photoResult.rows.map((p) => {
+      const ageMs = Date.now() - new Date(p.created_at).getTime();
+      const remainingMs = PHOTO_LIFETIME_MS - ageMs;
+      const expired = remainingMs <= 0;
+
+      return {
+        type: "photo",
+        created_at: p.created_at,
+        payload: {
+          id: p.id,
+          handle: p.handle,
+          color: p.color,
+          createdAt: p.created_at,
+          expired,
+          remainingMs: expired ? 0 : remainingMs,
+        },
+      };
+    });
 
     const merged = [...textItems, ...voiceItems, ...photoItems].sort(
       (a, b) => new Date(a.created_at) - new Date(b.created_at)
@@ -737,27 +742,34 @@ io.on("connection", (socket) => {
     }
 
     try {
-      const result = await pool.query(
+   const result = await pool.query(
         "INSERT INTO photos (handle, color, image_data) VALUES ($1, $2, $3) RETURNING id, created_at",
         [handle, color, imageData]
       );
 
+      const photoId = result.rows[0].id;
+
       io.emit("photoNew", {
-        id: result.rows[0].id,
+        id: photoId,
         handle,
         color,
-        isOwn: false,
-        alreadyOpened: false,
+        createdAt: result.rows[0].created_at,
+        expired: false,
+        remainingMs: PHOTO_LIFETIME_MS,
       });
+
+      setTimeout(() => {
+        io.emit("photoExpired", { photoId });
+      }, PHOTO_LIFETIME_MS);
     } catch (err) {
       console.error("Failed to save photo:", err);
     }
   });
 
-  socket.on("photoOpen", async ({ photoId, viewerHandle }) => {
+socket.on("photoOpen", async ({ photoId }) => {
     try {
       const photoResult = await pool.query(
-        "SELECT handle, color, image_data, deleted FROM photos WHERE id = $1",
+        "SELECT handle, color, image_data, deleted, created_at FROM photos WHERE id = $1",
         [photoId]
       );
 
@@ -767,28 +779,20 @@ io.on("connection", (socket) => {
       }
 
       const photo = photoResult.rows[0];
+      const ageMs = Date.now() - new Date(photo.created_at).getTime();
+      const remainingMs = PHOTO_LIFETIME_MS - ageMs;
 
-      if (photo.handle === viewerHandle) {
-        socket.emit("photoResult", { photoId, imageData: photo.image_data, expired: false });
-        return;
-      }
-
-      const viewCheck = await pool.query(
-        "SELECT id FROM photo_views WHERE photo_id = $1 AND viewer_handle = $2",
-        [photoId, viewerHandle]
-      );
-
-      if (viewCheck.rows.length > 0) {
+      if (remainingMs <= 0) {
         socket.emit("photoResult", { photoId, expired: true });
         return;
       }
 
-      await pool.query(
-        "INSERT INTO photo_views (photo_id, viewer_handle) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        [photoId, viewerHandle]
-      );
-
-      socket.emit("photoResult", { photoId, imageData: photo.image_data, expired: false });
+      socket.emit("photoResult", {
+        photoId,
+        imageData: photo.image_data,
+        expired: false,
+        remainingMs,
+      });
     } catch (err) {
       console.error("Photo open error:", err);
       socket.emit("photoResult", { photoId, expired: true });
