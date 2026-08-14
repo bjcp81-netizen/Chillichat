@@ -216,6 +216,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const micSound = document.getElementById("mic-sound");
   const endSound = document.getElementById("end-sound");
   const playClipSound = document.getElementById("play-sound");
+  const voiceEndSound = document.getElementById("voice-end-sound");
 
   const connectionBanner = document.getElementById("connection-banner");
   const micBtn = document.getElementById("mic-btn");
@@ -2762,12 +2763,14 @@ cancelRecordingBtn.addEventListener(
         }
       );
 
-      audio.addEventListener(
-        "pause",
+     audio.addEventListener(
+        "ended",
         () => {
           isPlaying = false;
           playBtn.textContent =
             "▶";
+
+          playSound(voiceEndSound);
         }
       );
 
