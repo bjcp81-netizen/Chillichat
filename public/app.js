@@ -2626,7 +2626,7 @@ mediaRecorder.start(250);
 
     mediaRecorder.stop();
 
-    playSound(endSound);
+    playSound(sendSound);
 
     buzz(20);
   }
@@ -2699,29 +2699,13 @@ cancelRecordingBtn.addEventListener(
       let isPlaying = false;
 
       audio.addEventListener(
-        "error",
+        "ended",
         () => {
-          const err = audio.error;
-
-          console.error(
-            "Voice clip error — code:",
-            err ? err.code : "none",
-            "| message:",
-            err ? err.message : "none",
-            "| clip id:",
-            data.id,
-            "| src length:",
-            data.audioData
-              ? data.audioData.length
-              : "none",
-            "| src prefix:",
-            data.audioData
-              ? data.audioData.slice(0, 30)
-              : "none"
-          );
-
           isPlaying = false;
-          playBtn.textContent = "▶";
+          playBtn.textContent =
+            "▶";
+
+          playSound(voiceEndSound);
         }
       );
 
