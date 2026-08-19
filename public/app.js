@@ -2700,6 +2700,8 @@ cancelRecordingBtn.addEventListener(
 
       let isPlaying = false;
 
+      // Single "ended" handler — previously this was registered
+      // three times, causing overlapping sounds on clip finish.
       audio.addEventListener(
         "ended",
         () => {
@@ -2746,28 +2748,6 @@ cancelRecordingBtn.addEventListener(
           isPlaying = true;
           playBtn.textContent =
             "⏸";
-        }
-      );
-
-     audio.addEventListener(
-        "ended",
-        () => {
-          isPlaying = false;
-          playBtn.textContent =
-            "▶";
-
-          playSound(voiceEndSound);
-        }
-      );
-
-      audio.addEventListener(
-        "ended",
-        () => {
-          isPlaying = false;
-          playBtn.textContent =
-            "▶";
-
-          playSound(endSound);
         }
       );
 
@@ -3120,7 +3100,7 @@ socket.on(
     }
   );
 
-function renderActiveThumb(
+  function renderActiveThumb(
     msgEl,
     handle,
     color,
@@ -3128,143 +3108,59 @@ function renderActiveThumb(
     remainingMs
   ) {
     msgEl.innerHTML = "";
+    msgEl.classList.remove("expired");
 
-    msgEl.classList.remove(
-      "expired"
-    );
-
-    const icon =
-      document.createElement(
-        "span"
-      );
-
-    icon.className =
-      "photo-thumb-icon";
-
+    const icon = document.createElement("span");
+    icon.className = "photo-thumb-icon";
     icon.textContent = "📷";
 
-    const meta =
-      document.createElement("div");
+    const meta = document.createElement("div");
+    meta.className = "photo-thumb-meta";
 
-    meta.className =
-      "photo-thumb-meta";
+    const handleLine = document.createElement("span");
+    handleLine.className = "photo-thumb-handle clickable-handle";
+    handleLine.textContent = handle;
+    handleLine.style.color = color;
+    handleLine.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openUserProfile(handle);
+    });
 
-    const handleLine =
-      document.createElement(
-        "span"
-      );
-
-    handleLine.className =
-      "photo-thumb-handle clickable-handle";
-
-    handleLine.textContent =
-      handle;
-
-    handleLine.style.color =
-      color;
-
-    handleLine.addEventListener(
-      "click",
-      (e) => {
-        e.stopPropagation();
-        openUserProfile(handle);
-      }
-    );
-
-    const hint =
-      document.createElement(
-        "span"
-      );
-
-    hint.className =
-      "photo-thumb-hint";
-
-    hint.textContent =
-      "Tap to view";
-
-    meta.appendChild(
-      handleLine
-    );
-
-    meta.appendChild(
-      hint
-    );
-
-    const countdown =
-      document.createElement(
-        "span"
-      );
-
-    countdown.className =
-      "photo-thumb-countdown";
-
+    const countdown = document.createElement("span");
+    countdown.className = "photo-thumb-countdown";
     countdown.textContent =
-      "🔥 " +
-      Math.ceil(
-        (remainingMs || 10000) /
-          1000
-      ) +
-      "s";
+      "🔥 " + Math.ceil((remainingMs || 10000) / 1000) + "s";
 
-    msgEl.appendChild(
-      icon
-    );
+    meta.appendChild(handleLine);
+    meta.appendChild(countdown);
 
-    msgEl.appendChild(
-      meta
-    );
+    const revealBtn = document.createElement("button");
+    revealBtn.className = "photo-reveal-btn";
+    revealBtn.textContent = "Reveal";
+    revealBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      buzz();
+      socket.emit("photoOpen", { photoId });
+    });
 
-    msgEl.appendChild(
-      countdown
-    );
+    msgEl.appendChild(icon);
+    msgEl.appendChild(meta);
+    msgEl.appendChild(revealBtn);
 
     if (myIsModerator) {
-      const delBtn =
-        document.createElement(
-          "button"
-        );
-
-      delBtn.className =
-        "mod-delete-btn";
-
-      delBtn.textContent =
-        "🗑️";
-
-      delBtn.title =
-        "Delete photo";
-
-      delBtn.addEventListener(
-        "click",
-        (e) => {
-          buzz();
-          e.stopPropagation();
-
-          if (
-            confirm(
-              "Delete this photo?"
-            )
-          ) {
-            socket.emit(
-              "moderatorDeletePhoto",
-              {
-                photoId,
-              }
-            );
-          }
+      const delBtn = document.createElement("button");
+      delBtn.className = "mod-delete-btn";
+      delBtn.textContent = "🗑️";
+      delBtn.title = "Delete photo";
+      delBtn.addEventListener("click", (e) => {
+        buzz();
+        e.stopPropagation();
+        if (confirm("Delete this photo?")) {
+          socket.emit("moderatorDeletePhoto", { photoId });
         }
-      );
-
-      msgEl.appendChild(
-        delBtn
-      );
+      });
+      msgEl.appendChild(delBtn);
     }
-
-    msgEl.onclick = () => {
-      socket.emit(
-        "photoOpen",
-        { photoId }
-      );
-    };
   }
 
   function renderExpiredThumb(
@@ -3516,16 +3412,31 @@ function renderActiveThumb(
     }
   );
 
- function closePhotoViewer() {
-    photoViewerOverlay.classList.add(
-      "hidden"
-    );
+  function openPhotoViewer(imageData, totalSeconds) {
+    photoViewerImg.src = imageData;
+    photoViewerOverlay.classList.remove("hidden");
 
-    photoViewerImg.src = "";
+    let secondsLeft = totalSeconds;
 
-    clearInterval(
-      photoCountdownInterval
-    );
+    photoCountdownText.textContent = secondsLeft + "s";
+    photoCountdownFill.style.width = "100%";
+
+    clearInterval(photoCountdownInterval);
+
+    photoCountdownInterval = setInterval(() => {
+      secondsLeft -= 1;
+
+      photoCountdownText.textContent =
+        Math.max(secondsLeft, 0) + "s";
+
+      photoCountdownFill.style.width =
+        Math.max((secondsLeft / totalSeconds) * 100, 0) + "%";
+
+      if (secondsLeft <= 0) {
+        clearInterval(photoCountdownInterval);
+        closePhotoViewer();
+      }
+    }, 1000);
   }
 
   function closePhotoViewer() {
@@ -3552,4 +3463,3 @@ function renderActiveThumb(
 
   checkReturningUser();
 });
-

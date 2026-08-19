@@ -1,3 +1,10 @@
+// Force UTC so Postgres TIMESTAMP columns (which are stored in UTC) are
+// interpreted consistently regardless of the host machine's local timezone.
+// Without this, photo expiry timing breaks on machines set to non-UTC zones
+// (e.g. UK during BST), because pg parses "timestamp without time zone"
+// columns using the OS's local offset instead of UTC.
+process.env.TZ = "UTC";
+
 require("dotenv").config();
 
 const express = require("express");

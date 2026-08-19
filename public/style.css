@@ -818,8 +818,7 @@ body {
   background-color: #0a0a0a;
   border: 1px solid #ff9100;
   border-radius: 8px;
-  max-width: 260px;
-  cursor: pointer;
+  max-width: 320px;
 }
 
 .photo-thumb-icon {
@@ -850,9 +849,28 @@ body {
   font-size: 11px;
   font-weight: bold;
   color: #ff9100;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.photo-reveal-btn {
+  background-color: #000000;
+  color: #39ff14;
+  border: 1px solid #39ff14;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  cursor: pointer;
   margin-left: auto;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+.photo-reveal-btn:hover {
+  background-color: #39ff14;
+  color: #000000;
 }
 
 .photo-thumb.burning {
