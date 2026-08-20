@@ -59,7 +59,7 @@ body {
 .join-box {
   background-color: #0a0a0a;
   padding: 28px;
-  border-radius: 10px;
+  border-radius: 2px;
   width: 360px;
   text-align: center;
   border: 1px solid #39ff14;
@@ -1570,4 +1570,212 @@ html {
 .color-swatch.selected {
   transform: scale(1.18);
   box-shadow: 0 0 12px 2px currentColor;
+}
+
+/* =========================================================
+   C64-STYLE TITLE SCREEN — scanlines, boot text, terminal
+   panel header, and pixel-art chilli decorations.
+   Purely decorative — does not touch input/roller/button logic.
+   ========================================================= */
+
+/* ---- CRT scanlines + edge vignette, sits above everything ---- */
+.join-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.15) 0px,
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0) 55%,
+      rgba(0, 0, 0, 0.55) 100%
+    );
+}
+
+/* ---- Boot-up text sequence ---- */
+.boot-text {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.7;
+  letter-spacing: 1px;
+  color: #39ff14;
+  opacity: 0.85;
+}
+
+.boot-text .boot-divider {
+  opacity: 0.5;
+  letter-spacing: 2px;
+}
+
+.boot-text .boot-ready {
+  color: #ffee00;
+  text-shadow: 0 0 6px rgba(255, 238, 0, 0.7);
+  margin-top: 2px;
+}
+
+.boot-text .boot-prompt {
+  margin-top: 2px;
+}
+
+.boot-cursor {
+  display: inline-block;
+  animation: bootCursorBlink 1s steps(1) infinite;
+}
+
+@keyframes bootCursorBlink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .boot-text {
+    font-size: 10px;
+  }
+}
+
+/* ---- Terminal-style header bar inside the join box ---- */
+.terminal-header {
+  border: 3px double #39ff14;
+  padding: 5px 0;
+  margin: -28px -28px 20px -28px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #39ff14;
+  background-color: #071a04;
+}
+
+/* ---- Pixel-art chilli decorations ---- */
+.pixel-chillis {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.chilli-float {
+  position: absolute;
+  animation: chilliBob 5s ease-in-out infinite;
+}
+
+.pc-1 {
+  top: 8%;
+  left: 7%;
+  animation-delay: 0s;
+}
+
+.pc-2 {
+  top: 10%;
+  right: 8%;
+  animation-delay: 1.2s;
+}
+
+.pc-3 {
+  bottom: 14%;
+  left: 10%;
+  animation-delay: 2.4s;
+}
+
+.pc-4 {
+  bottom: 10%;
+  right: 7%;
+  animation-delay: 0.6s;
+}
+
+@keyframes chilliBob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 480px) {
+  .pixel-chillis {
+    display: none;
+  }
+}
+
+/* Single 3px "pixel" base — the entire chilli sprite is drawn with
+   box-shadow, classic CSS pixel-art technique, no image files needed. */
+.pixel-chilli {
+  width: 3px;
+  height: 3px;
+  background: transparent;
+  transform: scale(1.3);
+  transform-origin: top left;
+  animation: chilliGlowPulse 6s ease-in-out infinite;
+  box-shadow:
+    /* stalk */
+    6px 0px 0 0 #1f7a0d,
+    6px 3px 0 0 #39ff14,
+    3px 3px 0 0 #1f7a0d,
+    /* shoulders */
+    3px 6px 0 0 #ff9100,
+    6px 6px 0 0 #ff2b2b,
+    9px 6px 0 0 #8a0000,
+    /* body */
+    0px 9px 0 0 #ff9100,
+    3px 9px 0 0 #ff2b2b,
+    6px 9px 0 0 #ff2b2b,
+    9px 9px 0 0 #ff2b2b,
+    12px 9px 0 0 #8a0000,
+    0px 12px 0 0 #ff9100,
+    3px 12px 0 0 #ff2b2b,
+    6px 12px 0 0 #ff2b2b,
+    9px 12px 0 0 #ff2b2b,
+    12px 12px 0 0 #8a0000,
+    0px 15px 0 0 #ff9100,
+    3px 15px 0 0 #ff2b2b,
+    6px 15px 0 0 #ff2b2b,
+    9px 15px 0 0 #ff2b2b,
+    12px 15px 0 0 #8a0000,
+    /* taper */
+    3px 18px 0 0 #ff9100,
+    6px 18px 0 0 #ff2b2b,
+    9px 18px 0 0 #ff2b2b,
+    12px 18px 0 0 #8a0000,
+    3px 21px 0 0 #ff9100,
+    6px 21px 0 0 #ff2b2b,
+    9px 21px 0 0 #8a0000,
+    /* tip */
+    6px 24px 0 0 #ff9100,
+    9px 24px 0 0 #ff2b2b,
+    6px 27px 0 0 #8a0000;
+}
+
+@keyframes chilliGlowPulse {
+  0%, 85%, 100% {
+    filter: drop-shadow(0 0 3px rgba(255, 43, 43, 0.35));
+  }
+  90% {
+    filter: drop-shadow(0 0 7px rgba(255, 145, 0, 0.7));
+  }
+}
+
+.pc-2 .pixel-chilli {
+  transform: scale(1) rotate(12deg);
+}
+
+.pc-3 .pixel-chilli {
+  transform: scale(1.6) rotate(18deg) scaleX(-1);
+}
+
+.pc-4 .pixel-chilli {
+  transform: scale(1.15) rotate(-14deg);
 }
