@@ -1479,6 +1479,21 @@ highrollersTodayBtn.addEventListener("click", () => {
     }
   );
 
+  socket.on(
+    "voiceClipExpired",
+    ({ clipId }) => {
+      const el = messagesBox.querySelector(
+        '[data-clip-id="' + clipId + '"]'
+      );
+
+      if (!el) return;
+
+      el.innerHTML = "";
+      el.className = "system-msg";
+      el.textContent = "🕐 Voice clip expired (1hr limit)";
+    }
+  );
+
   function formatTimestamp(isoString) {
     if (!isoString) return "";
 
@@ -2318,7 +2333,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
   // ---- Voice clips ----
 
-  const MAX_RECORD_MS = 10000;
+  const MAX_RECORD_MS = 15000;
 
   let mediaRecorder = null;
   let audioChunks = [];
@@ -2602,7 +2617,9 @@ mediaRecorder.start(250);
       seconds +
       "." +
       tenths +
-      "s / 10.0s";
+      "s / " +
+      (MAX_RECORD_MS / 1000).toFixed(1) +
+      "s";
 
     if (
       elapsed >=

@@ -30,6 +30,8 @@ const connectedUsers = {};
 
 const REACTION_SCHO_VALUES = { chilli: 5, heart: 10, laugh: 8, down: -5 };
 const PHOTO_LIFETIME_MS = 10000;
+const VOICE_CLIP_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
+const VOICE_CLIP_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
 const SCOVILLE_TIERS = [
   { min: 2200000, name: "Pepper X", emoji: "👑" },
   { min: 1641000, name: "Carolina Reaper", emoji: "💀" },
@@ -593,6 +595,28 @@ function findSocketIdByHandle(handle) {
   );
 }
 
+async function cleanupExpiredVoiceClips() {
+  try {
+    const result = await pool.query(
+      `DELETE FROM voice_clips
+       WHERE created_at < NOW() - INTERVAL '1 hour'
+       RETURNING id`
+    );
+
+    if (result.rows.length > 0) {
+      console.log(
+        `Cleaned up ${result.rows.length} expired voice clip(s).`
+      );
+
+      result.rows.forEach((row) => {
+        io.emit("voiceClipExpired", { clipId: row.id });
+      });
+    }
+  } catch (err) {
+    console.error("Voice clip cleanup error:", err);
+  }
+}
+
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
@@ -696,7 +720,7 @@ io.on("connection", (socket) => {
   });
 
  socket.on("voiceClip", async ({ handle, color, audioData, durationMs }) => {
-    const MAX_DURATION_MS = 10000;
+    const MAX_DURATION_MS = 15000;
     const MAX_SIZE_BYTES = 1024 * 1024; // 1MB safety cap
 
     if (!audioData || durationMs > MAX_DURATION_MS + 500) {
@@ -1157,6 +1181,11 @@ setupDatabase()
     server.listen(PORT, () => {
       console.log(`ChilliChat server running at http://localhost:${PORT}`);
     });
+
+    // Run once on startup (covers clips that expired while the server was down),
+    // then keep checking periodically.
+    cleanupExpiredVoiceClips();
+    setInterval(cleanupExpiredVoiceClips, VOICE_CLIP_CLEANUP_INTERVAL_MS);
   })
   .catch((err) => {
     console.error("Failed to connect to database:", err);
