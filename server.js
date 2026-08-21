@@ -32,6 +32,7 @@ const REACTION_SCHO_VALUES = { chilli: 5, heart: 10, laugh: 8, down: -5 };
 const PHOTO_LIFETIME_MS = 15000;
 const VOICE_CLIP_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
 const VOICE_CLIP_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
+const HISTORY_MESSAGE_LIMIT = 5; // how many recent items a new joiner sees on load
 const SCOVILLE_TIERS = [
   { min: 2200000, name: "Pepper X", emoji: "👑" },
   { min: 1641000, name: "Carolina Reaper", emoji: "💀" },
@@ -490,7 +491,8 @@ async function broadcastUserList() {
 
 async function sendMessageHistory(socket, viewerHandle) {
   try {
-    const msgResult = await pool.query(`
+    const msgResult = await pool.query(
+      `
       SELECT m.id, m.handle, m.color, m.text, m.created_at,
         COUNT(*) FILTER (WHERE r.reaction = 'chilli') AS chilli,
         COUNT(*) FILTER (WHERE r.reaction = 'heart') AS heart,
@@ -498,20 +500,32 @@ async function sendMessageHistory(socket, viewerHandle) {
         COUNT(*) FILTER (WHERE r.reaction = 'down') AS down
       FROM messages m
       LEFT JOIN message_reactions r ON r.message_id = m.id
-      WHERE m.created_at > NOW() - INTERVAL '24 hours' AND m.deleted = FALSE
+      WHERE m.deleted = FALSE
       GROUP BY m.id
-    `);
+      ORDER BY m.created_at DESC
+      LIMIT $1
+    `,
+      [HISTORY_MESSAGE_LIMIT]
+    );
 
-    const voiceResult = await pool.query(`
+    const voiceResult = await pool.query(
+      `
       SELECT id, handle, color, audio_data, duration_ms, created_at
       FROM voice_clips
-      WHERE created_at > NOW() - INTERVAL '24 hours' AND deleted = FALSE
-    `);
+      WHERE deleted = FALSE
+      ORDER BY created_at DESC
+      LIMIT $1
+    `,
+      [HISTORY_MESSAGE_LIMIT]
+    );
 
     const photoResult = await pool.query(
       `SELECT id, handle, color, created_at
        FROM photos
-       WHERE created_at > NOW() - INTERVAL '24 hours' AND deleted = FALSE`
+       WHERE deleted = FALSE
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [HISTORY_MESSAGE_LIMIT]
     );
 
     const textItems = msgResult.rows.map((msg) => {
@@ -568,9 +582,13 @@ async function sendMessageHistory(socket, viewerHandle) {
       };
     });
 
-    const merged = [...textItems, ...voiceItems, ...photoItems].sort(
-      (a, b) => new Date(a.created_at) - new Date(b.created_at)
-    );
+    // Combine all three types, keep only the most recent N overall
+    // (not per-type), then put them back in oldest-first order so they
+    // render top-to-bottom like a normal chat history.
+    const merged = [...textItems, ...voiceItems, ...photoItems]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, HISTORY_MESSAGE_LIMIT)
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
    merged.forEach((item) => {
       if (item.type === "text") {
