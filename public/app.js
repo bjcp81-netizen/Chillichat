@@ -3146,7 +3146,7 @@ socket.on(
     const countdown = document.createElement("span");
     countdown.className = "photo-thumb-countdown";
     countdown.textContent =
-      "🔥 " + Math.ceil((remainingMs || 10000) / 1000) + "s";
+      "🔥 " + Math.ceil((remainingMs || 15000) / 1000) + "s";
 
     meta.appendChild(handleLine);
     meta.appendChild(countdown);
@@ -3420,7 +3420,7 @@ socket.on(
         imageData,
         Math.max(
           Math.ceil(
-            (remainingMs || 10000) /
+            (remainingMs || 15000) /
               1000
           ),
           1

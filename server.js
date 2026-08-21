@@ -29,7 +29,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const connectedUsers = {};
 
 const REACTION_SCHO_VALUES = { chilli: 5, heart: 10, laugh: 8, down: -5 };
-const PHOTO_LIFETIME_MS = 10000;
+const PHOTO_LIFETIME_MS = 15000;
 const VOICE_CLIP_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
 const VOICE_CLIP_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
 const SCOVILLE_TIERS = [
