@@ -2906,8 +2906,6 @@ cancelRecordingBtn.addEventListener(
   const MAX_PHOTO_BASE64_LENGTH =
     450 * 1024;
 
-  const PHOTO_VIEW_SECONDS = 10;
-
   photoBtn.addEventListener(
     "click",
     () => {
