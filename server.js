@@ -11,7 +11,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
-const { Pool } = require("pg");
+const pool = require("./sqlite-db");
 const fs = require("fs");
 const os = require("os");
 const crypto = require("crypto");
@@ -151,10 +151,7 @@ function yesterdayString() {
   return d.toISOString().slice(0, 10);
 }
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+
 
 async function getReactionCounts(messageId) {
   const result = await pool.query(
@@ -298,7 +295,7 @@ async function setupDatabase() {
     console.error("Beta tester retroactive award error:", err);
   }
 
-  console.log("Connected to Neon and tables are ready");
+    console.log("Connected to local SQLite and tables are ready");
 }
 
 async function checkBanStatus(handle, deviceToken) {
