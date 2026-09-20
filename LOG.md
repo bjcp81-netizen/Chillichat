@@ -178,7 +178,7 @@ Render to your own PC.
 - Inspect → change → test → confirm → commit → push.
 - Do not bring back Render, Neon/PostgreSQL or MongoDB.
 - Old backup folders/files are not the current project.
-
+- If a phone doesn't show a CSS change, bump the number in `style.css?v=N` in index.html.
 ---
 
 ## 9. Known state
@@ -201,5 +201,6 @@ Render to your own PC.
 | 19 Sep 2026 | Voice bug investigated with temporary logging; logging removed | Done |
 | 19 Sep 2026 | WebM transcode block in `voiceClip` handler accidentally removed, then restored | Done, tested OK |
 | 19 Sep 2026 | Created LOG.md and CONSIDERATIONS.md | Done |
-| 19 Sep 2026 | Messages now shown in their own boxes with a 🌶️ reaction pill at top-left (style.css + app.js) | Testing |
+| 20 Sep 2026 | Removed duplicate app.js script tag in index.html (fixed Options/Users/Highrollers buttons) | Done, tested |
+| 20 Sep 2026 | Text messages in boxes; 🌶️ pill top-right opens reaction picker; long-press removed; style.css?v=2 added to bypass phone/Cloudflare cache | Done, tested on PC and mobile |
 | 20 Sep 2026 | Removed duplicate app.js script tag (fixed Options/Users/Highrollers). Text messages in boxes, 🌶️ pill top-right opens reaction picker, long-press removed | Done, tested |

@@ -37,6 +37,8 @@ Two lists:
 - Other UI improvements and community features
 
 ### Things noticed in the code (Not tested, only spotted by reading)
+- Leftover debug logging in app.js ([RAW DEBUG], [SEND DEBUG], [AUDIO DEBUG]). Harmless but noisy.
+- server.js: `transcodeVoiceClipToWebm` is defined but never called.
 - **Temporary ban expiry may be inexact.** Ban times are stored in one text
   format and compared in another, so a 1-hour ban might last longer.
 - **Timestamps might show an hour out in British Summer Time.**
