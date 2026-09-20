@@ -1820,3 +1820,9 @@ html {
   bottom: auto;
   margin-bottom: 0;
 }
+
+/* ---------- Voice clip burn animation (reuses photoBurn) ---------- */
+.voice-message.burning {
+  animation: photoBurn 1.1s ease-in-out forwards;
+  pointer-events: none;
+}

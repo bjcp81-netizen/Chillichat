@@ -171,7 +171,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  const socket = io();
+    const socket = io();
+  window.chilliSocket = socket;
 
   let myHandle = "";
   let myColor = "";
@@ -1480,7 +1481,7 @@ highrollersTodayBtn.addEventListener("click", () => {
   );
 
   socket.on(
-    "voiceClipExpired",
+   "voiceClipExpiredOld",
     ({ clipId }) => {
       const el = messagesBox.querySelector(
         '[data-clip-id="' + clipId + '"]'
@@ -2394,7 +2395,11 @@ highrollersTodayBtn.addEventListener("click", () => {
       : "";
   }
 
- async function startRecording(source) {
+  function startRecording(source) {
+    return window.ChilliVoice.start(myHandle, myColor);
+  }
+
+  async function startRecordingOld(source) {
     activeMicSource = source || "mic";
 
     if (!isRecordingSupported()) {
@@ -2433,6 +2438,9 @@ highrollersTodayBtn.addEventListener("click", () => {
       mediaRecorder.ondataavailable =
         (e) => {
           if (e.data.size > 0) {
+            
+                        const chunkNo = audioChunks.length + 1;
+            e.data.slice(0, 4).arrayBuffer().then((b) => console.log("[CHUNK]", chunkNo, "size:", e.data.size, "first4:", Array.from(new Uint8Array(b)).map((x) => x.toString(16).padStart(2, "0")).join("")));
             audioChunks.push(
               e.data
             );
@@ -2508,7 +2516,7 @@ highrollersTodayBtn.addEventListener("click", () => {
           );
 
           showSystemMessage(
-            "⚠️ That recording didn't capture any audio (a known Safari issue) — please try again."
+                      "⚠️ Recording too small: " + audioBlob.size + " bytes, type " + rawType + ". Please try again."  
           );
 
           return;
@@ -2655,7 +2663,11 @@ mediaRecorder.start(250);
     }
   }
 
-  function stopRecording(
+  function stopRecording(cancelled) {
+    return window.ChilliVoice.stop(cancelled);
+  }
+
+  function stopRecordingOld(
     cancelled
   ) {
     if (
@@ -2743,6 +2755,10 @@ cancelRecordingBtn.addEventListener(
 
       const audio = new Audio(data.audioData);
 audio.preload = "auto";
+      audio.addEventListener("pause", () => {
+        isPlaying = false;
+        playBtn.textContent = "▶";
+      });
       audio.addEventListener("error", () => {
         const e = audio.error;
         console.log(
@@ -2782,6 +2798,7 @@ audio.preload = "auto";
             audio
               .play()
               .catch((err) => {
+                                if (err && err.name === "AbortError") return;
                 console.error(
                   "Voice clip playback failed:",
                   err

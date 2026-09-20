@@ -36,8 +36,8 @@ const REACTION_SCHO_VALUES = {
 };
 
 const PHOTO_LIFETIME_MS = 15000;
-const VOICE_CLIP_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
-const VOICE_CLIP_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // check every 5 minutes
+const VOICE_CLIP_LIFETIME_MS = 5 * 60 * 1000; // 5 minutes
+const VOICE_CLIP_CLEANUP_INTERVAL_MS = 10 * 1000; // check every 10 seconds
 const HISTORY_MESSAGE_LIMIT = 5; // how many recent items a new joiner sees on load
 
 const SCOVILLE_TIERS = [
@@ -744,7 +744,7 @@ async function cleanupExpiredVoiceClips() {
   try {
     const result = await pool.query(
       `DELETE FROM voice_clips
-       WHERE created_at < NOW() - INTERVAL '1 hour'
+       WHERE created_at < datetime('now', '-5 minutes')
        RETURNING id`
     );
 

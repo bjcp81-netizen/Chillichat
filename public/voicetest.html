@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChilliChat voice test</title>
+<style>
+  body { background:#000; color:#39ff14; font-family:monospace; padding:16px; max-width:520px; margin:auto; }
+  button { background:#000; color:#39ff14; border:1px solid #39ff14; padding:12px 16px; margin:6px 6px 6px 0; font-size:16px; border-radius:4px; }
+  button:disabled { opacity:0.4; }
+  #meter { height:14px; background:#111; border:1px solid #1f7a0d; margin:8px 0; }
+  #bar { height:100%; width:0; background:#39ff14; }
+  pre { white-space:pre-wrap; word-break:break-all; background:#0a0a0a; border:1px solid #1f7a0d; padding:8px; font-size:13px; }
+  audio { width:100%; margin-top:8px; }
+</style>
+</head>
+<body>
+<h2>ChilliChat voice test (stage 1)</h2>
+<p>Tap Start, talk for a few seconds, tap Stop. It auto-stops at 15 seconds.</p>
+<button id="startBtn">Start</button><button id="stopBtn" disabled>Stop</button>
+<div id="meter"><div id="bar"></div></div>
+<audio id="player" controls></audio>
+<div><button id="dataBtn" disabled>Play via data URL (like the real chat)</button></div>
+<h3>Result (copy all of this to Claude)</h3>
+<pre id="log"></pre>
+
+<script>
+(function () {
+  var TARGET_RATE = 16000;
+  var MAX_MS = 15000;
+  var SERVER_LIMIT = 1024 * 1024;
+
+  var logEl = document.getElementById("log");
+  var startBtn = document.getElementById("startBtn");
+  var stopBtn = document.getElementById("stopBtn");
+  var dataBtn = document.getElementById("dataBtn");
+  var bar = document.getElementById("bar");
+  var player = document.getElementById("player");
+
+  var headerLines = [];
+  var resultLines = [];
+  function render() { logEl.textContent = headerLines.concat(resultLines).join("\n"); }
+  function head(t) { headerLines.push(t); render(); }
+  function res(t) { resultLines.push(t); render(); }
+
+  head("Page: " + location.href);
+  head("Secure context (mic needs true): " + window.isSecureContext);
+  head("Browser: " + navigator.userAgent);
+  head("getUserMedia available: " + !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+  head("AudioContext available: " + !!(window.AudioContext || window.webkitAudioContext));
+
+  var ctx = null, stream = null, source = null, proc = null;
+  var chunks = [], peak = 0, recording = false, startedAt = 0, timer = null;
+  var lastDataUrl = null;
+
+  startBtn.onclick = function () {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    resultLines = [];
+    render();
+
+    if (!AC || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      res("FAIL: this browser cannot record here.");
+      return;
+    }
+
+    ctx = new AC();
+    if (ctx.resume) ctx.resume();
+
+    startBtn.disabled = true;
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+      stream = s;
+      source = ctx.createMediaStreamSource(s);
+      proc = ctx.createScriptProcessor(4096, 1, 1);
+      chunks = [];
+      peak = 0;
+      recording = true;
+      startedAt = Date.now();
+
+      proc.onaudioprocess = function (e) {
+        if (!recording) return;
+        var d = e.inputBuffer.getChannelData(0);
+        chunks.push(new Float32Array(d));
+        var p = 0;
+        for (var i = 0; i < d.length; i++) {
+          var a = Math.abs(d[i]);
+          if (a > p) p = a;
+        }
+        if (p > peak) peak = p;
+        bar.style.width = Math.min(100, Math.round(p * 200)) + "%";
+      };
+
+      source.connect(proc);
+      proc.connect(ctx.destination);
+
+      stopBtn.disabled = false;
+      res("Recording... (mic opened, context rate " + ctx.sampleRate + " Hz)");
+      timer = setTimeout(stopRecording, MAX_MS);
+    }).catch(function (err) {
+      res("FAIL: mic error: " + err.name + ": " + err.message);
+      startBtn.disabled = false;
+      try { ctx.close(); } catch (e) {}
+    });
+  };
+
+  stopBtn.onclick = stopRecording;
+
+  function stopRecording() {
+    if (!recording) return;
+    recording = false;
+    clearTimeout(timer);
+    stopBtn.disabled = true;
+    bar.style.width = "0";
+
+    var rate = ctx.sampleRate;
+    var ms = Date.now() - startedAt;
+
+    try { proc.disconnect(); source.disconnect(); } catch (e) {}
+    stream.getTracks().forEach(function (t) { t.stop(); });
+    try { ctx.close(); } catch (e) {}
+
+    buildResult(rate, ms);
+    startBtn.disabled = false;
+  }
+
+  function downsample(f32, inRate, outRate) {
+    if (inRate <= outRate) return { data: f32, rate: inRate };
+    var ratio = inRate / outRate;
+    var outLen = Math.floor(f32.length / ratio);
+    var out = new Float32Array(outLen);
+    for (var i = 0; i < outLen; i++) {
+      var start = Math.floor(i * ratio);
+      var end = Math.min(f32.length, Math.floor((i + 1) * ratio));
+      var sum = 0, n = 0;
+      for (var j = start; j < end; j++) { sum += f32[j]; n++; }
+      out[i] = n ? sum / n : 0;
+    }
+    return { data: out, rate: outRate };
+  }
+
+  function encodeWav(f32, rate) {
+    var buf = new ArrayBuffer(44 + f32.length * 2);
+    var v = new DataView(buf);
+    function str(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+    str(0, "RIFF");
+    v.setUint32(4, 36 + f32.length * 2, true);
+    str(8, "WAVE");
+    str(12, "fmt ");
+    v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true);
+    v.setUint32(28, rate * 2, true);
+    v.setUint16(32, 2, true);
+    v.setUint16(34, 16, true);
+    str(36, "data");
+    v.setUint32(40, f32.length * 2, true);
+    for (var i = 0; i < f32.length; i++) {
+      var s = Math.max(-1, Math.min(1, f32[i]));
+      v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return new Blob([buf], { type: "audio/wav" });
+  }
+
+  function buildResult(rate, ms) {
+    var total = 0, i;
+    for (i = 0; i < chunks.length; i++) total += chunks[i].length;
+    var all = new Float32Array(total);
+    var pos = 0;
+    for (i = 0; i < chunks.length; i++) { all.set(chunks[i], pos); pos += chunks[i].length; }
+
+    res("Chunks captured: " + chunks.length);
+    res("Raw samples: " + total + " at " + rate + " Hz");
+    res("Peak loudness (0 to 1): " + peak.toFixed(3) + (peak < 0.01 ? "  <-- SILENT (mic gave no sound)" : "  (sound detected)"));
+
+    if (total === 0) {
+      res("FAIL: no audio captured at all.");
+      return;
+    }
+
+    var ds = downsample(all, rate, TARGET_RATE);
+    var blob = encodeWav(ds.data, ds.rate);
+    var seconds = ds.data.length / ds.rate;
+
+    res("WAV: " + ds.rate + " Hz, 16-bit mono, " + seconds.toFixed(1) + " s, " + blob.size + " bytes");
+
+    player.src = URL.createObjectURL(blob);
+    player.onerror = function () {
+      res("Player error code: " + (player.error ? player.error.code : "?"));
+    };
+
+    var reader = new FileReader();
+    reader.onloadend = function () {
+      lastDataUrl = reader.result;
+      res("Data URL starts: " + lastDataUrl.slice(0, 30));
+      res("Data URL length: " + lastDataUrl.length + (lastDataUrl.length > SERVER_LIMIT ? "  <-- TOO BIG for server limit" : "  (fits server limit of " + SERVER_LIMIT + ")"));
+      dataBtn.disabled = false;
+      res("Now press play on the player above, then the data URL button.");
+    };
+    reader.readAsDataURL(blob);
+  }
+
+  dataBtn.onclick = function () {
+    if (!lastDataUrl) return;
+    var a = new Audio(lastDataUrl);
+    a.onerror = function () {
+      res("Data URL playback error code: " + (a.error ? a.error.code : "?"));
+    };
+    a.play().then(function () {
+      res("Data URL playback started OK.");
+    }).catch(function (err) {
+      res("Data URL playback failed: " + err.name + ": " + err.message);
+    });
+  };
+})();
+</script>
+</body>
+</html>
