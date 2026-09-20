@@ -2142,6 +2142,11 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       msgEl.className =
         "chat-message";
+        
+      if (messagesBox.querySelector('[data-message-id="' + data.id + '"]')) {
+        console.log("[DUPLICATE] skipped message id", data.id);
+        return;
+      }
 
       msgEl.dataset.messageId =
         data.id;
@@ -2340,7 +2345,16 @@ highrollersTodayBtn.addEventListener("click", () => {
   let recordStartTime = 0;
   let recordTimerInterval = null;
   let wasCancelled = false;
-  let activeMicSource = null;
+    let activeMicSource = null;
+      let stopCurrentClip = null;
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && stopCurrentClip) {
+      stopCurrentClip();
+    }
+  });
+  let isStarting = false;
+  let stopRequested = false;
 
   function isRecordingSupported() {
     return !!(
@@ -2481,6 +2495,14 @@ highrollersTodayBtn.addEventListener("click", () => {
         );
 
         const MIN_VALID_BLOB_BYTES = 500;
+                audioBlob.slice(0, 4).arrayBuffer().then((buf) => {
+          console.log(
+            "[RAW DEBUG] first 4 bytes before ysFix (hex):",
+            Array.from(new Uint8Array(buf))
+              .map((b) => b.toString(16).padStart(2, "0"))
+              .join("")
+          );
+        });
 
         if (audioBlob.size < MIN_VALID_BLOB_BYTES) {
           console.warn(
@@ -2502,6 +2524,12 @@ highrollersTodayBtn.addEventListener("click", () => {
           reader.onloadend = () => {
             const base64Audio =
               reader.result;
+                          console.log(
+              "[SEND DEBUG] sending starts with:",
+              String(base64Audio).slice(0, 40),
+              "| length:",
+              String(base64Audio).length
+            );
 
             socket.emit(
               "voiceClip",
@@ -2698,6 +2726,11 @@ cancelRecordingBtn.addEventListener(
 
       msgEl.className =
         "voice-message";
+        
+      if (messagesBox.querySelector('[data-clip-id="' + data.id + '"]')) {
+        console.log("[DUPLICATE] skipped voice clip id", data.id);
+        return;
+      }
 
       msgEl.dataset.clipId =
         data.id;
@@ -2710,10 +2743,18 @@ cancelRecordingBtn.addEventListener(
 
       playBtn.textContent = "▶";
 
-      const audio =
-        new Audio(
-          dataUrlToBlobUrl(data.audioData)
+      const audio = new Audio(data.audioData);
+audio.preload = "auto";
+      audio.addEventListener("error", () => {
+        const e = audio.error;
+        console.log(
+          "[AUDIO DEBUG] clip id:", data.id,
+          "| error code:", e ? e.code : "none",
+          "| message:", e ? e.message : "none",
+          "| starts with:", String(data.audioData).slice(0, 40),
+          "| length:", String(data.audioData).length
         );
+      });
 
       let isPlaying = false;
 
