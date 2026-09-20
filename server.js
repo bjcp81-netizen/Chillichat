@@ -15,10 +15,7 @@ const pool = require("./sqlite-db");
 const fs = require("fs");
 const os = require("os");
 const crypto = require("crypto");
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("ffmpeg-static");
 
-ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 const server = http.createServer(app);
@@ -84,56 +81,6 @@ function computeScovilleRank(scho) {
 
 function generateToken() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-function parseAudioDataUrl(dataUrl) {
-  const match = dataUrl.match(/^data:(.+?);base64,(.*)$/s);
-  if (!match) throw new Error("Invalid audio data URL");
-  return { mimeType: match[1], base64: match[2] };
-}
-
-function guessAudioExtension(mimeType) {
-  if (mimeType.includes("webm")) return ".webm";
-  if (mimeType.includes("mp4")) return ".mp4";
-  return "";
-}
-
-async function transcodeVoiceClipToWebm(dataUrl) {
-  const { mimeType, base64 } = parseAudioDataUrl(dataUrl);
-  const inputBuffer = Buffer.from(base64, "base64");
-
-  const tmpDir = os.tmpdir();
-  const id = crypto.randomBytes(8).toString("hex");
-
-  const inputExt = guessAudioExtension(mimeType) || ".webm";
-  const inputPath = path.join(tmpDir, `voice-in-${id}${inputExt}`);
-  const outputPath = path.join(tmpDir, `voice-out-${id}.webm`);
-
-  fs.writeFileSync(inputPath, inputBuffer);
-
-  try {
-    await new Promise((resolve, reject) => {
-      ffmpeg(inputPath)
-        .audioCodec("libopus")
-        .audioBitrate("32k")
-        .audioFrequency(48000)
-        .audioChannels(1)
-        .format("webm")
-        .on("error", reject)
-        .on("end", resolve)
-        .save(outputPath);
-    });
-
-    const outputBuffer = fs.readFileSync(outputPath);
-
-    return (
-      "data:audio/webm;base64," +
-      outputBuffer.toString("base64")
-    );
-  } finally {
-    fs.unlink(inputPath, () => {});
-    fs.unlink(outputPath, () => {});
-  }
 }
 
 function computeHeatRating(counts) {
@@ -681,7 +628,7 @@ async function sendMessageHistory(socket, viewerHandle) {
         id: clip.id,
         handle: clip.handle,
         color: clip.color,
-        audioData: (socket.data.isIphone && mp4Copies.get(clip.id)) || clip.audio_data,
+              audioData: clip.audio_data,
         durationMs: clip.duration_ms,
         createdAt: clip.created_at,
       },
@@ -764,10 +711,7 @@ async function cleanupExpiredVoiceClips() {
 
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
-    // Remember whether this visitor is on an Apple device (used for voice clips)
-  socket.data.isIphone = /iPhone|iPad|iPod/.test(
-    socket.handshake.headers["user-agent"] || ""
-  );
+    
 
   socket.on("join", async ({ handle, color, deviceToken }) => {
     try {
@@ -909,82 +853,62 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on(
+    socket.on(
     "voiceClip",
     async ({ handle, color, audioData, durationMs }) => {
       const MAX_DURATION_MS = 15000;
       const MAX_SIZE_BYTES = 1024 * 1024;
 
-      if (!audioData || durationMs > MAX_DURATION_MS + 500) {
-        socket.emit(
-          "reactionError",
-          "Voice clip rejected: too long."
-        );
+      if (
+        typeof audioData !== "string" ||
+        !audioData.startsWith("data:audio/wav;base64,")
+      ) {
+        socket.emit("reactionError", "Voice clip rejected: unsupported format.");
+        return;
+      }
+
+      if (!durationMs || durationMs > MAX_DURATION_MS + 500) {
+        socket.emit("reactionError", "Voice clip rejected: too long.");
         return;
       }
 
       if (audioData.length > MAX_SIZE_BYTES) {
-        socket.emit(
-          "reactionError",
-          "Voice clip rejected: too large."
-        );
+        socket.emit("reactionError", "Voice clip rejected: too large.");
         return;
       }
 
-            // Stored and sent exactly as recorded (no conversion).
-      const finalAudioData = audioData;
-      
-      // Ignore a repeat of the exact same recording (sent twice by mistake).
-      const clipFingerprint =
+      // Ignore an exact repeat of the same recording.
+      const fingerprint =
         handle +
         ":" +
         crypto.createHash("sha1").update(audioData).digest("hex");
 
-      if (recentVoiceClips.has(clipFingerprint)) {
-        console.log("[VOICE] duplicate clip ignored from", handle);
-        return;
-      }
+      if (recentVoiceClips.has(fingerprint)) return;
 
-      recentVoiceClips.add(clipFingerprint);
-      setTimeout(() => recentVoiceClips.delete(clipFingerprint), 30000);
-
-      // iPhones can't reliably play WebM, so make an MP4 copy for iPhones only.
-      // If that fails, iPhones just get the original clip.
-      let mp4Copy = null;
-
-      try {
-        mp4Copy = await makeMp4CopyForIphones(audioData);
-      } catch (err) {
-        console.error(
-          "MP4 copy for iPhones failed (iPhones will get the original):",
-          err.message
-        );
-      }
+      recentVoiceClips.add(fingerprint);
+      setTimeout(() => recentVoiceClips.delete(fingerprint), 30000);
 
       try {
         const result = await pool.query(
           "INSERT INTO voice_clips (handle, color, audio_data, duration_ms) VALUES ($1, $2, $3, $4) RETURNING id, created_at",
-          [handle, color, finalAudioData, durationMs]
+          [handle, color, audioData, durationMs]
         );
 
-        sendVoiceClipToEveryone(
-          {
-            id: result.rows[0].id,
-            handle,
-            color,
-            audioData: finalAudioData,
-            durationMs,
-            createdAt: result.rows[0].created_at,
-          },
-          mp4Copy
-        );
+        io.emit("voiceClip", {
+          id: result.rows[0].id,
+          handle,
+          color,
+          audioData,
+          durationMs,
+          createdAt: result.rows[0].created_at,
+        });
       } catch (err) {
         console.error("Failed to save voice clip:", err);
-      }      
+      }
     }
-  );
-
-  socket.on(
+  )
+  
+  ;socket.on(
     "photoUpload",
     async ({ handle, color, imageData }) => {
       const MAX_SIZE_BYTES = 1.2 * 1024 * 1024;
@@ -1591,66 +1515,7 @@ setupDatabase()
     );
   });
 
-  // ---------- iPhone voice clip support ----------
+ // ---------- Voice clip helpers ----------
 
-// MP4 copies of voice clips, kept in memory for iPhones only.
-// Clip id -> MP4 data URL. Forgotten after 1 hour, like the clips themselves.
-const mp4Copies = new Map();
+// Remembers recent clips so an accidental double-send is ignored.
 const recentVoiceClips = new Set();
-
-// Makes an MP4 (AAC) copy of a WebM voice clip so iPhones can play it.
-// Returns null if the clip isn't WebM. Throws if the copy can't be made.
-async function makeMp4CopyForIphones(dataUrl) {
-  if (!dataUrl.startsWith("data:audio/webm")) return null;
-
-  const { base64 } = parseAudioDataUrl(dataUrl);
-  const id = crypto.randomBytes(8).toString("hex");
-  const inputPath = path.join(os.tmpdir(), `iphone-in-${id}.webm`);
-  const outputPath = path.join(os.tmpdir(), `iphone-out-${id}.m4a`);
-
-  fs.writeFileSync(inputPath, Buffer.from(base64, "base64"));
-
-  try {
-    await new Promise((resolve, reject) => {
-      ffmpeg(inputPath)
-        .audioCodec("aac")
-        .audioBitrate("48k")
-        .audioFrequency(44100)
-        .audioChannels(1)
-        .format("mp4")
-        .on("error", reject)
-        .on("end", resolve)
-        .save(outputPath);
-    });
-
-    const out = fs.readFileSync(outputPath);
-
-    // A real MP4 file has the word "ftyp" at bytes 4 to 8.
-    if (out.slice(4, 8).toString("latin1") !== "ftyp") {
-      throw new Error("FFmpeg output is not a valid MP4 file");
-    }
-
-    console.log("[VOICE] MP4 copy made for iPhones, bytes:", out.length);
-    return "data:audio/mp4;base64," + out.toString("base64");
-  } finally {
-    fs.unlink(inputPath, () => {});
-    fs.unlink(outputPath, () => {});
-  }
-}
-
-// Sends a voice clip to everyone. iPhones get the MP4 copy (if there is one),
-// everyone else gets the original recording.
-function sendVoiceClipToEveryone(clip, mp4Copy) {
-  if (mp4Copy) {
-    mp4Copies.set(clip.id, mp4Copy);
-    setTimeout(() => mp4Copies.delete(clip.id), VOICE_CLIP_LIFETIME_MS);
-  }
-
-  for (const s of io.sockets.sockets.values()) {
-    if (s.data.isIphone && mp4Copy) {
-      s.emit("voiceClip", { ...clip, audioData: mp4Copy });
-    } else {
-      s.emit("voiceClip", clip);
-    }
-  }
-}
