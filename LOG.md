@@ -202,3 +202,4 @@ Render to your own PC.
 | 19 Sep 2026 | WebM transcode block in `voiceClip` handler accidentally removed, then restored | Done, tested OK |
 | 19 Sep 2026 | Created LOG.md and CONSIDERATIONS.md | Done |
 | 19 Sep 2026 | Messages now shown in their own boxes with a 🌶️ reaction pill at top-left (style.css + app.js) | Testing |
+| 20 Sep 2026 | Removed duplicate app.js script tag (fixed Options/Users/Highrollers). Text messages in boxes, 🌶️ pill top-right opens reaction picker, long-press removed | Done, tested |
