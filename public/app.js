@@ -1919,8 +1919,8 @@ highrollersTodayBtn.addEventListener("click", () => {
     const bar =
       document.createElement("div");
 
-    bar.className =
-      "reaction-bar hidden";
+        bar.className =
+      "reaction-bar";
 
     const pillsWrap =
       document.createElement("span");
@@ -1936,7 +1936,8 @@ highrollersTodayBtn.addEventListener("click", () => {
     addBtn.className =
       "reaction-add-btn";
 
-    addBtn.textContent = "+";
+    addBtn.textContent = "🌶️";
+    addBtn.title = "React";
 
     bar.appendChild(addBtn);
 
@@ -2234,10 +2235,7 @@ highrollersTodayBtn.addEventListener("click", () => {
         msgEl
       );
 
-      attachLongPress(
-        textLine,
-        reactionBar
-      );
+      
 
       messagesBox.scrollTop =
         messagesBox.scrollHeight;

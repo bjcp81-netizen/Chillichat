@@ -1779,3 +1779,44 @@ html {
 .pc-4 .pixel-chilli {
   transform: scale(1.15) rotate(-14deg);
 }
+/* ---------- Text message boxes + top-right reaction pill ---------- */
+.chat-message {
+  background-color: #0a0a0a;
+  border: 1px solid #1f7a0d;
+  border-radius: 8px;
+  padding: 8px 52px 8px 10px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.reaction-bar {
+  position: static;
+  flex-wrap: wrap;
+}
+
+.reaction-add-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: auto;
+  height: auto;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.2;
+  background-color: #000000;
+  color: #39ff14;
+  border: 1px solid #1f7a0d;
+}
+
+.reaction-add-btn:hover {
+  border-color: #39ff14;
+}
+
+.reaction-picker {
+  top: 34px;
+  right: 8px;
+  left: auto;
+  bottom: auto;
+  margin-bottom: 0;
+}
