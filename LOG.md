@@ -191,7 +191,8 @@ Render to your own PC.
 - PC voice clips were silent. Diagnosis showed the clip reached the server
   intact and FFmpeg converted it fine; the PC microphone was recording silence.
   Not a code bug. What exactly fixed the mic is not recorded.
-
+- Old audio code is still in app.js (startRecordingOld, stopRecordingOld, the "voiceClipExpiredOld" handler) and server.js (transcodeVoiceClipToWebm, makeMp4CopyForIphones, mp4Copies). It is switched off but not yet removed.
+- Render is deleted. Do not reference it.
 ---
 
 ## 10. Change log
@@ -204,3 +205,5 @@ Render to your own PC.
 | 20 Sep 2026 | Removed duplicate app.js script tag in index.html (fixed Options/Users/Highrollers buttons) | Done, tested |
 | 20 Sep 2026 | Text messages in boxes; 🌶️ pill top-right opens reaction picker; long-press removed; style.css?v=2 added to bypass phone/Cloudflare cache | Done, tested on PC and mobile |
 | 20 Sep 2026 | Removed duplicate app.js script tag (fixed Options/Users/Highrollers). Text messages in boxes, 🌶️ pill top-right opens reaction picker, long-press removed | Done, tested |
+| 20 Sep 2026 | Voice clips rebuilt: new public/voice.js records raw audio and sends a 16 kHz WAV; no FFmpeg or WebM. Clips burn after 5 min (server sweep every 10s + burn animation). | Done, tested on PC Chrome/Firefox, iPhone Safari, Android Chrome/Brave/Edge/Firefox |
+| 20 Sep 2026 | public/voicetest.html added as a standalone recording test page | Done |

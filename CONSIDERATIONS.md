@@ -89,3 +89,6 @@ Items marked (unverified) were spotted by reading code and have not been tested.
 - More media features
 - UI improvements
 - More community features
+- Cleanup: remove the switched-off old audio code from app.js and server.js, and the fix-webm-duration script tag in index.html.
+- Consider MP3 (lamejs) to cut clip size from about 640 KB to about 60 KB. WAV works fine for now.
+- Remove the leftover [CHUNK], [RAW DEBUG], [SEND DEBUG] and [AUDIO DEBUG] console logs.
