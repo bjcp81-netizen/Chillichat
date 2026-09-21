@@ -1871,7 +1871,7 @@ highrollersTodayBtn.addEventListener("click", () => {
     );
   }
 
-  function buildReactionBar(
+  function buildReactionBarOld(
     messageId,
     counts,
     heatRating
@@ -2001,7 +2001,7 @@ highrollersTodayBtn.addEventListener("click", () => {
     return bar;
   }
 
-  function renderPills(
+  function renderPillsOld(
     pillsWrap,
     counts
   ) {
@@ -2027,7 +2027,7 @@ highrollersTodayBtn.addEventListener("click", () => {
   }
 
   socket.on(
-    "reactionUpdate",
+    
     ({
       messageId,
       counts,
@@ -2093,6 +2093,214 @@ highrollersTodayBtn.addEventListener("click", () => {
     }
   );
 
+    // ---- Reactions (rebuilt) ----
+
+  let pickerEl = null;
+  let pickerMessageId = null;
+
+  function closePicker() {
+    if (pickerEl) pickerEl.classList.add("hidden");
+    pickerMessageId = null;
+  }
+
+  function getPicker() {
+    if (pickerEl) return pickerEl;
+
+    pickerEl = document.createElement("div");
+    pickerEl.className = "reaction-picker-fixed hidden";
+
+    REACTIONS.forEach(function (r) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "reaction-pick-btn";
+      b.textContent = r.emoji;
+
+      b.addEventListener("click", function () {
+        buzz();
+
+        if (pickerMessageId !== null) {
+          socket.emit("reaction", {
+            messageId: pickerMessageId,
+            handle: myHandle,
+            reactionType: r.key,
+          });
+        }
+
+        closePicker();
+      });
+
+      pickerEl.appendChild(b);
+    });
+
+    document.body.appendChild(pickerEl);
+    return pickerEl;
+  }
+
+  function openPicker(messageId, anchorBtn) {
+    const p = getPicker();
+    pickerMessageId = messageId;
+    p.classList.remove("hidden");
+
+    const rect = anchorBtn.getBoundingClientRect();
+    const w = p.offsetWidth;
+    const h = p.offsetHeight;
+
+    let left = rect.right - w;
+    if (left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
+    if (left < 8) left = 8;
+
+    let top = rect.bottom + 6;
+    if (top + h > window.innerHeight - 8) top = rect.top - h - 6;
+    if (top < 8) top = 8;
+
+    p.style.left = left + "px";
+    p.style.top = top + "px";
+  }
+
+  document.addEventListener("click", function (e) {
+    if (
+      e.target.closest(".reaction-add-btn") ||
+      e.target.closest(".reaction-picker-fixed")
+    ) {
+      return;
+    }
+    closePicker();
+  });
+
+  messagesBox.addEventListener("scroll", closePicker);
+
+  function burstReaction(msgEl, emoji) {
+    try {
+      const rect = msgEl.getBoundingClientRect();
+
+      for (let i = 0; i < 3; i++) {
+        const el = document.createElement("span");
+        el.className = "reaction-burst";
+        el.textContent = emoji;
+        el.style.left = rect.right - 90 + Math.random() * 60 + "px";
+        el.style.top = rect.top + rect.height / 2 + "px";
+        el.style.animationDelay = i * 130 + "ms";
+        document.body.appendChild(el);
+
+        setTimeout(function () {
+          el.remove();
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Reaction animation failed:", err);
+    }
+  }
+
+  function renderPills(pillsWrap, counts) {
+    pillsWrap.innerHTML = "";
+
+    REACTIONS.forEach(function (r) {
+      const count = counts[r.key] || 0;
+
+      if (count > 0) {
+        const pill = document.createElement("span");
+        pill.className = "reaction-pill";
+        pill.textContent = r.emoji + " " + count;
+        pillsWrap.appendChild(pill);
+      }
+    });
+  }
+
+  function buildReactionBar(messageId, counts, heatRating) {
+    const bar = document.createElement("div");
+    bar.className = "reaction-bar";
+
+    const pillsWrap = document.createElement("span");
+    pillsWrap.className = "reaction-pills";
+    bar.appendChild(pillsWrap);
+
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "reaction-add-btn";
+    addBtn.textContent = "🌶️";
+    addBtn.title = "React";
+    bar.appendChild(addBtn);
+
+    addBtn.addEventListener("click", function () {
+      buzz();
+
+      if (
+        pickerEl &&
+        !pickerEl.classList.contains("hidden") &&
+        pickerMessageId === messageId
+      ) {
+        closePicker();
+      } else {
+        openPicker(messageId, addBtn);
+      }
+    });
+
+    const heatBadge = document.createElement("span");
+    heatBadge.className = "heat-badge";
+    heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
+    bar.appendChild(heatBadge);
+
+    if (myIsModerator) {
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "mod-delete-btn";
+      delBtn.textContent = "🗑️";
+      delBtn.title = "Delete message";
+
+      delBtn.addEventListener("click", function () {
+        buzz();
+
+        if (confirm("Delete this message?")) {
+          socket.emit("moderatorDeleteMessage", { messageId: messageId });
+        }
+      });
+
+      bar.appendChild(delBtn);
+    }
+
+    renderPills(pillsWrap, counts);
+
+    return bar;
+  }
+
+  socket.on("reactionUpdate", function (data) {
+    console.log("[reaction] update received for message", data.messageId);
+
+    const messageId = data.messageId;
+    const counts = data.counts || {};
+    const heatRating = data.heatRating;
+
+    const msgEl = messagesBox.querySelector(
+      '[data-message-id="' + messageId + '"]'
+    );
+
+    if (!msgEl) return;
+
+    const prev = lastKnownCounts[messageId] || {
+      chilli: 0,
+      heart: 0,
+      laugh: 0,
+      down: 0,
+    };
+
+    lastKnownCounts[messageId] = counts;
+
+    // Numbers first, so they always appear.
+    const pillsWrap = msgEl.querySelector(".reaction-pills");
+    if (pillsWrap) renderPills(pillsWrap, counts);
+
+    const heatBadge = msgEl.querySelector(".heat-badge");
+    if (heatBadge) {
+      heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
+    }
+
+    // Animation last, so it can never block the numbers.
+    REACTIONS.forEach(function (r) {
+      if ((counts[r.key] || 0) > (prev[r.key] || 0)) {
+        burstReaction(msgEl, r.emoji);
+      }
+    });
+  });
   // ---- Incoming chat messages ----
 
   socket.on(

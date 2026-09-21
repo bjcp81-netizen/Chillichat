@@ -207,3 +207,10 @@ Render to your own PC.
 | 20 Sep 2026 | Removed duplicate app.js script tag (fixed Options/Users/Highrollers). Text messages in boxes, 🌶️ pill top-right opens reaction picker, long-press removed | Done, tested |
 | 20 Sep 2026 | Voice clips rebuilt: new public/voice.js records raw audio and sends a 16 kHz WAV; no FFmpeg or WebM. Clips burn after 5 min (server sweep every 10s + burn animation). | Done, tested on PC Chrome/Firefox, iPhone Safari, Android Chrome/Brave/Edge/Firefox |
 | 20 Sep 2026 | public/voicetest.html added as a standalone recording test page | Done |
+### 21/09/2026 — Picker and reaction functionality confirmed working
+
+The ChilliChat picker/offline issue has cleared and the application is currently functional. Reaction functionality has also been confirmed working correctly across devices.
+
+No further code changes were made at this stage. The issue appeared to resolve without a deliberate change to the reaction implementation, so the exact cause of the temporary failure remains unconfirmed.
+
+Current status: ChilliChat functional and reactions working. Preserve this state as the current known-good baseline before making further changes.
