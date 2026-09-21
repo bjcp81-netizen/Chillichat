@@ -1848,7 +1848,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
   // ---- Reactions & heat rating ----
 
-  function showFloatingReaction(
+    function spawnFloatingReaction(
     msgEl,
     emoji
   ) {
@@ -3108,6 +3108,7 @@ socket.on(
       closePhotoViewer();
     }
   );
+
 
   checkReturningUser();
 });

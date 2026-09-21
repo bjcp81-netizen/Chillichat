@@ -1082,7 +1082,7 @@ io.on("connection", (socket) => {
           );
 
           await checkThresholdBadges(authorHandle);
-          await checkRankBadges(authorHandle);
+                    await checkRankBadges(authorHandle).catch((e) => console.error("Rank badge error:", e));
 
           scoreIncreased = schoValue > 0;
         }
@@ -1090,6 +1090,7 @@ io.on("connection", (socket) => {
         const counts = await getReactionCounts(messageId);
         const heatRating = computeHeatRating(counts);
 
+                console.log("[REACTION] sending update for message", messageId);
         io.emit("reactionUpdate", {
           messageId,
           counts,
