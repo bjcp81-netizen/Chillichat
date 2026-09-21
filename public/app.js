@@ -185,6 +185,16 @@ document.addEventListener("DOMContentLoaded", function () {
   let myHandle = "";
   let myColor = "";
   let myIsModerator = false;
+  
+  let moderatorHandles = [];
+
+  function modTag(handle) {
+    return moderatorHandles.indexOf(handle) !== -1 ? "👑 " : "";
+  }
+
+  socket.on("moderatorList", (list) => {
+    moderatorHandles = list || [];
+  });
   let lastActivityTime = Date.now();
   let isIdle = false;
 
@@ -1328,7 +1338,7 @@ highrollersTodayBtn.addEventListener("click", () => {
   );
 
   socket.on("userProfileResult", (data) => {
-    profileHandle.textContent = data.handle;
+        profileHandle.textContent = modTag(data.handle) + data.handle;
 
     profileRank.textContent =
       data.rankEmoji +
@@ -1581,7 +1591,7 @@ highrollersTodayBtn.addEventListener("click", () => {
           : "";
 
       name.textContent =
-        (user.isModerator ? "🛡️ " : "") +
+                modTag(user.handle) +
         rankPrefix +
         user.handle +
         equippedStr;
@@ -1608,7 +1618,8 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       const canModerate =
         myIsModerator &&
-        user.handle !== myHandle;
+                user.handle !== myHandle &&
+        user.handle !== "Mdnight";
 
       if (canModerate) {
         const modToggleBtn =
@@ -2330,7 +2341,7 @@ highrollersTodayBtn.addEventListener("click", () => {
         "msg-handle clickable-handle";
 
       handleSpan.textContent =
-        data.handle + ":";
+        modTag(data.handle) + data.handle + ":"
 
       handleSpan.style.color =
         data.color;

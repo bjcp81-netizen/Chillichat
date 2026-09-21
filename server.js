@@ -25,6 +25,39 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const connectedUsers = {};
 
+// ---- Moderators ----
+const MODERATOR_HANDLES = ["Mdnight", "MR MATTI3"];
+const OWNER_HANDLE = "Mdnight"; // other moderators cannot moderate this handle
+
+// True if this socket's moderator may delete the given content.
+// Only the owner can touch the owner's content.
+async function moderatorMayTouch(socket, table, id) {
+  const me = connectedUsers[socket.id];
+
+  if (!me || !me.isModerator) return false;
+  if (me.handle === OWNER_HANDLE) return true;
+
+  const allowedTables = ["messages", "voice_clips", "photos"];
+  if (!allowedTables.includes(table)) return false;
+
+  try {
+    const r = await pool.query(
+      "SELECT handle FROM " + table + " WHERE id = $1",
+      [id]
+    );
+
+    if (r.rows.length > 0 && r.rows[0].handle === OWNER_HANDLE) {
+      socket.emit("reactionError", "You can't moderate " + OWNER_HANDLE + ".");
+      return false;
+    }
+  } catch (err) {
+    console.error("Moderator check error:", err);
+    return false;
+  }
+
+  return true;
+}
+
 const REACTION_SCHO_VALUES = {
   chilli: 5,
   heart: 10,
@@ -710,11 +743,23 @@ async function cleanupExpiredVoiceClips() {
 }
 
 io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
+    console.log("A user connected:", socket.id);
+  socket.emit("moderatorList", MODERATOR_HANDLES);
     
 
   socket.on("join", async ({ handle, color, deviceToken }) => {
     try {
+            const reserved = MODERATOR_HANDLES.find(
+        (m) =>
+          m.toLowerCase() === String(handle).toLowerCase().trim() &&
+          m !== handle
+      );
+
+      if (reserved) {
+        socket.emit("joinError", "That handle is reserved.");
+        return;
+      }
+
       const ban = await checkBanStatus(handle, deviceToken);
 
       if (ban) {
@@ -741,7 +786,7 @@ io.on("connection", (socket) => {
 
       if (existing.rows.length === 0) {
         const newToken = deviceToken || generateToken();
-        const isModerator = handle === "Mdnight";
+                const isModerator = MODERATOR_HANDLES.includes(handle);
 
         await pool.query(
           "INSERT INTO users (handle, color, device_token, is_moderator) VALUES ($1, $2, $3, $4)",
@@ -769,9 +814,9 @@ io.on("connection", (socket) => {
         const owner = existing.rows[0];
 
         if (owner.device_token === deviceToken) {
-          let isModerator = owner.is_moderator;
+        let isModerator = MODERATOR_HANDLES.includes(handle);
 
-          if (handle === "Mdnight" && !isModerator) {
+                    if (MODERATOR_HANDLES.includes(handle) && !isModerator) {
             await pool.query(
               "UPDATE users SET is_moderator = TRUE WHERE handle = $1",
               [handle]
@@ -1293,7 +1338,14 @@ io.on("connection", (socket) => {
     const me = connectedUsers[socket.id];
 
     if (!me || !me.isModerator) return;
-    if (targetHandle === me.handle) return;
+          if (targetHandle === me.handle) return;
+
+    
+
+    if (targetHandle === OWNER_HANDLE && me.handle !== OWNER_HANDLE) {
+      socket.emit("reactionError", "You can't moderate " + OWNER_HANDLE + ".");
+      return;
+    }
 
     const targetSocketId =
       findSocketIdByHandle(targetHandle);
@@ -1371,7 +1423,8 @@ io.on("connection", (socket) => {
 
   socket.on(
     "moderatorDeleteMessage",
-    async ({ messageId }) => {
+        async ({ messageId }) => {
+      if (!(await moderatorMayTouch(socket, "messages", messageId))) return;
       const me = connectedUsers[socket.id];
 
       if (!me || !me.isModerator) return;
@@ -1397,7 +1450,8 @@ io.on("connection", (socket) => {
 
   socket.on(
     "moderatorDeleteVoiceClip",
-    async ({ clipId }) => {
+        async ({ clipId }) => {
+      if (!(await moderatorMayTouch(socket, "voice_clips", clipId))) return;
       const me = connectedUsers[socket.id];
 
       if (!me || !me.isModerator) return;
@@ -1423,7 +1477,8 @@ io.on("connection", (socket) => {
 
   socket.on(
     "moderatorDeletePhoto",
-    async ({ photoId }) => {
+        async ({ photoId }) => {
+      if (!(await moderatorMayTouch(socket, "photos", photoId))) return;
       const me = connectedUsers[socket.id];
 
       if (!me || !me.isModerator) return;
