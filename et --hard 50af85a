@@ -1,0 +1,103 @@
+[33m7bb6430[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Change second moderator handle to MR MATTI3; moderator list is the only source of moderator status
+[33m9d7200f[m Checkpoint before second moderator
+[33m0565a64[m[33m ([m[1;31morigin/main[m[33m)[m Checkpoint before reactions rebuild
+[33m8564b64[m Replace system-only fonts with Google fonts, add 10 readable fonts
+[33m50af85a[m Remove old audio code and unused packages
+[33ma3b7fba[m Remove old audio code and unused packages
+[33m6cc2a82[m Remove old FFmpeg audio code from server
+[33m6760c65[m Remove old FFmpeg audio code from server
+[33m28e59ac[m Checkpoint before server audio cleanup
+[33m7147934[m Rebuild voice clips: WAV recorder, 5 minute burn
+[33me5019d7[m Working checkpoint before voice clip changes
+[33md003a9e[m Cache-bust style.css so mobile shows message boxes
+[33mb689290[m Fix duplicate app.js script; message boxes with top-right reaction pill
+[33m29776d2[m Fix duplicate app.js script tag in index.html
+[33m1a7e1ba[m Move ChilliChat to local SQLite and standalone hosting
+[33mffd349f[m Limit chat history on join to the last 5 messages across text/voice/photo
+[33m767d340[m Increase photo view-once lifetime to 15 seconds; remove dead constant
+[33mbda3274[m function renderActiveThumb().
+[33m4b14517[m Add C64-style title screen: scanlines, boot text, retro panel, pixel-art chilli decorations
+[33mac46032[m Add C64-style title screen: scanlines, boot text, retro panel, pixel-art chilli decorations
+[33m8138fbe[m Auto-delete voice clips after 1 hour; increase recording limit to 15s
+[33mc625f84[m Fix photo reveal always expiring due to local timezone mismatch in timestamp parsing
+[33m4ea7a83[m Rework photo lifecycle: shared 10s viewing window for everyone, synchronized burn destruction
+[33mdbfab21[m Reduce voice clip bitrate and photo compression to cut bandwidth usage
+[33m29d68a4[m Fix ReferenceErrors from leftover endSound references after sound effect refactor
+[33m3f65fa5[m Swap mic-press and send/mic-release sounds to A4strt.ogg and B4strt.ogg
+[33mecdc46c[m Switch key sound effects from wav to opus (ogg) and split recording-stop from playback-stop sounds
+[33m913a3b4[m Rebuild scroll wheels as custom infinite round-robin wheels with fling physics and speed-responsive haptics
+[33mb69f38f[m Add server-side voice clip transcoding to AAC/mp4 for universal playback
+[33md6732fe[m Mitigate Safari empty-recording bug with timeslice, and block sending empty voice clips
+[33mf7a9c2d[m audio clip wack-a-mole
+[33md93122b[m Remove push-to-talk button, keep mic button for future integration into message box
+[33m1ddace9[m Fix mismatched label/div tag on Font Size row breaking page layout, and silence vibrate warning
+[33m99616d6[m Replace Font Size dropdown with a haptic slider
+[33m3fdd8f2[m Add live per-item haptic ticks to scroll wheels, scaling with scroll speed
+[33m01adb7b[m Fix broken options-dropdown HTML structure, wheel scroll jumping, and font-colour wheel clipping
+[33mdc4969d[m Replace join screen colour swatches with Apple-style scrolling colour wheel
+[33mce91067[m Fix webm voice clips missing duration metadata (Chrome demuxer seek error)
+[33mbe42c69[m Fix voice clip playback by converting data URIs to blob URLs
+[33m250939f[m Fix stuck pause icon and add error feedback for voice clip playback failures
+[33m220d4c4[m Add push-to-talk button replacing CB radio link
+[33m038c6a3[m Restore consistent haptic feedback across all buttons
+[33maec6134[m Fix system
+[33m2818ea5[m Fix system message color conflict, default buttons to theme green
+[33m7c60973[m Fix system message color conflict, default buttons to theme green
+[33mf1accbe[m Fix system message color conflict, default buttons to theme green
+[33mbf7e2a8[m Convert Bold Text and Sound checkboxes to green/red toggle switches
+[33m602c5a6[m Add user bio field, editable in Options, shown on profile
+[33m1376684[m Make handles clickable in chat messages, voice clips, and photos to open profiles
+[33md45752d[m Silence notification sounds during chat history replay on join
+[33m05fea56[m Silence notification sounds during chat history replay on join
+[33m444cc3c[m Add scroll marker and scrollbar color change
+[33mdc22bbf[m Add Quicksand, Space Grotesk, Manrope, DM Sans, and Plus Jakarta Sans fonts
+[33m8905946[m Style dropdown scrollbar green to match theme
+[33m582479e[m Force consistent audio/webm opus format across Android devices
+[33me5142ac[m Remove broken duration-fix hack causing voice clip demuxer crash
+[33mfa47bd7[m Simplify voice clip recording back to original working format
+[33mc1f365d[m Add error logging and clean MIME type for voice clip debugging
+[33mb987922[m Fix silent voice clips by restricting audio/mp4 recording to iOS only
+[33m01874d7[m Silence harmless AbortError on rapid voice clip play/pause
+[33m1fd1091[m Fix typo in strtA4.wav filename
+[33m7ab5896[m Add strtA4.wav sound for voice clip play button
+[33mb961e30[m Fix duplicate micSound declaration breaking app.js
+[33m86b7357[m Add endsnd.wav for voice clip recording stop and playback end
+[33mf3b56d1[m Fix button sounds not replaying after first click
+[33m43e6e16[m Assign dedicated mic button sound (micbp.wav)
+[33medca141[m Replace Font dropdown with custom compact green-on-black selector
+[33m4e7fdbb[m Replace Font Size dropdown with custom compact selector for mobile
+[33m421439e[m Fix voice clip recording/playback support on iPhone
+[33mc662e1b[m Fix send button overflow on mobile screens
+[33m240458e[m Add font size option and fix duplicate code in app.js
+[33mc6b0a15[m Style mobile dropdown options with green-on-black theme
+[33m5f2301f[m Fix mobile font dropdown styling to match green-on-black theme
+[33m29c7e5f[m Add btnfx button sounds and new mobile-friendly fonts
+[33mdf4198c[m Expand font colour options to 20
+[33m32b9666[m Fix hardcoded fonts overriding the font selector
+[33m1fd928f[m Fix element ordering bug preventing app from loading
+[33m55a5655[m Add Options panel: font choice, font colour, bold toggle, sound toggle, haptics on all buttons
+[33mec73edb[m Fix syntax error in app.js from haptics edit, restore full functionality
+[33m455319e[m Add haptic feedback to voice clip recording start/stop
+[33m723ffd3[m Expand colour palette to 20 options
+[33m5fbb01a[m Keep header badge beside title on mobile instead of stacking
+[33m4bb91cc[m Resize and reposition header badge for desktop and mobile
+[33m3f37926[m Add Community, Funny, and Rare badges, plus 7/30/100-day activity streaks
+[33m32831f9[m Add timestamps to messages and voice clips
+[33m8363245[m Add ephemeral view-once photos: upload, compression, 10s countdown, moderator delete
+[33mfc25ad8[m Hide reaction bar by default (long-press to reveal), add floating reaction animations
+[33m93b367a[m Fix voice clip playback cutting short due to broken webm duration metadata
+[33mfa8b25f[m Yellow moderator buttons with bigger text, add message/voice clip deletion
+[33mb02ad65[m Remove duplicate start sound from voice clip playback
+[33mcc90edf[m Add sound cues to voice clip recording and playback
+[33m314da7f[m Fix truncated server.js causing deploy crash
+[33m4c174dd[m Add voice clips: press-and-hold recording, 10s cap, playback
+[33mf287fa3[m Add ChilliChat badge image to header, heat notifications for rank-ups and leaderboard entries
+[33mfae960f[m Add Starter badges: Fresh Face, Ice Breaker, First Burn, Well Liked, Crowd Pleaser, Spice Merchant
+[33m87c288b[m Add Top Users leaderboard tab to Highrollers dropdown
+[33mb0ee8d0[m Add Scho tally and Scoville ranks, prevent self-reactions
+[33m9aef936[m Move mod controls to click-on-handle panel with bigger buttons
+[33mcd57a30[m Fix corrupted server.js, add Mdnight self-heal for existing accounts
+[33mb2fae2a[m Add Mdnight moderator system: permanent claim, kick, and timed/permanent bans
+[33m8fd7f02[m Add auto-reconnection with banner and message re-sync
+[33m4690551[m Add reactions and High Rollers leaderboard
+[33m832c87c[m Add permanent handles, duplicate prevention, and 24hr messag
