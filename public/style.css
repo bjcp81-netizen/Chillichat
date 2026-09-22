@@ -244,9 +244,10 @@ body {
 
 .header-controls {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-wrap: nowrap;
   justify-content: center;
+  width: 100%;
 }
 
 .app-header h1 {
@@ -674,6 +675,31 @@ body {
 
   .header-top-row h1 {
     font-size: 22px;
+  }
+
+  .header-controls {
+    gap: 3px;
+  }
+
+  .top-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 4px;
+    font-size: 9px;
+    gap: 2px;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .top-btn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .top-btn-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
   }
 }
 .mic-btn {

@@ -3481,18 +3481,20 @@ socket.on(
     return { dxMiles: dLon, dyMiles: -dLat };
   }
 
-  function drawMap() {
+    function drawMap() {
     if (mapOverlay.classList.contains("hidden")) return;
 
     const ctx = mapCanvas.getContext("2d");
     const w = mapCanvas.width;
     const h = mapCanvas.height;
 
+    if (w === 0 || h === 0) return; // canvas not laid out yet
+
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = "rgba(57, 255, 20, 0.15)";
+    ctx.strokeStyle = "rgba(57, 255, 20, 0.35)";
     ctx.lineWidth = 1;
     const gridSize = 40 * devicePixelRatio;
 
@@ -3513,11 +3515,32 @@ socket.on(
     const centerX = w / 2 + mapOffsetX;
     const centerY = h / 2 + mapOffsetY;
 
+    // Radar range rings every 5 miles out to 20, so scale is readable
+    // at a glance even before any pins are on screen.
+    ctx.strokeStyle = "rgba(57, 255, 20, 0.5)";
+    ctx.fillStyle = "rgba(57, 255, 20, 0.6)";
+    ctx.font = 9 * devicePixelRatio + "px monospace";
+    ctx.textAlign = "left";
+
+    for (let miles = 5; miles <= 20; miles += 5) {
+      const r = miles * mapScale * devicePixelRatio;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillText(miles + "mi", centerX + r + 3, centerY - 3);
+    }
+
+    // Compass marker.
+    ctx.fillStyle = "#39ff14";
+    ctx.font = "bold " + 12 * devicePixelRatio + "px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("N", centerX, 16 * devicePixelRatio);
+
     if (myJitteredLat === null && knownLocations.length === 0) {
       ctx.fillStyle = "#1f7a0d";
       ctx.font = 13 * devicePixelRatio + "px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("No locations to show yet.", w / 2, h / 2);
+      ctx.fillText("No locations to show yet.", w / 2, h / 2 + 30 * devicePixelRatio);
       return;
     }
 
@@ -3551,22 +3574,41 @@ socket.on(
       ctx.fillText(loc.handle, px, py - 10 * devicePixelRatio);
     });
 
-    ctx.strokeStyle = "#1f7a0d";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#ffee00";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 3 * devicePixelRatio, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, 4 * devicePixelRatio, 0, Math.PI * 2);
     ctx.stroke();
+
+    ctx.fillStyle = "#ffee00";
+    ctx.font = 10 * devicePixelRatio + "px monospace";
+    ctx.textAlign = "center";
+      ctx.fillText("YOU", centerX, centerY + 18 * devicePixelRatio);
   }
 
   mapToggleBtn.addEventListener("click", () => {
     buzz();
-    playSound(btnfxSound);
-    socket.emit("getLocations");
-    mapOverlay.classList.remove("hidden");
-    requestAnimationFrame(() => {
-      resizeMapCanvas();
-      drawMap();
-    });
+
+    try {
+      playSound(btnfxSound);
+      socket.emit("getLocations");
+      mapOverlay.classList.remove("hidden");
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resizeMapCanvas();
+          drawMap();
+        });
+      });
+
+      setTimeout(() => {
+        resizeMapCanvas();
+        drawMap();
+      }, 200);
+    } catch (err) {
+      console.error("Map open error:", err);
+      showSystemMessage("⚠️ Map error: " + err.message);
+    }
   });
 
   mapCloseBtn.addEventListener("click", () => {
@@ -3574,7 +3616,7 @@ socket.on(
     mapOverlay.classList.add("hidden");
   });
 
-  mapCanvas.addEventListener(
+    mapCanvas.addEventListener(
     "wheel",
     (e) => {
       e.preventDefault();
@@ -3585,27 +3627,80 @@ socket.on(
     { passive: false }
   );
 
+  // Tracks every finger/pointer currently touching the canvas, keyed
+  // by pointerId, so we can tell a one-finger drag from a two-finger pinch.
+  const activeMapPointers = new Map();
+  let pinchStartDistance = null;
+  let pinchStartScale = null;
+  let pinchCenterX = 0;
+  let pinchCenterY = 0;
+
+  function pointerDistance() {
+    const pts = Array.from(activeMapPointers.values());
+    const dx = pts[0].x - pts[1].x;
+    const dy = pts[0].y - pts[1].y;
+    return Math.hypot(dx, dy);
+  }
+
   mapCanvas.addEventListener("pointerdown", (e) => {
-    mapDragging = true;
-    mapLastX = e.clientX;
-    mapLastY = e.clientY;
     try {
       mapCanvas.setPointerCapture(e.pointerId);
     } catch (err) {}
+
+    activeMapPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activeMapPointers.size === 2) {
+      mapDragging = false;
+      pinchStartDistance = pointerDistance();
+      pinchStartScale = mapScale;
+    } else if (activeMapPointers.size === 1) {
+      mapDragging = true;
+      mapLastX = e.clientX;
+      mapLastY = e.clientY;
+    }
   });
 
   mapCanvas.addEventListener("pointermove", (e) => {
-    if (!mapDragging) return;
-    mapOffsetX += (e.clientX - mapLastX) * devicePixelRatio;
-    mapOffsetY += (e.clientY - mapLastY) * devicePixelRatio;
-    mapLastX = e.clientX;
-    mapLastY = e.clientY;
-    drawMap();
+    if (!activeMapPointers.has(e.pointerId)) return;
+    activeMapPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activeMapPointers.size === 2 && pinchStartDistance) {
+      const newDistance = pointerDistance();
+      mapScale = pinchStartScale * (newDistance / pinchStartDistance);
+      mapScale = Math.max(1, Math.min(mapScale, 60));
+      drawMap();
+      return;
+    }
+
+    if (activeMapPointers.size === 1 && mapDragging) {
+      mapOffsetX += (e.clientX - mapLastX) * devicePixelRatio;
+      mapOffsetY += (e.clientY - mapLastY) * devicePixelRatio;
+      mapLastX = e.clientX;
+      mapLastY = e.clientY;
+      drawMap();
+    }
   });
 
-  mapCanvas.addEventListener("pointerup", () => {
-    mapDragging = false;
-  });
+  function endMapPointer(e) {
+    activeMapPointers.delete(e.pointerId);
+
+    if (activeMapPointers.size < 2) {
+      pinchStartDistance = null;
+      pinchStartScale = null;
+    }
+
+    if (activeMapPointers.size === 1) {
+      const remaining = Array.from(activeMapPointers.values())[0];
+      mapDragging = true;
+      mapLastX = remaining.x;
+      mapLastY = remaining.y;
+    } else if (activeMapPointers.size === 0) {
+      mapDragging = false;
+    }
+  }
+
+  mapCanvas.addEventListener("pointerup", endMapPointer);
+  mapCanvas.addEventListener("pointercancel", endMapPointer);
 
   window.addEventListener("resize", () => {
     if (!mapOverlay.classList.contains("hidden")) {
