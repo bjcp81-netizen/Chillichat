@@ -731,20 +731,112 @@ function findSocketIdByHandle(handle) {
     (id) => connectedUsers[id].handle === handle
   );
 }
+
+// ---- Weather (Open-Meteo, no API key required) ----
+
+const WEATHER_CACHE = new Map();
+const WEATHER_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+// Rounds to a coarse grid (~35 miles) so nearby users share one
+// cached weather lookup instead of each triggering their own call.
+function weatherGridKey(lat, lon) {
+  const rLat = Math.round(lat * 2) / 2;
+  const rLon = Math.round(lon * 2) / 2;
+  return rLat + "," + rLon;
+}
+
+const WMO_DESCRIPTIONS = {
+  0: { desc: "Clear", icon: "☀" },
+  1: { desc: "Mostly Clear", icon: "🌤" },
+  2: { desc: "Partly Cloudy", icon: "⛅" },
+  3: { desc: "Overcast", icon: "☁" },
+  45: { desc: "Fog", icon: "🌫" },
+  48: { desc: "Fog", icon: "🌫" },
+  51: { desc: "Light Drizzle", icon: "🌦" },
+  53: { desc: "Drizzle", icon: "🌦" },
+  55: { desc: "Heavy Drizzle", icon: "🌧" },
+  61: { desc: "Light Rain", icon: "🌦" },
+  63: { desc: "Rain", icon: "🌧" },
+  65: { desc: "Heavy Rain", icon: "🌧" },
+  71: { desc: "Light Snow", icon: "🌨" },
+  73: { desc: "Snow", icon: "❄" },
+  75: { desc: "Heavy Snow", icon: "❄" },
+  80: { desc: "Rain Showers", icon: "🌦" },
+  81: { desc: "Rain Showers", icon: "🌧" },
+  82: { desc: "Violent Showers", icon: "🌧" },
+  95: { desc: "Thunderstorm", icon: "⛈" },
+  96: { desc: "Thunderstorm", icon: "⛈" },
+  99: { desc: "Severe Storm", icon: "⛈" },
+};
+
+function describeWeatherCode(code) {
+  return WMO_DESCRIPTIONS[code] || { desc: "Unknown", icon: "?" };
+}
+
+async function getWeatherFor(lat, lon) {
+  const key = weatherGridKey(lat, lon);
+  const cached = WEATHER_CACHE.get(key);
+
+  if (cached && Date.now() - cached.fetchedAt < WEATHER_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const url =
+      "https://api.open-meteo.com/v1/forecast?latitude=" +
+      lat +
+      "&longitude=" +
+      lon +
+      "&current=temperature_2m,weather_code&temperature_unit=celsius";
+
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!response.ok) throw new Error("Weather API status " + response.status);
+
+    const json = await response.json();
+    const current = json.current;
+
+    if (!current) throw new Error("Weather API returned no current data");
+
+    const { desc, icon } = describeWeatherCode(current.weather_code);
+
+    const data = {
+      tempC: Math.round(current.temperature_2m),
+      desc,
+      icon,
+    };
+
+    WEATHER_CACHE.set(key, { data, fetchedAt: Date.now() });
+    return data;
+  } catch (err) {
+    console.error("Weather fetch error:", err.message);
+    return null;
+  }
+}
+
 async function buildLocationList() {
   try {
     const result = await pool.query(
       "SELECT handle, color, location_lat, location_lon FROM users WHERE location_enabled = TRUE AND location_lat IS NOT NULL AND location_lon IS NOT NULL"
     );
 
-    return result.rows
-      .filter((row) => findSocketIdByHandle(row.handle))
-      .map((row) => ({
+    const rows = result.rows.filter((row) => findSocketIdByHandle(row.handle));
+
+    const withWeather = await Promise.all(
+      rows.map(async (row) => ({
         handle: row.handle,
         color: row.color,
         lat: row.location_lat,
         lon: row.location_lon,
-      }));
+        weather: await getWeatherFor(row.location_lat, row.location_lon),
+      }))
+    );
+
+    return withWeather;
   } catch (err) {
     console.error("Build location list error:", err);
     return [];

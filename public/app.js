@@ -3454,10 +3454,32 @@ socket.on(
     sendLocationUpdate(true);
   }
 
+    const mapWeatherHud = document.getElementById("map-weather-hud");
+
   socket.on("locationsUpdate", (locations) => {
     knownLocations = locations || [];
     drawMap();
+    updateWeatherHud();
   });
+
+  function updateWeatherHud() {
+    if (!mapWeatherHud) return;
+
+    const mine = knownLocations.find((loc) => loc.handle === myHandle);
+
+    if (!mine || !mine.weather) {
+      mapWeatherHud.textContent = "YOUR AREA: weather unavailable";
+      return;
+    }
+
+    mapWeatherHud.textContent =
+      "YOUR AREA: " +
+      mine.weather.icon +
+      " " +
+      mine.weather.tempC +
+      "°C " +
+      mine.weather.desc;
+  }
 
   // ---- Retro radar map ----
 
@@ -3549,7 +3571,7 @@ socket.on(
     const originLon =
       myJitteredLon !== null ? myJitteredLon : knownLocations[0].lon;
 
-    knownLocations.forEach((loc) => {
+        knownLocations.forEach((loc) => {
       const { dxMiles, dyMiles } = milesBetween(
         originLat,
         originLon,
@@ -3572,6 +3594,16 @@ socket.on(
       ctx.font = 11 * devicePixelRatio + "px monospace";
       ctx.textAlign = "center";
       ctx.fillText(loc.handle, px, py - 10 * devicePixelRatio);
+
+      if (loc.weather) {
+        ctx.fillStyle = "#a8ffb0";
+        ctx.font = 9 * devicePixelRatio + "px monospace";
+        ctx.fillText(
+          loc.weather.icon + " " + loc.weather.tempC + "°C",
+          px,
+          py + 18 * devicePixelRatio
+        );
+      }
     });
 
     ctx.strokeStyle = "#ffee00";
@@ -3583,7 +3615,7 @@ socket.on(
     ctx.fillStyle = "#ffee00";
     ctx.font = 10 * devicePixelRatio + "px monospace";
     ctx.textAlign = "center";
-      ctx.fillText("YOU", centerX, centerY + 18 * devicePixelRatio);
+    ctx.fillText("YOU", centerX, centerY + 18 * devicePixelRatio);
   }
 
   mapToggleBtn.addEventListener("click", () => {

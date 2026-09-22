@@ -1946,3 +1946,13 @@ html {
   color: #1f7a0d;
   text-align: center;
 }
+
+.map-weather-hud {
+  font-size: 11px;
+  color: #39ff14;
+  border: 1px solid #1f7a0d;
+  border-radius: 4px;
+  padding: 4px 8px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
