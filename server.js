@@ -228,8 +228,20 @@ async function setupDatabase() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_badge TEXT`
   );
 
-  await pool.query(
+   await pool.query(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`
+  );
+
+  await pool.query(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS location_enabled BOOLEAN DEFAULT FALSE`
+  );
+
+  await pool.query(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS location_lat REAL`
+  );
+
+  await pool.query(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS location_lon REAL`
   );
 
   await pool.query(`
@@ -719,7 +731,30 @@ function findSocketIdByHandle(handle) {
     (id) => connectedUsers[id].handle === handle
   );
 }
+async function buildLocationList() {
+  try {
+    const result = await pool.query(
+      "SELECT handle, color, location_lat, location_lon FROM users WHERE location_enabled = TRUE AND location_lat IS NOT NULL AND location_lon IS NOT NULL"
+    );
 
+    return result.rows
+      .filter((row) => findSocketIdByHandle(row.handle))
+      .map((row) => ({
+        handle: row.handle,
+        color: row.color,
+        lat: row.location_lat,
+        lon: row.location_lon,
+      }));
+  } catch (err) {
+    console.error("Build location list error:", err);
+    return [];
+  }
+}
+
+async function broadcastLocations() {
+  const locations = await buildLocationList();
+  io.emit("locationsUpdate", locations);
+}
 async function cleanupExpiredVoiceClips() {
   try {
     const result = await pool.query(
@@ -1253,6 +1288,34 @@ io.on("connection", (socket) => {
       }
     }
   );
+  socket.on("updateLocation", async ({ enabled, lat, lon }) => {
+    const me = connectedUsers[socket.id];
+    if (!me) return;
+
+    try {
+      if (enabled && typeof lat === "number" && typeof lon === "number") {
+        await pool.query(
+          "UPDATE users SET location_enabled = TRUE, location_lat = $1, location_lon = $2 WHERE handle = $3",
+          [lat, lon, me.handle]
+        );
+      } else {
+        await pool.query(
+          "UPDATE users SET location_enabled = FALSE, location_lat = NULL, location_lon = NULL WHERE handle = $1",
+          [me.handle]
+        );
+      }
+
+      await broadcastLocations();
+    } catch (err) {
+      console.error("Update location error:", err);
+    }
+  });
+
+  socket.on("getLocations", async () => {
+    const locations = await buildLocationList();
+    socket.emit("locationsUpdate", locations);
+  });
+
 
   socket.on("updateBio", async ({ bio }) => {
     const me = connectedUsers[socket.id];
@@ -1531,7 +1594,7 @@ io.on("connection", (socket) => {
         }
       }
 
-      await broadcastUserList();
+           await broadcastUserList();
     }
   });
 
@@ -1544,6 +1607,7 @@ io.on("connection", (socket) => {
     delete connectedUsers[socket.id];
 
     await broadcastUserList();
+    await broadcastLocations();
   });
 });
 

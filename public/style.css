@@ -1878,3 +1878,45 @@ html {
     transform: translateY(-140px) scale(1.7) rotate(0deg);
   }
 }
+.map-panel {
+  background-color: #0a0a0a;
+  border: 1px solid #39ff14;
+  border-radius: 10px;
+  padding: 12px;
+  width: 92vw;
+  max-width: 480px;
+  height: 80vh;
+  max-height: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #39ff14;
+}
+
+.map-canvas {
+  flex: 1;
+  width: 100%;
+  background-color: #000000;
+  border: 1px solid #1f7a0d;
+  border-radius: 6px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.map-canvas:active {
+  cursor: grabbing;
+}
+
+.map-hint {
+  font-size: 10px;
+  color: #1f7a0d;
+  text-align: center;
+}

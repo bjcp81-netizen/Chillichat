@@ -2523,16 +2523,23 @@ highrollersTodayBtn.addEventListener("click", () => {
     window.ChilliVoice.stop(cancelled);
   }
 
-  micBtn.addEventListener("mousedown", () => startRecording());
+    micBtn.addEventListener("mousedown", () => {
+    buzz();
+    startRecording();
+  });
 
   micBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
+    buzz();
     startRecording();
   });
 
   micBtn.addEventListener("mouseup", () => stopRecording(false));
   micBtn.addEventListener("touchend", () => stopRecording(false));
-  cancelRecordingBtn.addEventListener("click", () => stopRecording(true));
+  cancelRecordingBtn.addEventListener("click", () => {
+    buzz();
+    stopRecording(true);
+  });
  socket.on(
     "voiceClip",
     (data) => {
@@ -3328,6 +3335,284 @@ socket.on(
     }
   );
 
+
+  // ---- Location sharing ----
+
+  const STORAGE_LOCATION_KEY = "chillichat_location_enabled";
+  const STORAGE_LOCATION_LAT_KEY = "chillichat_location_lat";
+  const STORAGE_LOCATION_LON_KEY = "chillichat_location_lon";
+
+  const locationToggle = document.getElementById("location-toggle");
+  const mapToggleBtn = document.getElementById("map-toggle-btn");
+  const mapOverlay = document.getElementById("map-overlay");
+  const mapCloseBtn = document.getElementById("map-close-btn");
+  const mapCanvas = document.getElementById("map-canvas");
+
+  let myJitteredLat = null;
+  let myJitteredLon = null;
+  let knownLocations = [];
+
+  function milesToDegreesLat(miles) {
+    return miles / 69;
+  }
+
+  function milesToDegreesLon(miles, atLat) {
+    const cos = Math.max(Math.cos((atLat * Math.PI) / 180), 0.01);
+    return miles / (69 * cos);
+  }
+
+  function jitterLocation(lat, lon) {
+    const angle = Math.random() * Math.PI * 2;
+    const distanceMiles = Math.random() * 10;
+
+    const dLat = milesToDegreesLat(distanceMiles) * Math.sin(angle);
+    const dLon = milesToDegreesLon(distanceMiles, lat) * Math.cos(angle);
+
+    return { lat: lat + dLat, lon: lon + dLon };
+  }
+
+  function sendLocationUpdate(enabled) {
+    if (!enabled) {
+      socket.emit("updateLocation", { enabled: false });
+      return;
+    }
+
+    if (myJitteredLat !== null && myJitteredLon !== null) {
+      socket.emit("updateLocation", {
+        enabled: true,
+        lat: myJitteredLat,
+        lon: myJitteredLon,
+      });
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      showSystemMessage("⚠️ Location isn't supported in this browser.");
+      locationToggle.checked = false;
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const jittered = jitterLocation(
+          pos.coords.latitude,
+          pos.coords.longitude
+        );
+
+        myJitteredLat = jittered.lat;
+        myJitteredLon = jittered.lon;
+
+        safeStorage.setItem(STORAGE_LOCATION_LAT_KEY, String(jittered.lat));
+        safeStorage.setItem(STORAGE_LOCATION_LON_KEY, String(jittered.lon));
+
+        socket.emit("updateLocation", {
+          enabled: true,
+          lat: jittered.lat,
+          lon: jittered.lon,
+        });
+      },
+      (err) => {
+        console.error("Geolocation error:", err);
+        showSystemMessage("⚠️ Couldn't get your location. Check permissions.");
+        locationToggle.checked = false;
+        safeStorage.setItem(STORAGE_LOCATION_KEY, "false");
+      },
+      { enableHighAccuracy: false, timeout: 10000 }
+    );
+  }
+
+  locationToggle.addEventListener("change", () => {
+    buzz();
+
+    const enabled = locationToggle.checked;
+    safeStorage.setItem(STORAGE_LOCATION_KEY, String(enabled));
+
+    if (!enabled) {
+      myJitteredLat = null;
+      myJitteredLon = null;
+      safeStorage.removeItem(STORAGE_LOCATION_LAT_KEY);
+      safeStorage.removeItem(STORAGE_LOCATION_LON_KEY);
+    }
+
+    sendLocationUpdate(enabled);
+  });
+
+  function restoreLocationPreference() {
+    const wasEnabled = safeStorage.getItem(STORAGE_LOCATION_KEY) === "true";
+    if (!wasEnabled) return;
+
+    const savedLat = parseFloat(safeStorage.getItem(STORAGE_LOCATION_LAT_KEY));
+    const savedLon = parseFloat(safeStorage.getItem(STORAGE_LOCATION_LON_KEY));
+
+    locationToggle.checked = true;
+
+    if (!isNaN(savedLat) && !isNaN(savedLon)) {
+      myJitteredLat = savedLat;
+      myJitteredLon = savedLon;
+    }
+
+    sendLocationUpdate(true);
+  }
+
+  socket.on("locationsUpdate", (locations) => {
+    knownLocations = locations || [];
+    drawMap();
+  });
+
+  // ---- Retro radar map ----
+
+  let mapScale = 6;
+  let mapOffsetX = 0;
+  let mapOffsetY = 0;
+  let mapDragging = false;
+  let mapLastX = 0;
+  let mapLastY = 0;
+
+  function resizeMapCanvas() {
+    const rect = mapCanvas.getBoundingClientRect();
+    mapCanvas.width = rect.width * devicePixelRatio;
+    mapCanvas.height = rect.height * devicePixelRatio;
+  }
+
+  function milesBetween(lat1, lon1, lat2, lon2) {
+    const dLat = (lat2 - lat1) * 69;
+    const cos = Math.cos((((lat1 + lat2) / 2) * Math.PI) / 180);
+    const dLon = (lon2 - lon1) * 69 * cos;
+    return { dxMiles: dLon, dyMiles: -dLat };
+  }
+
+  function drawMap() {
+    if (mapOverlay.classList.contains("hidden")) return;
+
+    const ctx = mapCanvas.getContext("2d");
+    const w = mapCanvas.width;
+    const h = mapCanvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = "rgba(57, 255, 20, 0.15)";
+    ctx.lineWidth = 1;
+    const gridSize = 40 * devicePixelRatio;
+
+    for (let x = mapOffsetX % gridSize; x < w; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+
+    for (let y = mapOffsetY % gridSize; y < h; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+
+    const centerX = w / 2 + mapOffsetX;
+    const centerY = h / 2 + mapOffsetY;
+
+    if (myJitteredLat === null && knownLocations.length === 0) {
+      ctx.fillStyle = "#1f7a0d";
+      ctx.font = 13 * devicePixelRatio + "px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("No locations to show yet.", w / 2, h / 2);
+      return;
+    }
+
+    const originLat =
+      myJitteredLat !== null ? myJitteredLat : knownLocations[0].lat;
+    const originLon =
+      myJitteredLon !== null ? myJitteredLon : knownLocations[0].lon;
+
+    knownLocations.forEach((loc) => {
+      const { dxMiles, dyMiles } = milesBetween(
+        originLat,
+        originLon,
+        loc.lat,
+        loc.lon
+      );
+
+      const px = centerX + dxMiles * mapScale * devicePixelRatio;
+      const py = centerY + dyMiles * mapScale * devicePixelRatio;
+
+      ctx.beginPath();
+      ctx.arc(px, py, 5 * devicePixelRatio, 0, Math.PI * 2);
+      ctx.fillStyle = loc.color || "#39ff14";
+      ctx.shadowColor = loc.color || "#39ff14";
+      ctx.shadowBlur = 8 * devicePixelRatio;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "#39ff14";
+      ctx.font = 11 * devicePixelRatio + "px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(loc.handle, px, py - 10 * devicePixelRatio);
+    });
+
+    ctx.strokeStyle = "#1f7a0d";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 3 * devicePixelRatio, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  mapToggleBtn.addEventListener("click", () => {
+    buzz();
+    playSound(btnfxSound);
+    socket.emit("getLocations");
+    mapOverlay.classList.remove("hidden");
+    requestAnimationFrame(() => {
+      resizeMapCanvas();
+      drawMap();
+    });
+  });
+
+  mapCloseBtn.addEventListener("click", () => {
+    buzz();
+    mapOverlay.classList.add("hidden");
+  });
+
+  mapCanvas.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      mapScale *= e.deltaY > 0 ? 0.9 : 1.1;
+      mapScale = Math.max(1, Math.min(mapScale, 60));
+      drawMap();
+    },
+    { passive: false }
+  );
+
+  mapCanvas.addEventListener("pointerdown", (e) => {
+    mapDragging = true;
+    mapLastX = e.clientX;
+    mapLastY = e.clientY;
+    try {
+      mapCanvas.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  });
+
+  mapCanvas.addEventListener("pointermove", (e) => {
+    if (!mapDragging) return;
+    mapOffsetX += (e.clientX - mapLastX) * devicePixelRatio;
+    mapOffsetY += (e.clientY - mapLastY) * devicePixelRatio;
+    mapLastX = e.clientX;
+    mapLastY = e.clientY;
+    drawMap();
+  });
+
+  mapCanvas.addEventListener("pointerup", () => {
+    mapDragging = false;
+  });
+
+  window.addEventListener("resize", () => {
+    if (!mapOverlay.classList.contains("hidden")) {
+      resizeMapCanvas();
+      drawMap();
+    }
+  });
 
   checkReturningUser();
 });
