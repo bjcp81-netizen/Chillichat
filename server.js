@@ -810,11 +810,61 @@ async function getWeatherFor(lat, lon) {
       icon,
     };
 
-    WEATHER_CACHE.set(key, { data, fetchedAt: Date.now() });
+     WEATHER_CACHE.set(key, { data, fetchedAt: Date.now() });
     return data;
   } catch (err) {
     console.error("Weather fetch error:", err.message);
     return null;
+  }
+}
+
+// ---- UK Air Traffic (OpenSky Network, anonymous/free tier) ----
+
+const UK_BBOX = { lamin: 49.5, lomin: -8.5, lamax: 61, lomax: 2 };
+const FLIGHT_POLL_INTERVAL_MS = 75 * 1000; // anonymous OpenSky quota is shared and tight
+let cachedFlights = [];
+
+async function fetchUkFlights() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const url =
+      "https://opensky-network.org/api/states/all?lamin=" +
+      UK_BBOX.lamin +
+      "&lomin=" +
+      UK_BBOX.lomin +
+      "&lamax=" +
+      UK_BBOX.lamax +
+      "&lomax=" +
+      UK_BBOX.lomax;
+
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!response.ok) throw new Error("OpenSky API status " + response.status);
+
+    const json = await response.json();
+    const states = json.states || [];
+
+    cachedFlights = states
+      .filter((s) => s[6] !== null && s[5] !== null && !s[8]) // has position, not on ground
+      .slice(0, 60)
+      .map((s) => ({
+        icao24: s[0],
+        callsign: (s[1] || "").trim() || "UNKNOWN",
+        lon: s[5],
+        lat: s[6],
+        altitudeM: s[7],
+        heading: s[10] || 0,
+        velocityMs: s[9] || 0,
+      }));
+
+    io.emit("flightsUpdate", cachedFlights);
+  } catch (err) {
+    console.error("Flight fetch error:", err.message);
+    // Keep serving the last good cache rather than clearing it on a
+    // transient failure — OpenSky's anonymous quota is easily exhausted.
   }
 }
 
@@ -1403,9 +1453,13 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("getLocations", async () => {
+   socket.on("getLocations", async () => {
     const locations = await buildLocationList();
     socket.emit("locationsUpdate", locations);
+  });
+
+  socket.on("getFlights", () => {
+    socket.emit("flightsUpdate", cachedFlights);
   });
 
 
@@ -1713,12 +1767,15 @@ setupDatabase()
       );
     });
 
-    cleanupExpiredVoiceClips();
+        cleanupExpiredVoiceClips();
 
     setInterval(
       cleanupExpiredVoiceClips,
       VOICE_CLIP_CLEANUP_INTERVAL_MS
     );
+
+    fetchUkFlights();
+    setInterval(fetchUkFlights, FLIGHT_POLL_INTERVAL_MS);
   })
   .catch((err) => {
     console.error(

@@ -2798,64 +2798,36 @@ audio.preload = "auto";
       const img =
         new Image();
 
-      img.onload = () => {
-        let {
-          width,
-          height,
-        } = img;
+           img.onload = () => {
+        // Some mobile browsers fire "load" before the image is fully
+        // decoded, which can make canvas draw it as blank/black.
+        // img.decode() (where supported) guarantees full decode first.
+        const proceed = () => {
+          let { width, height } = img;
 
-        if (
-          width > height &&
-          width >
-            MAX_PHOTO_DIMENSION
-        ) {
-          height = Math.round(
-            (height *
-              MAX_PHOTO_DIMENSION) /
-              width
-          );
+          if (width > height && width > MAX_PHOTO_DIMENSION) {
+            height = Math.round((height * MAX_PHOTO_DIMENSION) / width);
+            width = MAX_PHOTO_DIMENSION;
+          } else if (height > MAX_PHOTO_DIMENSION) {
+            width = Math.round((width * MAX_PHOTO_DIMENSION) / height);
+            height = MAX_PHOTO_DIMENSION;
+          }
 
-          width =
-            MAX_PHOTO_DIMENSION;
-        } else if (
-          height >
-          MAX_PHOTO_DIMENSION
-        ) {
-          width = Math.round(
-            (width *
-              MAX_PHOTO_DIMENSION) /
-              height
-          );
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
 
-          height =
-            MAX_PHOTO_DIMENSION;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          tryCompress(canvas, 0.5);
+        };
+
+        if (img.decode) {
+          img.decode().then(proceed).catch(proceed);
+        } else {
+          proceed();
         }
-
-        const canvas =
-          document.createElement(
-            "canvas"
-          );
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx =
-          canvas.getContext(
-            "2d"
-          );
-
-        ctx.drawImage(
-          img,
-          0,
-          0,
-          width,
-          height
-        );
-
-       tryCompress(
-          canvas,
-          0.5
-        );
       };
 
       img.onerror = () => {
@@ -3286,9 +3258,14 @@ socket.on(
     }
   );
 
-  function openPhotoViewer(imageData, totalSeconds) {
+   function openPhotoViewer(imageData, totalSeconds) {
+    photoViewerImg.onerror = () => {
+      showSystemMessage("⚠️ Couldn't display that photo.");
+      closePhotoViewer();
+    };
+
     photoViewerImg.src = imageData;
-    photoViewerOverlay.classList.remove("hidden");
+    photoViewerOverlay.classList.remove("hidden"); 
 
     let secondsLeft = totalSeconds;
 
@@ -3348,9 +3325,11 @@ socket.on(
   const mapCloseBtn = document.getElementById("map-close-btn");
   const mapCanvas = document.getElementById("map-canvas");
 
-  let myJitteredLat = null;
+   let myJitteredLat = null;
   let myJitteredLon = null;
   let knownLocations = [];
+  let knownFlights = [];
+  const flightsToggle = document.getElementById("flights-toggle");
 
   function milesToDegreesLat(miles) {
     return miles / 69;
@@ -3454,13 +3433,25 @@ socket.on(
     sendLocationUpdate(true);
   }
 
-    const mapWeatherHud = document.getElementById("map-weather-hud");
+       const mapWeatherHud = document.getElementById("map-weather-hud");
 
   socket.on("locationsUpdate", (locations) => {
     knownLocations = locations || [];
     drawMap();
     updateWeatherHud();
   });
+
+  socket.on("flightsUpdate", (flights) => {
+    knownFlights = flights || [];
+    drawMap();
+  });
+
+  if (flightsToggle) {
+    flightsToggle.addEventListener("change", () => {
+      buzz();
+      drawMap();
+    });
+  } 
 
   function updateWeatherHud() {
     if (!mapWeatherHud) return;
@@ -3571,7 +3562,7 @@ socket.on(
     const originLon =
       myJitteredLon !== null ? myJitteredLon : knownLocations[0].lon;
 
-        knownLocations.forEach((loc) => {
+          knownLocations.forEach((loc) => {
       const { dxMiles, dyMiles } = milesBetween(
         originLat,
         originLon,
@@ -3581,6 +3572,32 @@ socket.on(
 
       const px = centerX + dxMiles * mapScale * devicePixelRatio;
       const py = centerY + dyMiles * mapScale * devicePixelRatio;
+
+      const isMe = loc.handle === myHandle;
+
+      if (!isMe) {
+        const distanceMiles = Math.hypot(dxMiles, dyMiles);
+        const roundedMiles =
+          distanceMiles < 5 ? 5 : Math.round(distanceMiles / 10) * 10;
+
+        // Proximity line from you to them — brighter when closer.
+        const alpha = Math.max(0.15, 1 - distanceMiles / 100);
+        ctx.strokeStyle = "rgba(57, 255, 20, " + alpha.toFixed(2) + ")";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+
+        ctx.fillStyle = "#a8ffb0";
+        ctx.font = 9 * devicePixelRatio + "px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          "≈" + roundedMiles + "mi",
+          (centerX + px) / 2,
+          (centerY + py) / 2 - 4 * devicePixelRatio
+        );
+      }
 
       ctx.beginPath();
       ctx.arc(px, py, 5 * devicePixelRatio, 0, Math.PI * 2);
@@ -3606,6 +3623,43 @@ socket.on(
       }
     });
 
+    if (flightsToggle && flightsToggle.checked) {
+      knownFlights.forEach((flight) => {
+        const { dxMiles, dyMiles } = milesBetween(
+          originLat,
+          originLon,
+          flight.lat,
+          flight.lon
+        );
+
+        const distanceMiles = Math.hypot(dxMiles, dyMiles);
+        if (distanceMiles > 300) return; // keep the radar readable
+
+        const px = centerX + dxMiles * mapScale * devicePixelRatio;
+        const py = centerY + dyMiles * mapScale * devicePixelRatio;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate((flight.heading * Math.PI) / 180);
+        ctx.beginPath();
+        ctx.moveTo(0, -6 * devicePixelRatio);
+        ctx.lineTo(4 * devicePixelRatio, 5 * devicePixelRatio);
+        ctx.lineTo(-4 * devicePixelRatio, 5 * devicePixelRatio);
+        ctx.closePath();
+        ctx.fillStyle = "#00eeff";
+        ctx.shadowColor = "#00eeff";
+        ctx.shadowBlur = 5 * devicePixelRatio;
+        ctx.fill();
+        ctx.restore();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "#00eeff";
+        ctx.font = 8 * devicePixelRatio + "px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(flight.callsign, px, py + 12 * devicePixelRatio);
+      });
+    }
+
     ctx.strokeStyle = "#ffee00";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -3622,8 +3676,9 @@ socket.on(
     buzz();
 
     try {
-      playSound(btnfxSound);
+           playSound(btnfxSound);
       socket.emit("getLocations");
+      socket.emit("getFlights");
       mapOverlay.classList.remove("hidden");
 
       requestAnimationFrame(() => {

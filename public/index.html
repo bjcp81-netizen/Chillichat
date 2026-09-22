@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Sans:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&family=Nunito:wght@400;700&family=Poppins:wght@400;700&family=Work+Sans:wght@400;700&family=Quicksand:wght@400;700&family=Space+Grotesk:wght@400;700&family=Manrope:wght@400;700&family=DM+Sans:wght@400;700&family=Plus+Jakarta+Sans:wght@400;700&family=Oswald:wght@400;700&family=Bebas+Neue&family=Righteous&family=Permanent+Marker&family=Caveat:wght@400;700&family=Bangers&family=JetBrains+Mono:wght@400;700&family=Fira+Code:wght@400;700&family=Rubik:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Lexend:wght@400;700&family=IBM+Plex+Sans:wght@400;700&family=Fira+Sans:wght@400;700&family=Mulish:wght@400;700&family=Figtree:wght@400;700&family=Merriweather:wght@400;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="style.css?v=1013" /> 
+          <link rel="stylesheet" href="style.css?v=1014" />
 </head> <link rel="icon" href="FieryChiliChatBadge.png" type="image/png">
 <body>
 
@@ -294,13 +294,24 @@
   </div>
  <div id="map-overlay" class="photo-viewer-overlay hidden">
     <div class="map-panel">
-            <div class="map-header">
+       <div class="map-header">
         <span>LOCATION RADAR</span>
         <button id="map-close-btn" class="cancel-recording-btn">✕</button>
       </div>
-      <div id="map-weather-hud" class="map-weather-hud">YOUR AREA: —</div>
+      <div class="map-toolbar">
+        <div id="map-weather-hud" class="map-weather-hud">YOUR AREA: —</div>
+        <label class="map-flights-toggle">
+          <input type="checkbox" id="flights-toggle" checked />
+          <span>✈ Flights</span>
+        </label>
+      </div>
       <canvas id="map-canvas" class="map-canvas"></canvas>
-      <div class="map-hint">Scroll/pinch to zoom · drag to pan · ~10mi accuracy · weather via Open-Meteo</div>
+      <div class="map-legend">
+        <span>🟢 USER</span>
+        <span>🟡 YOU</span>
+        <span>🔵 AIRCRAFT</span>
+      </div>
+      <div class="map-hint">Scroll/pinch to zoom · drag to pan · ~10mi accuracy · weather via Open-Meteo · flights via OpenSky</div>
     </div>
   </div>
 
@@ -320,6 +331,6 @@
   <audio id="voice-end-sound" src="C5strt.ogg" preload="auto"></audio>
   <script src="/socket.io/socket.io.js"></script>
       <script src="voice.js?v=1"></script>
-     <script src="app.js?v=11113"></script>
+        <script src="app.js?v=11114"></script> 
 </body>
 </html>
