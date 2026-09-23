@@ -444,9 +444,10 @@ const FONT_LABELS = {
     soundToggle.checked = soundEnabled;
   }
 
-  optionsToggleBtn.addEventListener("click", () => {
+   optionsToggleBtn.addEventListener("click", (e) => {
     buzz();
-    playSound(btnfxSound);
+    playSound(iconOptionsSound);
+    spawnIconRipple(optionsToggleBtn, e);
     optionsDropdown.classList.toggle("open");
   });
 
