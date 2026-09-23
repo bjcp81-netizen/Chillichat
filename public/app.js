@@ -3365,6 +3365,14 @@ socket.on(
       return;
     }
 
+        if (!window.isSecureContext) {
+      showSystemMessage(
+        "⚠️ Location needs a secure (https://) connection. This page isn't loaded over https, so browsers block location access here."
+      );
+      locationToggle.checked = false;
+      return;
+    }
+
     if (!navigator.geolocation) {
       showSystemMessage("⚠️ Location isn't supported in this browser.");
       locationToggle.checked = false;
@@ -3391,8 +3399,21 @@ socket.on(
         });
       },
       (err) => {
-        console.error("Geolocation error:", err);
-        showSystemMessage("⚠️ Couldn't get your location. Check permissions.");
+        console.error("Geolocation error:", err.code, err.message);
+
+        let reason;
+        if (err.code === 1) {
+          reason =
+            "Permission denied. Check your browser's site settings AND your device/OS location settings (Windows Settings > Privacy > Location, or your phone's Location toggle) — both must allow it.";
+        } else if (err.code === 2) {
+          reason = "Your device couldn't determine a position right now.";
+        } else if (err.code === 3) {
+          reason = "Location request timed out.";
+        } else {
+          reason = "Unknown error (" + err.message + ").";
+        }
+
+        showSystemMessage("⚠️ Couldn't get your location: " + reason);
         locationToggle.checked = false;
         safeStorage.setItem(STORAGE_LOCATION_KEY, "false");
       },
@@ -3453,7 +3474,7 @@ socket.on(
     });
   } 
 
-  function updateWeatherHud() {
+    function updateWeatherHud() {
     if (!mapWeatherHud) return;
 
     const mine = knownLocations.find((loc) => loc.handle === myHandle);
@@ -3463,13 +3484,19 @@ socket.on(
       return;
     }
 
-    mapWeatherHud.textContent =
+    let text =
       "YOUR AREA: " +
       mine.weather.icon +
       " " +
       mine.weather.tempC +
       "°C " +
       mine.weather.desc;
+
+    if (mine.aqi) {
+      text += "  ·  AQI " + mine.aqi.value + " (" + mine.aqi.label + ")";
+    }
+
+    mapWeatherHud.textContent = text;
   }
 
   // ---- Retro radar map ----
@@ -3487,12 +3514,42 @@ socket.on(
     mapCanvas.height = rect.height * devicePixelRatio;
   }
 
-  function milesBetween(lat1, lon1, lat2, lon2) {
+    function milesBetween(lat1, lon1, lat2, lon2) {
     const dLat = (lat2 - lat1) * 69;
     const cos = Math.cos((((lat1 + lat2) / 2) * Math.PI) / 180);
     const dLon = (lon2 - lon1) * 69 * cos;
     return { dxMiles: dLon, dyMiles: -dLat };
   }
+
+  // Simplified Great Britain coastline — hand-picked reference points,
+  // not survey-accurate, just enough to read as "the UK" at a glance.
+  const UK_OUTLINE = [
+    [50.07, -5.7], [50.3, -4.6], [50.3, -3.5], [50.6, -1.3], [50.8, 0.3],
+    [51.1, 1.3], [51.4, 1.4], [51.7, 1.2], [52.0, 1.6], [52.9, 1.3],
+    [53.0, 0.3], [53.7, 0.0], [54.1, -0.1], [54.5, -0.6], [54.9, -1.2],
+    [55.0, -1.6], [55.77, -2.0], [56.0, -3.2], [56.46, -2.97], [57.15, -2.1],
+    [57.7, -2.0], [58.4, -3.0], [58.6, -3.07], [58.6, -5.0], [57.8, -5.6],
+    [56.8, -5.5], [56.0, -5.7], [55.4, -5.6], [55.0, -5.0], [54.9, -3.5],
+    [53.5, -3.5], [53.3, -4.6], [52.3, -4.7], [51.6, -4.2], [51.3, -3.5],
+    [50.7, -3.9], [50.07, -5.7],
+  ];
+
+  const UK_CITIES = [
+    { name: "London", lat: 51.5074, lon: -0.1278 },
+    { name: "Manchester", lat: 53.4808, lon: -2.2426 },
+    { name: "Birmingham", lat: 52.4862, lon: -1.8904 },
+    { name: "Edinburgh", lat: 55.9533, lon: -3.1883 },
+    { name: "Glasgow", lat: 55.8642, lon: -4.2518 },
+    { name: "Cardiff", lat: 51.4816, lon: -3.1791 },
+    { name: "Bristol", lat: 51.4545, lon: -2.5879 },
+    { name: "Leeds", lat: 53.8008, lon: -1.5491 },
+    { name: "Liverpool", lat: 53.4084, lon: -2.9916 },
+    { name: "Newcastle", lat: 54.9783, lon: -1.6178 },
+    { name: "Sheffield", lat: 53.3811, lon: -1.4701 },
+    { name: "Nottingham", lat: 52.9548, lon: -1.1581 },
+    { name: "Southampton", lat: 50.9097, lon: -1.4044 },
+    { name: "Belfast", lat: 54.5973, lon: -5.9301 },
+  ];
 
     function drawMap() {
     if (mapOverlay.classList.contains("hidden")) return;
@@ -3528,20 +3585,34 @@ socket.on(
     const centerX = w / 2 + mapOffsetX;
     const centerY = h / 2 + mapOffsetY;
 
-    // Radar range rings every 5 miles out to 20, so scale is readable
-    // at a glance even before any pins are on screen.
+       // Radar range rings out to 400+ miles. Ring distances are fixed in
+    // real miles; a ring is only labelled if it sits far enough away
+    // (in screen pixels) from the last labelled ring, so labels never
+    // overlap when zoomed out and rings bunch together visually.
+    const RING_DISTANCES_MILES = [10, 25, 50, 100, 150, 200, 300, 400];
+    const maxVisibleRadius = Math.hypot(w, h) * 0.75;
+    const MIN_LABEL_GAP_PX = 22 * devicePixelRatio;
+
     ctx.strokeStyle = "rgba(57, 255, 20, 0.5)";
     ctx.fillStyle = "rgba(57, 255, 20, 0.6)";
     ctx.font = 9 * devicePixelRatio + "px monospace";
     ctx.textAlign = "left";
 
-    for (let miles = 5; miles <= 20; miles += 5) {
+    let lastLabelRadius = null;
+
+    for (const miles of RING_DISTANCES_MILES) {
       const r = miles * mapScale * devicePixelRatio;
+      if (r > maxVisibleRadius) break; // rings only get bigger from here
+
       ctx.beginPath();
       ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.fillText(miles + "mi", centerX + r + 3, centerY - 3);
-    }
+
+      if (lastLabelRadius === null || r - lastLabelRadius >= MIN_LABEL_GAP_PX) {
+        ctx.fillText(miles + "mi", centerX + r + 3, centerY - 3);
+        lastLabelRadius = r;
+      }
+    } 
 
     // Compass marker.
     ctx.fillStyle = "#39ff14";
@@ -3557,12 +3628,57 @@ socket.on(
       return;
     }
 
-    const originLat =
+        const originLat =
       myJitteredLat !== null ? myJitteredLat : knownLocations[0].lat;
     const originLon =
       myJitteredLon !== null ? myJitteredLon : knownLocations[0].lon;
 
-          knownLocations.forEach((loc) => {
+    // UK coastline outline — a faint visual reference, not
+    // survey-accurate, just enough to read as "the UK" at a glance.
+    ctx.strokeStyle = "rgba(0, 238, 255, 0.35)";
+    ctx.lineWidth = 1.5 * devicePixelRatio;
+    ctx.beginPath();
+    UK_OUTLINE.forEach((point, i) => {
+      const { dxMiles, dyMiles } = milesBetween(
+        originLat,
+        originLon,
+        point[0],
+        point[1]
+      );
+      const px = centerX + dxMiles * mapScale * devicePixelRatio;
+      const py = centerY + dyMiles * mapScale * devicePixelRatio;
+
+      if (i === 0) {
+        ctx.moveTo(px, py);
+      } else {
+        ctx.lineTo(px, py);
+      }
+    });
+    ctx.stroke();
+
+    // City reference labels.
+    UK_CITIES.forEach((city) => {
+      const { dxMiles, dyMiles } = milesBetween(
+        originLat,
+        originLon,
+        city.lat,
+        city.lon
+      );
+      const px = centerX + dxMiles * mapScale * devicePixelRatio;
+      const py = centerY + dyMiles * mapScale * devicePixelRatio;
+
+      ctx.beginPath();
+      ctx.arc(px, py, 2 * devicePixelRatio, 0, Math.PI * 2);
+      ctx.fillStyle = "#4d5eff";
+      ctx.fill();
+
+      ctx.fillStyle = "#4d5eff";
+      ctx.font = 9 * devicePixelRatio + "px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(city.name, px, py - 6 * devicePixelRatio);
+    });
+
+    knownLocations.forEach((loc) => {
       const { dxMiles, dyMiles } = milesBetween(
         originLat,
         originLon,
@@ -3607,7 +3723,7 @@ socket.on(
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      ctx.fillStyle = "#39ff14";
+            ctx.fillStyle = "#39ff14";
       ctx.font = 11 * devicePixelRatio + "px monospace";
       ctx.textAlign = "center";
       ctx.fillText(loc.handle, px, py - 10 * devicePixelRatio);
@@ -3615,11 +3731,19 @@ socket.on(
       if (loc.weather) {
         ctx.fillStyle = "#a8ffb0";
         ctx.font = 9 * devicePixelRatio + "px monospace";
+        ctx.textAlign = "center";
         ctx.fillText(
           loc.weather.icon + " " + loc.weather.tempC + "°C",
           px,
           py + 18 * devicePixelRatio
         );
+      }
+
+      if (loc.aqi) {
+        ctx.fillStyle = loc.aqi.color;
+        ctx.font = 8 * devicePixelRatio + "px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("AQI " + loc.aqi.value, px, py + 28 * devicePixelRatio);
       }
     });
 

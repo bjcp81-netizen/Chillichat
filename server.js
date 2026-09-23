@@ -810,7 +810,7 @@ async function getWeatherFor(lat, lon) {
       icon,
     };
 
-     WEATHER_CACHE.set(key, { data, fetchedAt: Date.now() });
+          WEATHER_CACHE.set(key, { data, fetchedAt: Date.now() });
     return data;
   } catch (err) {
     console.error("Weather fetch error:", err.message);
@@ -818,7 +818,65 @@ async function getWeatherFor(lat, lon) {
   }
 }
 
-// ---- UK Air Traffic (OpenSky Network, anonymous/free tier) ----
+// ---- Air Quality (Open-Meteo, no API key required) ----
+
+const AQI_CACHE = new Map();
+const AQI_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour — AQI changes slower than weather
+
+function describeAqi(value) {
+  if (value <= 20) return { label: "Good", color: "#39ff14" };
+  if (value <= 40) return { label: "Fair", color: "#99ff00" };
+  if (value <= 60) return { label: "Moderate", color: "#ffee00" };
+  if (value <= 80) return { label: "Poor", color: "#ff8800" };
+  if (value <= 100) return { label: "Very Poor", color: "#ff2b2b" };
+  return { label: "Extremely Poor", color: "#a52a2a" };
+}
+
+async function getAirQualityFor(lat, lon) {
+  const key = weatherGridKey(lat, lon);
+  const cached = AQI_CACHE.get(key);
+
+  if (cached && Date.now() - cached.fetchedAt < AQI_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const url =
+      "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" +
+      lat +
+      "&longitude=" +
+      lon +
+      "&current=european_aqi";
+
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!response.ok) throw new Error("Air quality API status " + response.status);
+
+    const json = await response.json();
+    const current = json.current;
+
+    if (!current || typeof current.european_aqi !== "number") {
+      throw new Error("Air quality API returned no current data");
+    }
+
+    const value = Math.round(current.european_aqi);
+    const { label, color } = describeAqi(value);
+
+    const data = { value, label, color };
+
+    AQI_CACHE.set(key, { data, fetchedAt: Date.now() });
+    return data;
+  } catch (err) {
+    console.error("Air quality fetch error:", err.message);
+    return null;
+  }
+}
+
+// ---- UK Air Traffic (OpenSky Network, anonymous/free tier) ---- ----
 
 const UK_BBOX = { lamin: 49.5, lomin: -8.5, lamax: 61, lomax: 2 };
 const FLIGHT_POLL_INTERVAL_MS = 75 * 1000; // anonymous OpenSky quota is shared and tight
@@ -876,14 +934,22 @@ async function buildLocationList() {
 
     const rows = result.rows.filter((row) => findSocketIdByHandle(row.handle));
 
-    const withWeather = await Promise.all(
-      rows.map(async (row) => ({
-        handle: row.handle,
-        color: row.color,
-        lat: row.location_lat,
-        lon: row.location_lon,
-        weather: await getWeatherFor(row.location_lat, row.location_lon),
-      }))
+       const withWeather = await Promise.all(
+      rows.map(async (row) => {
+        const [weather, aqi] = await Promise.all([
+          getWeatherFor(row.location_lat, row.location_lon),
+          getAirQualityFor(row.location_lat, row.location_lon),
+        ]);
+
+        return {
+          handle: row.handle,
+          color: row.color,
+          lat: row.location_lat,
+          lon: row.location_lon,
+          weather,
+          aqi,
+        };
+      })
     );
 
     return withWeather;
