@@ -154,7 +154,34 @@ document.addEventListener("DOMContentLoaded", function () {
     const sound = audioEl.cloneNode(true);
     sound.play().catch(() => {});
   }
+  function spawnIconRipple(btn, evt) {
+    try {
+      const rect = btn.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement("span");
 
+      ripple.className = "icon-ripple";
+      ripple.style.width = size + "px";
+      ripple.style.height = size + "px";
+
+      let x = rect.width / 2 - size / 2;
+      let y = rect.height / 2 - size / 2;
+
+      if (evt && typeof evt.clientX === "number") {
+        x = evt.clientX - rect.left - size / 2;
+        y = evt.clientY - rect.top - size / 2;
+      }
+
+      ripple.style.left = x + "px";
+      ripple.style.top = y + "px";
+
+      btn.appendChild(ripple);
+
+      ripple.addEventListener("animationend", () => ripple.remove());
+    } catch (err) {
+      // Ripple is cosmetic only — never let it block the actual button action.
+    }
+  }
   function dataUrlToBlobUrl(dataUrl) {
     try {
       const [header, base64] = dataUrl.split(",");
@@ -231,7 +258,10 @@ document.addEventListener("DOMContentLoaded", function () {
   const sendSound = document.getElementById("send-sound");
   const notifySound = document.getElementById("notify-sound");
   const btnfxSound = document.getElementById("btnfx-sound");
-
+  const iconOptionsSound = document.getElementById("icon-options-sound");
+  const iconUsersSound = document.getElementById("icon-users-sound");
+  const iconMapSound = document.getElementById("icon-map-sound");
+  const iconHighrollerSound = document.getElementById("icon-highroller-sound");
   const micSound = document.getElementById("mic-sound");
   const endSound = document.getElementById("end-sound");
   const playClipSound = document.getElementById("play-sound");
@@ -948,15 +978,17 @@ function createWheel({
     joinBtn.disabled = !termsCheckbox.checked;
   });
 
-  usersToggleBtn.addEventListener("click", () => {
+    usersToggleBtn.addEventListener("click", (e) => {
     buzz();
-    playSound(btnfxSound);
+    playSound(iconUsersSound);
+    spawnIconRipple(usersToggleBtn, e);
     usersDropdown.classList.toggle("open");
   });
 
-  highrollersToggleBtn.addEventListener("click", () => {
+   highrollersToggleBtn.addEventListener("click", (e) => {
     buzz();
-    playSound(btnfxSound);
+    playSound(iconHighrollerSound);
+    spawnIconRipple(highrollersToggleBtn, e);
 
     highrollersDropdown.classList.toggle("open");
 
@@ -3824,13 +3856,13 @@ socket.on(
     ctx.fillText("YOU", centerX, centerY + 18 * devicePixelRatio);
   }
 
-  mapToggleBtn.addEventListener("click", () => {
+    mapToggleBtn.addEventListener("click", (e) => {
     buzz();
 
     try {
-           playSound(btnfxSound);
+      playSound(iconMapSound);
+      spawnIconRipple(mapToggleBtn, e);
       socket.emit("getLocations");
-      socket.emit("getFlights");
       mapOverlay.classList.remove("hidden");
 
       requestAnimationFrame(() => {

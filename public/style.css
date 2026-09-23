@@ -2007,3 +2007,72 @@ html {
   font-size: 9px;
   color: #1f7a0d;
 }
+/* ---------- Icon-only nav controls (Options/Users/Map/Highrollers) ---------- */
+.icon-control {
+  position: relative;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 10px;
+  border-radius: 50%;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.icon-control:hover {
+  background-color: rgba(57, 255, 20, 0.08);
+  box-shadow: none;
+  border-color: transparent;
+}
+
+.icon-control:active {
+  background-color: rgba(57, 255, 20, 0.16);
+  transform: scale(0.92);
+  border-color: transparent;
+}
+
+.icon-control:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.icon-control .top-btn-icon {
+  width: 20px;
+  height: 20px;
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+.icon-control:active .top-btn-icon {
+  transform: scale(0.9);
+}
+
+.icon-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(57, 255, 20, 0.35);
+  transform: scale(0);
+  pointer-events: none;
+  animation: iconRippleExpand 500ms ease-out forwards;
+}
+
+@keyframes iconRippleExpand {
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .icon-control {
+    padding: 8px;
+  }
+
+  .icon-control .top-btn-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
