@@ -1551,11 +1551,10 @@ highrollersTodayBtn.addEventListener("click", () => {
       messagesBox.scrollHeight;
   }
 
-  socket.on("userList", (users) => {
+    socket.on("userList", (users) => {
     document.getElementById(
       "users-count-label"
-    ).textContent =
-      "Users (" + users.length + ")";
+    ).textContent = String(users.length);
 
     usersList.innerHTML = "";
 

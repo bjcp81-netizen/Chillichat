@@ -1480,18 +1480,37 @@ html {
 .top-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 4px;
   background-color: #0a0a0a;
   color: #39ff14;
   border: 1px solid #2a2a2a;
   border-radius: 8px;
-  padding: 7px 12px;
+  padding: 9px;
   font-size: 12px;
   font-family: var(--app-font-family);
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease, color 150ms ease;
 }
+
+/* Icon-only nav buttons — labels are kept in the DOM (title attribute
+   covers accessibility/tooltip) but hidden visually to save header
+   width for future buttons. */
+.top-btn-label {
+  display: none;
+}
+
+.top-btn-count {
+  font-size: 10px;
+  font-weight: bold;
+  background-color: #1f7a0d;
+  color: #000000;
+  border-radius: 8px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
 
 .top-btn-icon {
   width: 15px;
