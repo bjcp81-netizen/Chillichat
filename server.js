@@ -879,7 +879,7 @@ async function getAirQualityFor(lat, lon) {
 // ---- UK Air Traffic (OpenSky Network, anonymous/free tier) ---- ----
 
 const UK_BBOX = { lamin: 49.5, lomin: -8.5, lamax: 61, lomax: 2 };
-const FLIGHT_POLL_INTERVAL_MS = 75 * 1000; // anonymous OpenSky quota is shared and tight
+const FLIGHT_POLL_INTERVAL_MS = 3 * 60 * 1000; // anonymous OpenSky quota is shared and tight
 let cachedFlights = [];
 
 async function fetchUkFlights() {

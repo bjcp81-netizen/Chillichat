@@ -2565,13 +2565,20 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       playBtn.textContent = "▶";
 
-      const audio = new Audio(data.audioData);
+            const audio = new Audio(data.audioData);
 audio.preload = "auto";
       audio.addEventListener("pause", () => {
         isPlaying = false;
         playBtn.textContent = "▶";
       });
-      
+
+      audio.addEventListener("error", () => {
+        const code = audio.error ? audio.error.code : "unknown";
+        console.error("Voice clip audio element error, code:", code);
+        showSystemMessage(
+          "⚠️ Voice clip failed to load (error code " + code + ")."
+        );
+      });
 
       let isPlaying = false;
 
@@ -2980,11 +2987,18 @@ socket.on(
     meta.appendChild(handleLine);
     meta.appendChild(countdown);
 
-    const revealBtn = document.createElement("button");
+     const revealBtn = document.createElement("button");
     revealBtn.className = "photo-reveal-btn";
     revealBtn.textContent = "Reveal";
     revealBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+
+      if (revealBtn.disabled) return;
+      revealBtn.disabled = true;
+      setTimeout(() => {
+        revealBtn.disabled = false;
+      }, 1500);
+
       buzz();
       socket.emit("photoOpen", { photoId });
     });
@@ -3258,14 +3272,24 @@ socket.on(
     }
   );
 
-   function openPhotoViewer(imageData, totalSeconds) {
+     let photoViewerGeneration = 0;
+
+  function openPhotoViewer(imageData, totalSeconds) {
+    photoViewerGeneration += 1;
+    const thisGeneration = photoViewerGeneration;
+
+    // Guards against a stale/aborted previous load's error event firing
+    // this message for the photo that's actually showing now — this is
+    // what caused repeated false "couldn't display" messages, especially
+    // on Android where rapid taps can overlap two photo loads.
     photoViewerImg.onerror = () => {
+      if (thisGeneration !== photoViewerGeneration) return;
       showSystemMessage("⚠️ Couldn't display that photo.");
       closePhotoViewer();
     };
 
     photoViewerImg.src = imageData;
-    photoViewerOverlay.classList.remove("hidden"); 
+    photoViewerOverlay.classList.remove("hidden");
 
     let secondsLeft = totalSeconds;
 
@@ -3290,11 +3314,16 @@ socket.on(
     }, 1000);
   }
 
-  function closePhotoViewer() {
+     function closePhotoViewer() {
     photoViewerOverlay.classList.add(
       "hidden"
     );
 
+    // Bump the generation so any error from this now-closed load
+    // (including the empty-src trigger some mobile browsers fire)
+    // is ignored rather than showing a stale message.
+    photoViewerGeneration += 1;
+    photoViewerImg.onerror = null;
     photoViewerImg.src = "";
 
     clearInterval(
