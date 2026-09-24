@@ -1,9 +1,8 @@
-document.addEventListener("DOMContentLoaded", function () {
+﻿document.addEventListener("DOMContentLoaded", function () {
   console.log("ChilliChat app.js loaded");
 
    // Show the iOS "Add to Home Screen" banner only on iPhone/iPad Safari,
   // only if it isn't already installed, and not if the person dismissed it before.
-  
   const IDLE_LIMIT_MS = 5 * 60 * 1000;
   const STORAGE_HANDLE_KEY = "chillichat_handle";
   const STORAGE_COLOR_KEY = "chillichat_color";
@@ -11,34 +10,34 @@ document.addEventListener("DOMContentLoaded", function () {
   const WHEEL_ITEM_HEIGHT = 32;
 
   const REACTIONS = [
-    { key: "chilli", emoji: "🌶️" },
-    { key: "heart", emoji: "❤️" },
-    { key: "laugh", emoji: "😂" },
-    { key: "down", emoji: "👎" },
+    { key: "chilli", emoji: "ðŸŒ¶ï¸" },
+    { key: "heart", emoji: "â¤ï¸" },
+    { key: "laugh", emoji: "ðŸ˜‚" },
+    { key: "down", emoji: "ðŸ‘Ž" },
   ];
 
   const lastKnownCounts = {};
 
   const BADGE_DEFS_CLIENT = {
-    fresh_face: { emoji: "🌱", name: "Fresh Face" },
-    ice_breaker: { emoji: "💬", name: "Ice Breaker" },
-    first_burn: { emoji: "🌶️", name: "First Burn" },
-    well_liked: { emoji: "❤️", name: "Well Liked" },
-    crowd_pleaser: { emoji: "😂", name: "Crowd Pleaser" },
-    spice_merchant: { emoji: "🌶️", name: "Spice Merchant" },
-    friendly_flame: { emoji: "🤝", name: "Friendly Flame" },
-    top_banter: { emoji: "💡", name: "Top Banter" },
-    fire_extinguisher: { emoji: "🧯", name: "Fire Extinguisher" },
-    melted_keyboard: { emoji: "🫠", name: "Melted Keyboard" },
-    meme_machine: { emoji: "🤣", name: "Meme Machine" },
-    heartbreaker: { emoji: "❤️", name: "Heartbreaker" },
-    spice_lord: { emoji: "🌶️", name: "Spice Lord" },
-    pepper_royalty: { emoji: "👑", name: "Pepper Royalty" },
-    beta_tester: { emoji: "🚀", name: "Beta Tester" },
-    lightning_fingers: { emoji: "⚡", name: "Lightning Fingers" },
-    streak_7: { emoji: "🔥", name: "7-Day Streak" },
-    streak_30: { emoji: "🌋", name: "30-Day Streak" },
-    streak_100: { emoji: "☄️", name: "100-Day Streak" },
+    fresh_face: { emoji: "ðŸŒ±", name: "Fresh Face" },
+    ice_breaker: { emoji: "ðŸ’¬", name: "Ice Breaker" },
+    first_burn: { emoji: "ðŸŒ¶ï¸", name: "First Burn" },
+    well_liked: { emoji: "â¤ï¸", name: "Well Liked" },
+    crowd_pleaser: { emoji: "ðŸ˜‚", name: "Crowd Pleaser" },
+    spice_merchant: { emoji: "ðŸŒ¶ï¸", name: "Spice Merchant" },
+    friendly_flame: { emoji: "ðŸ¤", name: "Friendly Flame" },
+    top_banter: { emoji: "ðŸ’¡", name: "Top Banter" },
+    fire_extinguisher: { emoji: "ðŸ§¯", name: "Fire Extinguisher" },
+    melted_keyboard: { emoji: "ðŸ« ", name: "Melted Keyboard" },
+    meme_machine: { emoji: "ðŸ¤£", name: "Meme Machine" },
+    heartbreaker: { emoji: "â¤ï¸", name: "Heartbreaker" },
+    spice_lord: { emoji: "ðŸŒ¶ï¸", name: "Spice Lord" },
+    pepper_royalty: { emoji: "ðŸ‘‘", name: "Pepper Royalty" },
+    beta_tester: { emoji: "ðŸš€", name: "Beta Tester" },
+    lightning_fingers: { emoji: "âš¡", name: "Lightning Fingers" },
+    streak_7: { emoji: "ðŸ”¥", name: "7-Day Streak" },
+    streak_30: { emoji: "ðŸŒ‹", name: "30-Day Streak" },
+    streak_100: { emoji: "â˜„ï¸", name: "100-Day Streak" },
   };
 
  const FONT_MAP = {
@@ -93,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
       try {
         navigator.vibrate(ms || 15);
       } catch (e) {
-        // Ignore — browser blocked vibrate before a user gesture.
+        // Ignore â€” browser blocked vibrate before a user gesture.
       }
     }
   }
@@ -140,7 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
       try {
         localStorage.setItem(key, value);
       } catch (e) {
-        // Storage blocked — silently ignore.
+        // Storage blocked â€” silently ignore.
       }
     },
 
@@ -220,14 +219,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function requestNotificationPermission() {
     if (typeof Notification === "undefined") {
-      showSystemMessage("⚠️ Notifications aren't supported in this browser.");
+      showSystemMessage("âš ï¸ Notifications aren't supported in this browser.");
       notificationsToggle.checked = false;
       return;
     }
 
     Notification.requestPermission().then((permission) => {
       if (permission !== "granted") {
-        showSystemMessage("⚠️ Notification permission was not granted.");
+        showSystemMessage("âš ï¸ Notification permission was not granted.");
         notificationsToggle.checked = false;
         notificationsEnabled = false;
         safeStorage.setItem("chillichat_notifications", "false");
@@ -241,7 +240,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       ripple.addEventListener("animationend", () => ripple.remove());
     } catch (err) {
-      // Ripple is cosmetic only — never let it block the actual button action.
+      // Ripple is cosmetic only â€” never let it block the actual button action.
     }
   }
   function dataUrlToBlobUrl(dataUrl) {
@@ -287,7 +286,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let moderatorHandles = [];
 
   function modTag(handle) {
-    return moderatorHandles.indexOf(handle) !== -1 ? "👑 " : "";
+    return moderatorHandles.indexOf(handle) !== -1 ? "ðŸ‘‘ " : "";
   }
 
   socket.on("moderatorList", (list) => {
@@ -404,7 +403,7 @@ const FONT_LABELS = {
     fontBtn.textContent =
       (match
         ? match.textContent
-        : FONT_LABELS.default) + " ▾";
+        : FONT_LABELS.default) + " â–¾";
   }
 
   const fontColorBtn = document.getElementById("font-color-btn");
@@ -427,7 +426,7 @@ const FONT_LABELS = {
 
     fontColorBtn.textContent =
       (match ? match.textContent : "Neon Green") +
-      " ▾";
+      " â–¾";
   }
 
     const boldToggle = document.getElementById("bold-toggle");
@@ -547,7 +546,7 @@ const FONT_LABELS = {
       );
 
       fontBtn.textContent =
-        itemEl.textContent + " ▾";
+        itemEl.textContent + " â–¾";
     },
   });
 fontBtn.addEventListener("click", () => {
@@ -655,7 +654,7 @@ fontBtn.addEventListener("click", () => {
       );
 
       fontColorBtn.textContent =
-        itemEl.textContent + " ▾";
+        itemEl.textContent + " â–¾";
     },
   });
 
@@ -1142,7 +1141,7 @@ highrollersTodayBtn.addEventListener("click", () => {
     socket.emit("getHighrollers", { period });
   }
 
-  const MEDALS = ["🥇", "🥈", "🥉"];
+  const MEDALS = ["ðŸ¥‡", "ðŸ¥ˆ", "ðŸ¥‰"];
 
   socket.on(
     "userLeaderboardResult",
@@ -1188,7 +1187,7 @@ highrollersTodayBtn.addEventListener("click", () => {
         // appears to send the value under that property.
         scoville.textContent =
           entry.scho.toLocaleString() +
-          " Scoville — " +
+          " Scoville â€” " +
           entry.rankName;
 
         li.appendChild(position);
@@ -1209,7 +1208,7 @@ highrollersTodayBtn.addEventListener("click", () => {
         const li = document.createElement("li");
         li.className = "highrollers-empty";
         li.textContent =
-          "No hot takes yet — react to some messages!";
+          "No hot takes yet â€” react to some messages!";
 
         highrollersList.appendChild(li);
         return;
@@ -1224,7 +1223,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
         heat.className = "highrollers-heat";
         heat.textContent =
-          "🔥 " + entry.heatRating;
+          "ðŸ”¥ " + entry.heatRating;
 
         const handle =
           document.createElement("span");
@@ -1360,7 +1359,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       if (myIsModerator) {
         showSystemMessage(
-          "🛡️ Moderator mode active."
+          "ðŸ›¡ï¸ Moderator mode active."
         );
       }
 
@@ -1411,14 +1410,14 @@ highrollersTodayBtn.addEventListener("click", () => {
   );
 
   socket.on("reactionError", (message) => {
-    showSystemMessage("⚠️ " + message);
+    showSystemMessage("âš ï¸ " + message);
   });
 
   socket.on(
     "badgeUnlocked",
     ({ emoji, name }) => {
       showSystemMessage(
-        "🏅 Badge unlocked: " +
+        "ðŸ… Badge unlocked: " +
           emoji +
           " " +
           name +
@@ -1450,11 +1449,11 @@ highrollersTodayBtn.addEventListener("click", () => {
     "bioUpdateResult",
     ({ success, bio }) => {
       if (success) {
-        showSystemMessage("✅ Bio saved.");
+        showSystemMessage("âœ… Bio saved.");
         bioInput.value = bio;
       } else {
         showSystemMessage(
-          "⚠️ Couldn't save bio, try again."
+          "âš ï¸ Couldn't save bio, try again."
         );
       }
     }
@@ -1467,14 +1466,14 @@ highrollersTodayBtn.addEventListener("click", () => {
       data.rankEmoji +
       " " +
       data.rankName +
-      " — " +
+      " â€” " +
       data.scho.toLocaleString() +
       " Scoville";
 
     profileBio.textContent = data.bio
       ? data.bio
       : data.isOwn
-      ? "No bio set yet — add one in Options!"
+      ? "No bio set yet â€” add one in Options!"
       : "";
 
     if (data.isOwn) {
@@ -1484,10 +1483,10 @@ highrollersTodayBtn.addEventListener("click", () => {
     profileReactions.innerHTML = "";
 
     const reactionLabels = [
-      { key: "chilli", emoji: "🌶️" },
-      { key: "heart", emoji: "❤️" },
-      { key: "laugh", emoji: "😂" },
-      { key: "down", emoji: "👎" },
+      { key: "chilli", emoji: "ðŸŒ¶ï¸" },
+      { key: "heart", emoji: "â¤ï¸" },
+      { key: "laugh", emoji: "ðŸ˜‚" },
+      { key: "down", emoji: "ðŸ‘Ž" },
     ];
 
     reactionLabels.forEach((r) => {
@@ -1632,7 +1631,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       el.innerHTML = "";
       el.className = "system-msg";
-      el.textContent = "🕐 Voice clip expired (1hr limit)";
+      el.textContent = "ðŸ• Voice clip expired (1hr limit)";
     }
   );
 
@@ -1750,7 +1749,7 @@ highrollersTodayBtn.addEventListener("click", () => {
         modToggleBtn.className =
           "mod-delete-btn";
 
-        modToggleBtn.textContent = "🛡️";
+        modToggleBtn.textContent = "ðŸ›¡ï¸";
 
         modToggleBtn.title =
           "Moderate " + user.handle;
@@ -1803,7 +1802,7 @@ highrollersTodayBtn.addEventListener("click", () => {
     kickBtn.className =
       "mod-btn mod-kick-btn";
 
-    kickBtn.textContent = "🚪 Kick";
+    kickBtn.textContent = "ðŸšª Kick";
 
    kickBtn.addEventListener("click", () => {
       buzz();
@@ -1847,7 +1846,7 @@ highrollersTodayBtn.addEventListener("click", () => {
         "mod-btn mod-ban-btn";
 
       banBtn.textContent =
-        "⛔ " + d.label;
+        "â›” " + d.label;
 
      banBtn.addEventListener("click", () => {
         buzz();
@@ -2029,7 +2028,7 @@ highrollersTodayBtn.addEventListener("click", () => {
     addBtn.className =
       "reaction-add-btn";
 
-    addBtn.textContent = "🌶️";
+    addBtn.textContent = "ðŸŒ¶ï¸";
     addBtn.title = "React";
 
     bar.appendChild(addBtn);
@@ -2089,7 +2088,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
     heatBadge.textContent =
       heatRating
-        ? "🔥 " + heatRating
+        ? "ðŸ”¥ " + heatRating
         : "";
 
     bar.appendChild(heatBadge);
@@ -2101,7 +2100,7 @@ highrollersTodayBtn.addEventListener("click", () => {
       delBtn.className =
         "mod-delete-btn";
 
-      delBtn.textContent = "🗑️";
+      delBtn.textContent = "ðŸ—‘ï¸";
 
       delBtn.title =
         "Delete message";
@@ -2220,7 +2219,7 @@ highrollersTodayBtn.addEventListener("click", () => {
       if (heatBadge) {
         heatBadge.textContent =
           heatRating
-            ? "🔥 " + heatRating
+            ? "ðŸ”¥ " + heatRating
             : "";
       }
     }
@@ -2350,7 +2349,7 @@ highrollersTodayBtn.addEventListener("click", () => {
     const addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.className = "reaction-add-btn";
-    addBtn.textContent = "🌶️";
+    addBtn.textContent = "ðŸŒ¶ï¸";
     addBtn.title = "React";
     bar.appendChild(addBtn);
 
@@ -2370,14 +2369,14 @@ highrollersTodayBtn.addEventListener("click", () => {
 
     const heatBadge = document.createElement("span");
     heatBadge.className = "heat-badge";
-    heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
+    heatBadge.textContent = heatRating ? "ðŸ”¥ " + heatRating : "";
     bar.appendChild(heatBadge);
 
     if (myIsModerator) {
       const delBtn = document.createElement("button");
       delBtn.type = "button";
       delBtn.className = "mod-delete-btn";
-      delBtn.textContent = "🗑️";
+      delBtn.textContent = "ðŸ—‘ï¸";
       delBtn.title = "Delete message";
 
       delBtn.addEventListener("click", function () {
@@ -2424,7 +2423,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
     const heatBadge = msgEl.querySelector(".heat-badge");
     if (heatBadge) {
-      heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
+      heatBadge.textContent = heatRating ? "ðŸ”¥ " + heatRating : "";
     }
 
     // Animation last, so it can never block the numbers.
@@ -2686,33 +2685,33 @@ highrollersTodayBtn.addEventListener("click", () => {
       playBtn.className =
         "voice-play-btn";
 
-      playBtn.textContent = "▶";
+      playBtn.textContent = "â–¶";
 
             const audio = new Audio(data.audioData);
 audio.preload = "auto";
       audio.addEventListener("pause", () => {
         isPlaying = false;
-        playBtn.textContent = "▶";
+        playBtn.textContent = "â–¶";
       });
 
       audio.addEventListener("error", () => {
         const code = audio.error ? audio.error.code : "unknown";
         console.error("Voice clip audio element error, code:", code);
         showSystemMessage(
-          "⚠️ Voice clip failed to load (error code " + code + ")."
+          "âš ï¸ Voice clip failed to load (error code " + code + ")."
         );
       });
 
       let isPlaying = false;
 
-      // Single "ended" handler — previously this was registered
+      // Single "ended" handler â€” previously this was registered
       // three times, causing overlapping sounds on clip finish.
       audio.addEventListener(
         "ended",
         () => {
           isPlaying = false;
           playBtn.textContent =
-            "▶";
+            "â–¶";
 
           playSound(voiceEndSound);
         }
@@ -2738,10 +2737,10 @@ audio.preload = "auto";
                 );
 
                 isPlaying = false;
-                playBtn.textContent = "▶";
+                playBtn.textContent = "â–¶";
 
                 showSystemMessage(
-                  "⚠️ Couldn't play that voice clip in this browser."
+                  "âš ï¸ Couldn't play that voice clip in this browser."
                 );
               });
           }
@@ -2753,7 +2752,7 @@ audio.preload = "auto";
         () => {
           isPlaying = true;
           playBtn.textContent =
-            "⏸";
+            "â¸";
         }
       );
 
@@ -2841,7 +2840,7 @@ audio.preload = "auto";
           "mod-delete-btn";
 
         delBtn.textContent =
-          "🗑️";
+          "ðŸ—‘ï¸";
 
         delBtn.title =
           "Delete voice clip";
@@ -2886,7 +2885,7 @@ audio.preload = "auto";
           notifySound
         );
 
-        maybeNotify(data.handle + " sent a voice clip", "🎤 Tap to open ChilliChat");
+        maybeNotify(data.handle + " sent a voice clip", "ðŸŽ¤ Tap to open ChilliChat");
       }
     }
   );
@@ -3075,7 +3074,7 @@ socket.on(
           notifySound
         );
 
-        maybeNotify(data.handle + " sent a photo", "📷 Tap to open ChilliChat");
+        maybeNotify(data.handle + " sent a photo", "ðŸ“· Tap to open ChilliChat");
       }
     }
   );
@@ -3092,7 +3091,7 @@ socket.on(
 
     const icon = document.createElement("span");
     icon.className = "photo-thumb-icon";
-    icon.textContent = "📷";
+    icon.textContent = "ðŸ“·";
 
     const meta = document.createElement("div");
     meta.className = "photo-thumb-meta";
@@ -3109,7 +3108,7 @@ socket.on(
     const countdown = document.createElement("span");
     countdown.className = "photo-thumb-countdown";
     countdown.textContent =
-      "🔥 " + Math.ceil((remainingMs || 15000) / 1000) + "s";
+      "ðŸ”¥ " + Math.ceil((remainingMs || 15000) / 1000) + "s";
 
     meta.appendChild(handleLine);
     meta.appendChild(countdown);
@@ -3137,7 +3136,7 @@ socket.on(
     if (myIsModerator) {
       const delBtn = document.createElement("button");
       delBtn.className = "mod-delete-btn";
-      delBtn.textContent = "🗑️";
+      delBtn.textContent = "ðŸ—‘ï¸";
       delBtn.title = "Delete photo";
       delBtn.addEventListener("click", (e) => {
         buzz();
@@ -3171,7 +3170,7 @@ socket.on(
     icon.className =
       "photo-thumb-icon";
 
-    icon.textContent = "📷";
+    icon.textContent = "ðŸ“·";
 
     const meta =
       document.createElement(
@@ -3204,7 +3203,7 @@ socket.on(
       "photo-thumb-hint";
 
     hint.textContent =
-      "🔥 Burned away";
+      "ðŸ”¥ Burned away";
 
     meta.appendChild(
       handleLine
@@ -3263,7 +3262,7 @@ socket.on(
       );
 
       countdownEl.textContent =
-        "🔥 " + secondsLeft + "s";
+        "ðŸ”¥ " + secondsLeft + "s";
 
       if (msLeft <= 0) {
         clearPhotoCountdown(photoId);
@@ -3406,12 +3405,12 @@ socket.on(
     const thisGeneration = photoViewerGeneration;
 
     // Guards against a stale/aborted previous load's error event firing
-    // this message for the photo that's actually showing now — this is
+    // this message for the photo that's actually showing now â€” this is
     // what caused repeated false "couldn't display" messages, especially
     // on Android where rapid taps can overlap two photo loads.
     photoViewerImg.onerror = () => {
       if (thisGeneration !== photoViewerGeneration) return;
-      showSystemMessage("⚠️ Couldn't display that photo.");
+      showSystemMessage("âš ï¸ Couldn't display that photo.");
       closePhotoViewer();
     };
 
@@ -3523,14 +3522,14 @@ socket.on(
 
         if (!window.isSecureContext) {
       showSystemMessage(
-        "⚠️ Location needs a secure (https://) connection. This page isn't loaded over https, so browsers block location access here."
+        "âš ï¸ Location needs a secure (https://) connection. This page isn't loaded over https, so browsers block location access here."
       );
       locationToggle.checked = false;
       return;
     }
 
     if (!navigator.geolocation) {
-      showSystemMessage("⚠️ Location isn't supported in this browser.");
+      showSystemMessage("âš ï¸ Location isn't supported in this browser.");
       locationToggle.checked = false;
       return;
     }
@@ -3560,7 +3559,7 @@ socket.on(
         let reason;
         if (err.code === 1) {
           reason =
-            "Permission denied. Check your browser's site settings AND your device/OS location settings (Windows Settings > Privacy > Location, or your phone's Location toggle) — both must allow it.";
+            "Permission denied. Check your browser's site settings AND your device/OS location settings (Windows Settings > Privacy > Location, or your phone's Location toggle) â€” both must allow it.";
         } else if (err.code === 2) {
           reason = "Your device couldn't determine a position right now.";
         } else if (err.code === 3) {
@@ -3569,7 +3568,7 @@ socket.on(
           reason = "Unknown error (" + err.message + ").";
         }
 
-        showSystemMessage("⚠️ Couldn't get your location: " + reason);
+        showSystemMessage("âš ï¸ Couldn't get your location: " + reason);
         locationToggle.checked = false;
         safeStorage.setItem(STORAGE_LOCATION_KEY, "false");
       },
@@ -3645,11 +3644,11 @@ socket.on(
       mine.weather.icon +
       " " +
       mine.weather.tempC +
-      "°C " +
+      "Â°C " +
       mine.weather.desc;
 
     if (mine.aqi) {
-      text += "  ·  AQI " + mine.aqi.value + " (" + mine.aqi.label + ")";
+      text += "  Â·  AQI " + mine.aqi.value + " (" + mine.aqi.label + ")";
     }
 
     mapWeatherHud.textContent = text;
@@ -3677,7 +3676,7 @@ socket.on(
     return { dxMiles: dLon, dyMiles: -dLat };
   }
 
-  // Simplified Great Britain coastline — hand-picked reference points,
+  // Simplified Great Britain coastline â€” hand-picked reference points,
   // not survey-accurate, just enough to read as "the UK" at a glance.
   const UK_OUTLINE = [
     [50.07, -5.7], [50.3, -4.6], [50.3, -3.5], [50.6, -1.3], [50.8, 0.3],
@@ -3789,7 +3788,7 @@ socket.on(
     const originLon =
       myJitteredLon !== null ? myJitteredLon : knownLocations[0].lon;
 
-    // UK coastline outline — a faint visual reference, not
+    // UK coastline outline â€” a faint visual reference, not
     // survey-accurate, just enough to read as "the UK" at a glance.
     ctx.strokeStyle = "rgba(0, 238, 255, 0.35)";
     ctx.lineWidth = 1.5 * devicePixelRatio;
@@ -3852,7 +3851,7 @@ socket.on(
         const roundedMiles =
           distanceMiles < 5 ? 5 : Math.round(distanceMiles / 10) * 10;
 
-        // Proximity line from you to them — brighter when closer.
+        // Proximity line from you to them â€” brighter when closer.
         const alpha = Math.max(0.15, 1 - distanceMiles / 100);
         ctx.strokeStyle = "rgba(57, 255, 20, " + alpha.toFixed(2) + ")";
         ctx.lineWidth = 1;
@@ -3865,7 +3864,7 @@ socket.on(
         ctx.font = 9 * devicePixelRatio + "px monospace";
         ctx.textAlign = "center";
         ctx.fillText(
-          "≈" + roundedMiles + "mi",
+          "â‰ˆ" + roundedMiles + "mi",
           (centerX + px) / 2,
           (centerY + py) / 2 - 4 * devicePixelRatio
         );
@@ -3889,7 +3888,7 @@ socket.on(
         ctx.font = 9 * devicePixelRatio + "px monospace";
         ctx.textAlign = "center";
         ctx.fillText(
-          loc.weather.icon + " " + loc.weather.tempC + "°C",
+          loc.weather.icon + " " + loc.weather.tempC + "Â°C",
           px,
           py + 18 * devicePixelRatio
         );
@@ -3982,7 +3981,7 @@ socket.on(
       }, 200);
     } catch (err) {
       console.error("Map open error:", err);
-      showSystemMessage("⚠️ Map error: " + err.message);
+      showSystemMessage("âš ï¸ Map error: " + err.message);
     }
   });
 

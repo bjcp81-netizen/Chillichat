@@ -3,7 +3,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
    // Show the iOS "Add to Home Screen" banner only on iPhone/iPad Safari,
   // only if it isn't already installed, and not if the person dismissed it before.
-  
+  (function maybeShowIosInstallBanner() {
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone =
+      window.navigator.standalone === true ||
+      window.matchMedia("(display-mode: standalone)").matches;
+    const dismissed = safeStorage.getItem("chillichat_ios_banner_dismissed") === "true";
+
+    if (!isIos || isStandalone || dismissed) return;
+
+    const banner = document.getElementById("ios-install-banner");
+    if (!banner) return;
+
+    banner.classList.remove("hidden");
+
+    const dismissBtn = document.getElementById("ios-install-dismiss-btn");
+    if (dismissBtn) {
+      dismissBtn.addEventListener("click", () => {
+        banner.classList.add("hidden");
+        safeStorage.setItem("chillichat_ios_banner_dismissed", "true");
+      });
+    }
+  })();
   const IDLE_LIMIT_MS = 5 * 60 * 1000;
   const STORAGE_HANDLE_KEY = "chillichat_handle";
   const STORAGE_COLOR_KEY = "chillichat_color";

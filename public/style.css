@@ -240,6 +240,8 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  position: relative;
+  z-index: 250;
 }
 
 .header-controls {
@@ -2075,4 +2077,37 @@ html {
     width: 18px;
     height: 18px;
   }
+}
+/* ---------- iOS "Add to Home Screen" banner ---------- */
+.ios-install-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #0a0a0a;
+  color: #39ff14;
+  border-bottom: 1px solid #39ff14;
+  text-align: center;
+  padding: 8px 36px 8px 12px;
+  font-size: 12px;
+  z-index: 300;
+}
+
+.ios-install-dismiss-btn {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  background: none;
+  border: 1px solid #39ff14;
+  color: #39ff14;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ios-install-dismiss-btn:hover {
+  background-color: #39ff14;
+  color: #000000;
 }
