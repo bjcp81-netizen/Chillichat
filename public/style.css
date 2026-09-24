@@ -2276,3 +2276,402 @@ html {
   }
 }
 
+/* =========================================================
+   MESSAGE-BOX MICROPHONE CONTROL
+   Icon-only press-and-hold mic embedded inside the right side
+   of the text field. Recording/audio logic remains in voice.js.
+   ========================================================= */
+
+.message-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.message-input-wrap #message-input {
+  width: 100%;
+  min-width: 0;
+  margin-right: 0;
+  padding-right: 46px;
+}
+
+.message-mic-btn {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  background: transparent;
+  color: #39ff14;
+  border: none;
+  border-radius: 50%;
+  box-shadow: none;
+  cursor: pointer;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 2;
+  transition:
+    transform 110ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.message-mic-btn .mic-btn-icon {
+  position: relative;
+  z-index: 1;
+  width: 19px;
+  height: 19px;
+  pointer-events: none;
+}
+
+.message-mic-btn .icon-ripple {
+  z-index: 0;
+}
+
+.message-mic-btn:hover {
+  background-color: rgba(57, 255, 20, 0.08);
+  color: #39ff14;
+}
+
+.message-mic-btn:active,
+.message-mic-btn.pressed {
+  transform: translateY(-50%) scale(0.88);
+  background-color: rgba(57, 255, 20, 0.16);
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.45);
+}
+
+.message-mic-btn:focus-visible {
+  outline: 2px solid #39ff14;
+  outline-offset: 1px;
+}
+
+.message-mic-btn.recording {
+  background-color: rgba(255, 43, 43, 0.16);
+  color: #ff2b2b;
+  border: none;
+  animation: messageMicRecordPulse 900ms ease-in-out infinite;
+}
+
+.message-mic-btn.recording.pressed {
+  background-color: rgba(255, 43, 43, 0.24);
+}
+
+@keyframes messageMicRecordPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 43, 43, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 12px 3px rgba(255, 43, 43, 0.55);
+  }
+}
+
+@media (max-width: 480px) {
+  .message-input-wrap #message-input {
+    padding-right: 42px;
+  }
+
+  .message-mic-btn {
+    right: 3px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+
+  .message-mic-btn .mic-btn-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* =========================================================
+   MESSAGE-ROW PHOTO ICON CONTROL
+   Icon-only camera control matching the embedded mic's
+   ChilliChat-green tactile/ripple design.
+   ========================================================= */
+
+.message-photo-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #39ff14;
+  border: none;
+  border-radius: 50%;
+  box-shadow: none;
+  cursor: pointer;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 110ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.message-photo-btn .photo-btn-icon {
+  position: relative;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.message-photo-btn .icon-ripple {
+  z-index: 0;
+}
+
+.message-photo-btn:hover {
+  background-color: rgba(57, 255, 20, 0.08);
+  color: #39ff14;
+}
+
+.message-photo-btn:active {
+  transform: scale(0.88);
+  background-color: rgba(57, 255, 20, 0.16);
+  color: #39ff14;
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.45);
+}
+
+.message-photo-btn:focus-visible {
+  outline: 2px solid #39ff14;
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .message-photo-btn {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .message-photo-btn .photo-btn-icon {
+    width: 19px;
+    height: 19px;
+  }
+}
+
+/* =========================================================
+   CHILLICHAT GREEN ICON THEME LOCK
+   Prevents the legacy photo/mic button styles and the current
+   user accent colour from recolouring the new icon controls.
+   ========================================================= */
+
+/* Camera: always transparent, round and ChilliChat green. */
+#photo-btn.message-photo-btn {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #39ff14 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  margin-right: 0 !important;
+}
+
+#photo-btn.message-photo-btn .photo-btn-icon {
+  display: block;
+  fill: none !important;
+  stroke: #39ff14 !important;
+  color: #39ff14 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+#photo-btn.message-photo-btn:hover {
+  background: rgba(57, 255, 20, 0.08) !important;
+  color: #39ff14 !important;
+}
+
+#photo-btn.message-photo-btn:active {
+  background: rgba(57, 255, 20, 0.16) !important;
+  color: #39ff14 !important;
+  transform: scale(0.88);
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.45) !important;
+}
+
+/* Mic: never inherit the user's handle/accent colour. */
+#mic-btn.message-mic-btn {
+  color: #39ff14 !important;
+  border: none !important;
+  background-color: transparent !important;
+}
+
+#mic-btn.message-mic-btn .mic-btn-icon {
+  display: block;
+  fill: none !important;
+  stroke: #39ff14 !important;
+  color: #39ff14 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Keep the mic green during the hold-to-record state too. */
+#mic-btn.message-mic-btn.recording {
+  color: #39ff14 !important;
+  background-color: rgba(57, 255, 20, 0.10) !important;
+  animation: chilliMicRecordPulse 900ms ease-in-out infinite !important;
+}
+
+#mic-btn.message-mic-btn.recording.pressed {
+  background-color: rgba(57, 255, 20, 0.18) !important;
+}
+
+@keyframes chilliMicRecordPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(57, 255, 20, 0.22);
+  }
+  50% {
+    box-shadow: 0 0 12px 3px rgba(57, 255, 20, 0.55);
+  }
+}
+
+/* =========================================================
+   LARGER MOBILE COMPOSER + SWIPE-UP MIC CANCEL
+   Makes the bottom input/icons easier to see and press while
+   keeping camera + mic locked to ChilliChat neon green.
+   ========================================================= */
+
+.input-row {
+  min-height: 56px;
+  padding: 8px 10px;
+  gap: 7px;
+}
+
+.message-input-wrap #message-input {
+  min-height: 44px;
+  padding: 10px 52px 10px 12px;
+  font-size: max(var(--app-font-size), 15px);
+}
+
+#mic-btn.message-mic-btn {
+  right: 5px;
+  width: 40px;
+  height: 40px;
+}
+
+#mic-btn.message-mic-btn .mic-btn-icon {
+  width: 23px;
+  height: 23px;
+  stroke: #39ff14 !important;
+}
+
+#photo-btn.message-photo-btn {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
+#photo-btn.message-photo-btn .photo-btn-icon {
+  width: 24px;
+  height: 24px;
+  stroke: #39ff14 !important;
+}
+
+#send-btn {
+  min-height: 44px;
+  padding: 9px 15px;
+  font-size: 14px;
+}
+
+/* Keep the recording strip useful but remove the old inaccessible X. */
+.recording-overlay {
+  min-height: 38px;
+  gap: 10px;
+  padding: 7px 10px;
+}
+
+.recording-hint {
+  font-size: 11px;
+}
+
+/* Crossing the swipe-up threshold gives an obvious cancel state. */
+#mic-btn.message-mic-btn.cancel-armed {
+  color: #ff2b2b !important;
+  background-color: rgba(255, 43, 43, 0.20) !important;
+  box-shadow: 0 0 14px rgba(255, 43, 43, 0.65) !important;
+}
+
+#mic-btn.message-mic-btn.cancel-armed .mic-btn-icon {
+  stroke: #ff2b2b !important;
+}
+
+.recording-overlay.cancel-armed {
+  border-top-color: #ff2b2b;
+  background-color: rgba(80, 0, 0, 0.92);
+}
+
+.recording-overlay.cancel-armed .recording-hint {
+  color: #ff2b2b;
+  font-weight: bold;
+}
+
+@media (max-width: 480px) {
+  .input-row {
+    min-height: 60px;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .message-input-wrap #message-input {
+    min-height: 46px;
+    padding: 10px 50px 10px 11px;
+    font-size: 16px;
+  }
+
+  #mic-btn.message-mic-btn {
+    right: 4px;
+    width: 40px;
+    height: 40px;
+  }
+
+  #mic-btn.message-mic-btn .mic-btn-icon {
+    width: 23px;
+    height: 23px;
+  }
+
+  #photo-btn.message-photo-btn {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  #photo-btn.message-photo-btn .photo-btn-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  #send-btn {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .recording-overlay {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
+
+  .recording-hint {
+    font-size: 10px;
+  }
+}
+

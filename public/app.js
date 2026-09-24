@@ -342,7 +342,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const micBtn = document.getElementById("mic-btn");
   const recordingOverlay = document.getElementById("recording-overlay");
   const recordingTimer = document.getElementById("recording-timer");
-  const cancelRecordingBtn = document.getElementById("cancel-recording-btn");
+  const recordingHint = recordingOverlay
+    ? recordingOverlay.querySelector(".recording-hint")
+    : null;
 
   const photoBtn = document.getElementById("photo-btn");
   const photoFileInput = document.getElementById("photo-file-input");
@@ -2646,22 +2648,117 @@ highrollersTodayBtn.addEventListener("click", () => {
     window.ChilliVoice.stop(cancelled);
   }
 
-    micBtn.addEventListener("mousedown", () => {
-    buzz();
-    startRecording();
-  });
+  let micPressActive = false;
+  let micPointerId = null;
+  let micStartY = 0;
+  let micCancelArmed = false;
 
-  micBtn.addEventListener("touchstart", (e) => {
+  const MIC_CANCEL_SWIPE_PX = 64;
+
+  function setMicCancelArmed(armed) {
+    if (micCancelArmed === armed) return;
+
+    micCancelArmed = armed;
+    micBtn.classList.toggle("cancel-armed", armed);
+
+    if (recordingOverlay) {
+      recordingOverlay.classList.toggle("cancel-armed", armed);
+    }
+
+    if (recordingHint) {
+      recordingHint.textContent = armed
+        ? "Release to cancel"
+        : "Hold · swipe up to cancel · release to send";
+    }
+
+    // One clear tactile bump when crossing the cancel threshold.
+    buzz(armed ? [24, 12, 24] : 10);
+  }
+
+  function beginMicPress(e) {
+    if (micPressActive) return;
+
     e.preventDefault();
-    buzz();
+
+    micPressActive = true;
+    micPointerId = e.pointerId;
+    micStartY = e.clientY;
+    micCancelArmed = false;
+
+    micBtn.classList.add("pressed");
+    micBtn.classList.remove("cancel-armed");
+
+    if (recordingOverlay) {
+      recordingOverlay.classList.remove("cancel-armed");
+    }
+
+    if (recordingHint) {
+      recordingHint.textContent =
+        "Hold · swipe up to cancel · release to send";
+    }
+
+    // Strong tactile confirmation when recording begins.
+    buzz([20, 12, 32]);
+
+    spawnIconRipple(micBtn, e);
+
+    try {
+      micBtn.setPointerCapture(e.pointerId);
+    } catch (err) {}
+
     startRecording();
+  }
+
+  function moveMicPress(e) {
+    if (!micPressActive || e.pointerId !== micPointerId) return;
+
+    e.preventDefault();
+
+    const upwardDistance = micStartY - e.clientY;
+    setMicCancelArmed(upwardDistance >= MIC_CANCEL_SWIPE_PX);
+  }
+
+  function finishMicPress(cancelled, e) {
+    if (!micPressActive) return;
+
+    const shouldCancel = cancelled || micCancelArmed;
+
+    micPressActive = false;
+    micBtn.classList.remove("pressed", "cancel-armed");
+
+    if (recordingOverlay) {
+      recordingOverlay.classList.remove("cancel-armed");
+    }
+
+    if (recordingHint) {
+      recordingHint.textContent =
+        "Hold · swipe up to cancel · release to send";
+    }
+
+    if (e && micPointerId !== null) {
+      try {
+        micBtn.releasePointerCapture(micPointerId);
+      } catch (err) {}
+    }
+
+    micPointerId = null;
+    micCancelArmed = false;
+
+    // Distinct tactile finish: double bump for cancel, single for send.
+    buzz(shouldCancel ? [28, 18, 28] : 18);
+
+    stopRecording(shouldCancel);
+  }
+
+  micBtn.addEventListener("pointerdown", beginMicPress);
+  micBtn.addEventListener("pointermove", moveMicPress);
+
+  micBtn.addEventListener("pointerup", (e) => {
+    finishMicPress(false, e);
   });
 
-  micBtn.addEventListener("mouseup", () => stopRecording(false));
-  micBtn.addEventListener("touchend", () => stopRecording(false));
-  cancelRecordingBtn.addEventListener("click", () => {
-    buzz();
-    stopRecording(true);
+  micBtn.addEventListener("pointercancel", (e) => {
+    finishMicPress(true, e);
   });
  socket.on(
     "voiceClip",
@@ -2899,8 +2996,9 @@ audio.preload = "auto";
 
   photoBtn.addEventListener(
     "click",
-    () => {
-      buzz();
+    (e) => {
+      buzz([18, 10, 24]);
+      spawnIconRipple(photoBtn, e);
       playSound(btnfxSound);
       photoFileInput.click();
     }

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Sans:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&family=Nunito:wght@400;700&family=Poppins:wght@400;700&family=Work+Sans:wght@400;700&family=Quicksand:wght@400;700&family=Space+Grotesk:wght@400;700&family=Manrope:wght@400;700&family=DM+Sans:wght@400;700&family=Plus+Jakarta+Sans:wght@400;700&family=Oswald:wght@400;700&family=Bebas+Neue&family=Righteous&family=Permanent+Marker&family=Caveat:wght@400;700&family=Bangers&family=JetBrains+Mono:wght@400;700&family=Fira+Code:wght@400;700&family=Rubik:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Lexend:wght@400;700&family=IBM+Plex+Sans:wght@400;700&family=Fira+Sans:wght@400;700&family=Mulish:wght@400;700&family=Figtree:wght@400;700&family=Merriweather:wght@400;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
-               <link rel="stylesheet" href="style.css?v=1016" />
+               <link rel="stylesheet" href="style.css?v=1020" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -281,15 +281,40 @@
 
         <div id="recording-overlay" class="recording-overlay hidden">
           <span id="recording-timer" class="recording-timer">0:00 / 0:15</span>
-          <span class="recording-hint">Release to send</span>
-          <button id="cancel-recording-btn" class="cancel-recording-btn">✕</button>
+          <span class="recording-hint">Hold · swipe up to cancel · release to send</span>
         </div>
 
         <div class="input-row">
-          <input type="text" id="message-input" placeholder="Type a message..." />
-          <button id="photo-btn" class="photo-btn" title="Send a view-once photo">📷</button>
+          <div class="message-input-wrap">
+            <input type="text" id="message-input" placeholder="Type a message..." />
+            <button
+              type="button"
+              id="mic-btn"
+              class="mic-btn message-mic-btn"
+              title="Hold to record a voice clip"
+              aria-label="Hold to record a voice clip"
+            >
+              <svg class="mic-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="8" y1="22" x2="16" y2="22"/>
+              </svg>
+            </button>
+          </div>
+          <button
+            type="button"
+            id="photo-btn"
+            class="photo-btn message-photo-btn"
+            title="Send a view-once photo"
+            aria-label="Send a view-once photo"
+          >
+            <svg class="photo-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14.5 4l1.8 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.7l1.8-2h5z"/>
+              <circle cx="12" cy="13" r="3.5"/>
+            </svg>
+          </button>
           <input type="file" id="photo-file-input" accept="image/*" class="hidden" />
-          <button id="mic-btn" class="mic-btn" title="Hold to record a voice clip">🎤</button>
           <button id="send-btn">Send</button>
         </div>
         </div>
@@ -349,6 +374,6 @@
   <audio id="icon-highroller-sound" src="B42strt.ogg" preload="auto"></audio>
   <script src="/socket.io/socket.io.js"></script>
       <script src="voice.js?v=1"></script>
-              <script src="app.js?v=11120"></script>
+              <script src="app.js?v=11123"></script>
 </body>
 </html>

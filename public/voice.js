@@ -237,15 +237,9 @@
     reader.readAsDataURL(blob);
   }
 
-  // Stop if the mouse slides off the mic button while held (desktop).
-  document.addEventListener("DOMContentLoaded", function () {
-    var m = $("mic-btn");
-    if (m) {
-      m.addEventListener("mouseleave", function () {
-        if (recording) finish(false);
-      });
-    }
-  });
+  // Mic pointer/gesture handling is owned by app.js.
+  // Do not auto-send when the pointer leaves the mic button: the user may
+  // be dragging upward to arm the swipe-to-cancel gesture.
 
   // Burn animation when the server says a clip has expired.
   function waitForSocket(cb) {
