@@ -148,25 +148,66 @@ function yesterdayString() {
   return d.toISOString().slice(0, 10);
 }
 
-async function getReactionCounts(messageId) {
+const REACTION_TARGETS = {
+  text: {
+    contentTable: "messages",
+    reactionTable: "message_reactions",
+    idColumn: "message_id",
+    label: "message",
+    lifetimeMs: null,
+  },
+  voice: {
+    contentTable: "voice_clips",
+    reactionTable: "voice_reactions",
+    idColumn: "voice_id",
+    label: "voice clip",
+    lifetimeMs: VOICE_CLIP_LIFETIME_MS,
+  },
+  photo: {
+    contentTable: "photos",
+    reactionTable: "photo_reactions",
+    idColumn: "photo_id",
+    label: "photo",
+    lifetimeMs: PHOTO_LIFETIME_MS,
+  },
+};
+
+function emptyReactionCounts() {
+  return {
+    chilli: 0,
+    heart: 0,
+    laugh: 0,
+    down: 0,
+  };
+}
+
+async function getReactionCountsFor(targetType, targetId) {
+  const target = REACTION_TARGETS[targetType];
+  if (!target) return emptyReactionCounts();
+
   const result = await pool.query(
     `SELECT
       COUNT(*) FILTER (WHERE reaction = 'chilli') AS chilli,
       COUNT(*) FILTER (WHERE reaction = 'heart') AS heart,
       COUNT(*) FILTER (WHERE reaction = 'laugh') AS laugh,
       COUNT(*) FILTER (WHERE reaction = 'down') AS down
-     FROM message_reactions WHERE message_id = $1`,
-    [messageId]
+     FROM ${target.reactionTable} WHERE ${target.idColumn} = $1`,
+    [targetId]
   );
 
-  const row = result.rows[0];
+  const row = result.rows[0] || emptyReactionCounts();
 
   return {
-    chilli: parseInt(row.chilli),
-    heart: parseInt(row.heart),
-    laugh: parseInt(row.laugh),
-    down: parseInt(row.down),
+    chilli: parseInt(row.chilli || 0),
+    heart: parseInt(row.heart || 0),
+    laugh: parseInt(row.laugh || 0),
+    down: parseInt(row.down || 0),
   };
+}
+
+// Text High Rollers and older code still call this helper by message ID.
+async function getReactionCounts(messageId) {
+  return getReactionCountsFor("text", messageId);
 }
 
 async function setupDatabase() {
@@ -334,6 +375,28 @@ async function setupDatabase() {
       viewer_handle TEXT NOT NULL,
       opened_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(photo_id, viewer_handle)
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS voice_reactions (
+      id SERIAL PRIMARY KEY,
+      voice_id INTEGER NOT NULL,
+      handle TEXT NOT NULL,
+      reaction TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(voice_id, handle, reaction)
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS photo_reactions (
+      id SERIAL PRIMARY KEY,
+      photo_id INTEGER NOT NULL,
+      handle TEXT NOT NULL,
+      reaction TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(photo_id, handle, reaction)
     )
   `);
 
@@ -625,20 +688,32 @@ async function sendMessageHistory(socket, viewerHandle) {
 
     const voiceResult = await pool.query(
       `
-      SELECT id, handle, color, audio_data, duration_ms, created_at
-      FROM voice_clips
-      WHERE deleted = FALSE
-      ORDER BY created_at DESC
+      SELECT v.id, v.handle, v.color, v.audio_data, v.duration_ms, v.created_at,
+        COUNT(*) FILTER (WHERE reaction = 'chilli') AS chilli,
+        COUNT(*) FILTER (WHERE reaction = 'heart') AS heart,
+        COUNT(*) FILTER (WHERE reaction = 'laugh') AS laugh,
+        COUNT(*) FILTER (WHERE reaction = 'down') AS down
+      FROM voice_clips v
+      LEFT JOIN voice_reactions r ON r.voice_id = v.id
+      WHERE v.deleted = FALSE
+      GROUP BY v.id
+      ORDER BY v.created_at DESC
       LIMIT $1
     `,
       [HISTORY_MESSAGE_LIMIT]
     );
 
     const photoResult = await pool.query(
-      `SELECT id, handle, color, created_at
-       FROM photos
-       WHERE deleted = FALSE
-       ORDER BY created_at DESC
+      `SELECT p.id, p.handle, p.color, p.created_at,
+         COUNT(*) FILTER (WHERE reaction = 'chilli') AS chilli,
+         COUNT(*) FILTER (WHERE reaction = 'heart') AS heart,
+         COUNT(*) FILTER (WHERE reaction = 'laugh') AS laugh,
+         COUNT(*) FILTER (WHERE reaction = 'down') AS down
+       FROM photos p
+       LEFT JOIN photo_reactions r ON r.photo_id = p.id
+       WHERE p.deleted = FALSE
+       GROUP BY p.id
+       ORDER BY p.created_at DESC
        LIMIT $1`,
       [HISTORY_MESSAGE_LIMIT]
     );
@@ -666,23 +741,40 @@ async function sendMessageHistory(socket, viewerHandle) {
       };
     });
 
-    const voiceItems = voiceResult.rows.map((clip) => ({
-      type: "voice",
-      created_at: clip.created_at,
-      payload: {
-        id: clip.id,
-        handle: clip.handle,
-        color: clip.color,
-              audioData: clip.audio_data,
-        durationMs: clip.duration_ms,
-        createdAt: clip.created_at,
-      },
-    }));
+    const voiceItems = voiceResult.rows.map((clip) => {
+      const counts = {
+        chilli: parseInt(clip.chilli || 0),
+        heart: parseInt(clip.heart || 0),
+        laugh: parseInt(clip.laugh || 0),
+        down: parseInt(clip.down || 0),
+      };
+
+      return {
+        type: "voice",
+        created_at: clip.created_at,
+        payload: {
+          id: clip.id,
+          handle: clip.handle,
+          color: clip.color,
+          audioData: clip.audio_data,
+          durationMs: clip.duration_ms,
+          counts,
+          heatRating: computeHeatRating(counts),
+          createdAt: clip.created_at,
+        },
+      };
+    });
 
     const photoItems = photoResult.rows.map((p) => {
       const ageMs = Date.now() - new Date(p.created_at).getTime();
       const remainingMs = PHOTO_LIFETIME_MS - ageMs;
       const expired = remainingMs <= 0;
+      const counts = {
+        chilli: parseInt(p.chilli || 0),
+        heart: parseInt(p.heart || 0),
+        laugh: parseInt(p.laugh || 0),
+        down: parseInt(p.down || 0),
+      };
 
       return {
         type: "photo",
@@ -691,6 +783,8 @@ async function sendMessageHistory(socket, viewerHandle) {
           id: p.id,
           handle: p.handle,
           color: p.color,
+          counts,
+          heatRating: computeHeatRating(counts),
           createdAt: p.created_at,
           expired,
           remainingMs: expired ? 0 : remainingMs,
@@ -1188,6 +1282,8 @@ io.on("connection", (socket) => {
           color,
           audioData,
           durationMs,
+          counts: emptyReactionCounts(),
+          heatRating: null,
           createdAt: result.rows[0].created_at,
         });
       } catch (err) {
@@ -1233,6 +1329,8 @@ io.on("connection", (socket) => {
           id: photoId,
           handle,
           color,
+          counts: emptyReactionCounts(),
+          heatRating: null,
           createdAt: result.rows[0].created_at,
           expired: false,
           remainingMs: PHOTO_LIFETIME_MS,
@@ -1297,7 +1395,7 @@ io.on("connection", (socket) => {
 
   socket.on(
     "reaction",
-    async ({ messageId, handle, reactionType }) => {
+    async ({ targetType, targetId, messageId, reactionType }) => {
       const allowed = [
         "chilli",
         "heart",
@@ -1307,31 +1405,64 @@ io.on("connection", (socket) => {
 
       if (!allowed.includes(reactionType)) return;
 
+      const me = connectedUsers[socket.id];
+      if (!me) return;
+
+      // Backward compatibility: older ChilliChat clients only sent messageId.
+      const resolvedType = REACTION_TARGETS[targetType] ? targetType : "text";
+      const resolvedId =
+        targetId !== undefined && targetId !== null ? targetId : messageId;
+
+      if (resolvedId === undefined || resolvedId === null) return;
+
+      const target = REACTION_TARGETS[resolvedType];
+      const reactingHandle = me.handle;
+
       try {
-        const messageResult = await pool.query(
-          "SELECT handle FROM messages WHERE id = $1",
-          [messageId]
+        const contentResult = await pool.query(
+          `SELECT handle, created_at, deleted
+           FROM ${target.contentTable}
+           WHERE id = $1`,
+          [resolvedId]
         );
 
-        if (messageResult.rows.length === 0) return;
+        if (contentResult.rows.length === 0) return;
 
-        const authorHandle = messageResult.rows[0].handle;
+        const content = contentResult.rows[0];
+        if (content.deleted) return;
 
-        if (authorHandle === handle) {
+        const authorHandle = content.handle;
+
+        if (authorHandle === reactingHandle) {
           socket.emit(
             "reactionError",
-            "You can't react to your own message."
+            "You can't react to your own " + target.label + "."
           );
           return;
         }
 
+        if (target.lifetimeMs) {
+          const createdMs = new Date(content.created_at).getTime();
+          const ageMs = Date.now() - createdMs;
+
+          if (!Number.isFinite(createdMs) || ageMs >= target.lifetimeMs) {
+            socket.emit(
+              "reactionError",
+              target.label === "photo"
+                ? "That photo has already burned away."
+                : "That voice clip has expired."
+            );
+            return;
+          }
+        }
+
         const existing = await pool.query(
-          "SELECT id FROM message_reactions WHERE message_id = $1 AND handle = $2 AND reaction = $3",
-          [messageId, handle, reactionType]
+          `SELECT id FROM ${target.reactionTable}
+           WHERE ${target.idColumn} = $1 AND handle = $2 AND reaction = $3`,
+          [resolvedId, reactingHandle, reactionType]
         );
 
-        const schoValue =
-          REACTION_SCHO_VALUES[reactionType] || 0;
+        const schoValue = REACTION_SCHO_VALUES[reactionType] || 0;
 
         const counterColumn = {
           chilli: "chilli_received",
@@ -1344,7 +1475,7 @@ io.on("connection", (socket) => {
 
         if (existing.rows.length > 0) {
           await pool.query(
-            "DELETE FROM message_reactions WHERE id = $1",
+            `DELETE FROM ${target.reactionTable} WHERE id = $1`,
             [existing.rows[0].id]
           );
 
@@ -1357,8 +1488,10 @@ io.on("connection", (socket) => {
           );
         } else {
           await pool.query(
-            "INSERT INTO message_reactions (message_id, handle, reaction) VALUES ($1, $2, $3)",
-            [messageId, handle, reactionType]
+            `INSERT INTO ${target.reactionTable}
+             (${target.idColumn}, handle, reaction)
+             VALUES ($1, $2, $3)`,
+            [resolvedId, reactingHandle, reactionType]
           );
 
           await pool.query(
@@ -1370,17 +1503,21 @@ io.on("connection", (socket) => {
           );
 
           await checkThresholdBadges(authorHandle);
-                    await checkRankBadges(authorHandle).catch((e) => console.error("Rank badge error:", e));
+          await checkRankBadges(authorHandle).catch((e) =>
+            console.error("Rank badge error:", e)
+          );
 
           scoreIncreased = schoValue > 0;
         }
 
-        const counts = await getReactionCounts(messageId);
+        const counts = await getReactionCountsFor(resolvedType, resolvedId);
         const heatRating = computeHeatRating(counts);
 
-                console.log("[REACTION] sending update for message", messageId);
         io.emit("reactionUpdate", {
-          messageId,
+          targetType: resolvedType,
+          targetId: resolvedId,
+          // Keep messageId for older clients when the target is a text message.
+          messageId: resolvedType === "text" ? resolvedId : undefined,
           counts,
           heatRating,
         });

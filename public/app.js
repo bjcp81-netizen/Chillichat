@@ -76,6 +76,36 @@ document.addEventListener("DOMContentLoaded", function () {
     caveat: "'Caveat', cursive",
     jetbrainsmono: "'JetBrains Mono', monospace",
     firacode: "'Fira Code', monospace",
+    vt323: "'VT323', monospace",
+    pressstart: "'Press Start 2P', monospace",
+    sharetechmono: "'Share Tech Mono', monospace",
+    pixelify: "'Pixelify Sans', sans-serif",
+    silkscreen: "'Silkscreen', sans-serif",
+    orbitron: "'Orbitron', sans-serif",
+    audiowide: "'Audiowide', sans-serif",
+    oxanium: "'Oxanium', sans-serif",
+    chakrapetch: "'Chakra Petch', sans-serif",
+    quantico: "'Quantico', sans-serif",
+    russoone: "'Russo One', sans-serif",
+    aldrich: "'Aldrich', sans-serif",
+    electrolize: "'Electrolize', sans-serif",
+    michroma: "'Michroma', sans-serif",
+    geo: "'Geo', sans-serif",
+    cascadiacode: "'Cascadia Code', 'Cascadia Mono', Consolas, monospace",
+    cascadiamono: "'Cascadia Mono', 'Cascadia Code', Consolas, monospace",
+    consolasretro: "Consolas, 'Lucida Console', monospace",
+    lucidaconsole: "'Lucida Console', Monaco, monospace",
+    ibmplexmono: "'IBM Plex Mono', monospace",
+    commodore64: "'C64 Pro Mono', 'Pet Me 64', 'Pixelify Sans', monospace",
+    amstradcpc: "'Amstrad CPC464', 'CPC464', 'Silkscreen', monospace",
+    ibmvga: "'Px437 IBM VGA8', 'IBM VGA 8x16', 'IBM Plex Mono', monospace",
+    decvt100: "'VT323', 'IBM Plex Mono', monospace",
+    zxspectrum: "'ZX Spectrum', 'Press Start 2P', monospace",
+    bbcmicro: "'BBC Micro', 'Share Tech Mono', monospace",
+    appleii: "'Apple II', 'Nova Mono', monospace",
+    atari8bit: "'Atari Classic', 'Kode Mono', monospace",
+    trs80: "'TRS-80', 'Anonymous Pro', monospace",
+    spacemono: "'Space Mono', monospace",
   };
 
   const FONT_SIZE_MAP = {
@@ -397,6 +427,36 @@ const FONT_LABELS = {
     caveat: "Caveat",
     jetbrainsmono: "JetBrains Mono",
     firacode: "Fira Code",
+    vt323: "VT323",
+    pressstart: "Press Start 2P",
+    sharetechmono: "Share Tech Mono",
+    pixelify: "Pixelify Sans",
+    silkscreen: "Silkscreen",
+    orbitron: "Orbitron",
+    audiowide: "Audiowide",
+    oxanium: "Oxanium",
+    chakrapetch: "Chakra Petch",
+    quantico: "Quantico",
+    russoone: "Russo One",
+    aldrich: "Aldrich",
+    electrolize: "Electrolize",
+    michroma: "Michroma",
+    geo: "Geo",
+    cascadiacode: "Microsoft Cascadia Code",
+    cascadiamono: "Microsoft Cascadia Mono",
+    consolasretro: "Microsoft Consolas",
+    lucidaconsole: "Microsoft Lucida Console",
+    ibmplexmono: "IBM Plex Mono",
+    commodore64: "Commodore 64 Style",
+    amstradcpc: "Amstrad CPC Style",
+    ibmvga: "IBM VGA Style",
+    decvt100: "DEC VT100 Style",
+    zxspectrum: "ZX Spectrum Style",
+    bbcmicro: "BBC Micro Style",
+    appleii: "Apple II Style",
+    atari8bit: "Atari 8-bit Style",
+    trs80: "TRS-80 Style",
+    spacemono: "Space Mono",
   };
  function updateFontButtonLabel(value) {
     const match = fontWheelItems.find(
@@ -421,6 +481,84 @@ const FONT_LABELS = {
       "#font-color-wheel-list .wheel-item"
     )
   );
+
+
+  const themeBtn = document.getElementById("theme-btn");
+  const themeWheelPanel = document.getElementById("theme-wheel-panel");
+  const themeWheelList = document.getElementById("theme-wheel-list");
+  const themeWheelItems = Array.from(
+    document.querySelectorAll("#theme-wheel-list .wheel-item")
+  );
+
+  const THEME_MAP = {
+    "neon-green":     { label: "Neon Green",     primary: "#39ff14", dim: "#1f7a0d" },
+    cyan:             { label: "Cyan",           primary: "#00eeff", dim: "#007985" },
+    "electric-blue": { label: "Electric Azure", primary: "#00a2ff", dim: "#005783" },
+    "royal-blue":    { label: "Royal Blue",     primary: "#4169e1", dim: "#263f87" },
+    cobalt:           { label: "Cobalt Beam",    primary: "#3366ff", dim: "#1e3d99" },
+    ultraviolet:      { label: "Ultraviolet",    primary: "#7a00ff", dim: "#490099" },
+    purple:           { label: "Purple",         primary: "#9900ff", dim: "#5b0099" },
+    magenta:          { label: "Magenta",        primary: "#ff00dd", dim: "#8f007c" },
+    "laser-pink":    { label: "Laser Pink",     primary: "#ff2a6d", dim: "#971941" },
+    scarlet:          { label: "Neon Scarlet",   primary: "#ff1744", dim: "#920d27" },
+    "plasma-orange": { label: "Plasma Orange",  primary: "#ff5f1f", dim: "#943812" },
+    amber:            { label: "Laser Amber",    primary: "#ffb000", dim: "#8f6300" },
+    gold:             { label: "Gold",           primary: "#ffd700", dim: "#8f7900" },
+    "electric-lemon":{ label: "Electric Lemon", primary: "#f7ff00", dim: "#858a00" },
+    "toxic-lime":    { label: "Toxic Lime",     primary: "#c6ff00", dim: "#6c8c00" },
+    "neon-mint":     { label: "Neon Mint",      primary: "#00ffc8", dim: "#008a6d" },
+    turquoise:        { label: "Turquoise",      primary: "#40e0d0", dim: "#247d74" },
+    aquamarine:       { label: "Aquamarine",     primary: "#7fffd4", dim: "#478f77" },
+    ice:              { label: "Ghost Ice",      primary: "#e8fbff", dim: "#78969c" },
+    silver:           { label: "Silver",         primary: "#c0c0c0", dim: "#686868" },
+  };
+
+  let currentThemeKey = "neon-green";
+
+  function hexToRgbString(hex) {
+    const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
+    if (!match) return "57, 255, 20";
+    return [
+      parseInt(match[1], 16),
+      parseInt(match[2], 16),
+      parseInt(match[3], 16),
+    ].join(", ");
+  }
+
+  function updateThemeButtonLabel(themeKey) {
+    const theme = THEME_MAP[themeKey] || THEME_MAP["neon-green"];
+    themeBtn.textContent = theme.label + " ▾";
+    themeBtn.style.color = theme.primary;
+  }
+
+  function applyTheme(themeKey) {
+    const theme = THEME_MAP[themeKey] || THEME_MAP["neon-green"];
+    currentThemeKey = THEME_MAP[themeKey] ? themeKey : "neon-green";
+
+    document.documentElement.style.setProperty("--theme-primary", theme.primary);
+    document.documentElement.style.setProperty("--theme-primary-rgb", hexToRgbString(theme.primary));
+    document.documentElement.style.setProperty("--theme-dim", theme.dim);
+    document.documentElement.style.setProperty("--theme-dim-rgb", hexToRgbString(theme.dim));
+    // Backward-compatible alias for older ChilliChat CSS that still reads accent-color.
+    document.documentElement.style.setProperty("--accent-color", theme.primary);
+
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute("content", "#000000");
+
+    updateThemeButtonLabel(currentThemeKey);
+  }
+
+  function themePrimary() {
+    return (THEME_MAP[currentThemeKey] || THEME_MAP["neon-green"]).primary;
+  }
+
+  function themeDim() {
+    return (THEME_MAP[currentThemeKey] || THEME_MAP["neon-green"]).dim;
+  }
+
+  function themeRgba(alpha) {
+    return "rgba(" + hexToRgbString(themePrimary()) + ", " + alpha + ")";
+  }
 
   function updateFontColorButtonLabel(color) {
     const match = fontColorWheelItems.find(
@@ -479,6 +617,9 @@ const FONT_LABELS = {
     const savedColor =
       safeStorage.getItem("chillichat_font_color") || "#39ff14";
 
+    const savedTheme =
+      safeStorage.getItem("chillichat_theme") || "neon-green";
+
     const savedSound =
       safeStorage.getItem("chillichat_sound");
 
@@ -493,10 +634,9 @@ const FONT_LABELS = {
       FONT_MAP[savedFont] || FONT_MAP.default
     );
 
-    document.documentElement.style.setProperty(
-      "--app-text-color",
-      savedColor
-    );
+    applyFontColor(savedColor);
+
+    applyTheme(savedTheme);
 
     document.documentElement.style.setProperty(
       "--app-font-size",
@@ -638,6 +778,14 @@ fontBtn.addEventListener("click", () => {
         "hidden"
       );
     }
+
+
+    if (
+      !themeBtn.contains(e.target) &&
+      !themeWheelPanel.contains(e.target)
+    ) {
+      themeWheelPanel.classList.add("hidden");
+    }
   });
 
  const fontColorWheel = createWheel({
@@ -651,10 +799,7 @@ fontBtn.addEventListener("click", () => {
         color
       );
 
-      document.documentElement.style.setProperty(
-        "--app-text-color",
-        color
-      );
+      applyFontColor(color);
 
       fontColorBtn.textContent =
         itemEl.textContent + " ▾";
@@ -692,6 +837,38 @@ fontBtn.addEventListener("click", () => {
     }
   });
 
+  const themeWheel = createWheel({
+    wrap: themeWheelPanel,
+    list: themeWheelList,
+    items: themeWheelItems,
+    getValue: (item) => item.dataset.theme,
+    onChange: (themeKey, itemEl) => {
+      safeStorage.setItem("chillichat_theme", themeKey);
+      applyTheme(themeKey);
+      themeBtn.textContent = itemEl.textContent + " ▾";
+      themeBtn.style.color = themePrimary();
+      try {
+        drawMap();
+      } catch (err) {
+        // Map may not be initialized yet during startup; theme still applies normally.
+      }
+    },
+  });
+
+  themeBtn.addEventListener("click", () => {
+    buzz();
+
+    const opening = themeWheelPanel.classList.contains("hidden");
+    themeWheelPanel.classList.toggle("hidden");
+
+    if (opening) {
+      positionWheelPanel(themeBtn, themeWheelPanel);
+      const savedTheme = safeStorage.getItem("chillichat_theme") || "neon-green";
+      themeWheel.scrollToValue(savedTheme);
+      themeWheel.settle();
+    }
+  });
+
   boldToggle.addEventListener("change", () => {
     safeStorage.setItem(
       "chillichat_bold",
@@ -725,14 +902,124 @@ fontBtn.addEventListener("click", () => {
     }
   });
 
-  applyOptions();
 
   function applyAccentColor(color) {
+    // Handle colour is identity only. It must not recolour the ChilliChat UI theme.
     document.documentElement.style.setProperty(
-      "--accent-color",
-      color
+      "--user-accent-color",
+      color || "#39ff14"
     );
   }
+
+  const TWO_TONE_COLORS = {
+    "#00f6ff": {
+      secondary: "#ff2bd6",
+      fontClass: "two-tone-font-cyber",
+    },
+    "#39ff15": {
+      secondary: "#ff5f1f",
+      fontClass: "two-tone-font-chilli",
+    },
+    "#ff38c7": {
+      secondary: "#00f5ff",
+      fontClass: "two-tone-font-miami",
+    },
+    "#c8ff1a": {
+      secondary: "#ff4d00",
+      fontClass: "two-tone-font-toxic",
+    },
+    "#33d7ff": {
+      secondary: "#ff1744",
+      fontClass: "two-tone-font-icefire",
+    },
+    "#ffe600": {
+      secondary: "#ff00c8",
+      fontClass: "two-tone-font-lemonade",
+    },
+    "#a855ff": {
+      secondary: "#39ff14",
+      fontClass: "two-tone-font-arcade",
+    },
+    "#e8fbff": {
+      secondary: "#00a2ff",
+      fontClass: "two-tone-font-ghost",
+    },
+    "#00ff88": {
+      secondary: "#7a00ff",
+      fontClass: "two-tone-font-reactor",
+    },
+    "#ff7a18": {
+      secondary: "#ffee00",
+      fontClass: "two-tone-font-solar",
+    },
+    "#4f7cff": {
+      secondary: "#ff2a6d",
+      fontClass: "two-tone-font-nightdrive",
+    },
+    "#adff2f": {
+      secondary: "#ff2bd6",
+      fontClass: "two-tone-font-acid",
+    },
+    "#ff334f": {
+      secondary: "#00f0ff",
+      fontClass: "two-tone-font-infernoice",
+    },
+    "#9d4dff": {
+      secondary: "#00ffcc",
+      fontClass: "two-tone-font-ultravolt",
+    },
+  };
+
+  function getTwoTone(color) {
+    if (!color) return null;
+    return TWO_TONE_COLORS[String(color).toLowerCase()] || null;
+  }
+
+  function applyHandleColor(element, color) {
+    if (!element) return;
+
+    element.style.color = color || "#39ff14";
+
+    const tone = getTwoTone(color);
+    element.style.textShadow = tone
+      ? "0 0 4px " + color + ", 0 0 10px " + tone.secondary +
+        ", 0 0 18px " + tone.secondary
+      : "";
+  }
+
+  function applyFontColor(color) {
+    document.documentElement.style.setProperty(
+      "--app-text-color",
+      color
+    );
+
+    document.body.classList.remove(
+      "two-tone-font-cyber",
+      "two-tone-font-chilli",
+      "two-tone-font-miami",
+      "two-tone-font-toxic",
+      "two-tone-font-icefire",
+      "two-tone-font-lemonade",
+      "two-tone-font-arcade",
+      "two-tone-font-ghost",
+      "two-tone-font-reactor",
+      "two-tone-font-solar",
+      "two-tone-font-nightdrive",
+      "two-tone-font-acid",
+      "two-tone-font-infernoice",
+      "two-tone-font-ultravolt"
+    );
+
+    const tone = getTwoTone(color);
+    if (tone) {
+      document.body.classList.add(tone.fontClass);
+    }
+  }
+
+  // Apply saved options only after the two-tone colour table and helpers
+  // have been initialized. Calling this earlier triggers a temporal-dead-zone
+  // ReferenceError and stops the join-screen JavaScript from finishing setup.
+  applyOptions();
 
   const handlePreview =
     document.getElementById("handle-preview");
@@ -743,12 +1030,13 @@ fontBtn.addEventListener("click", () => {
 
     if (myColor) {
       handlePreview.textContent = name;
-      handlePreview.style.color = myColor;
+      applyHandleColor(handlePreview, myColor);
     } else {
       handlePreview.textContent =
         "Pick a colour to preview your handle";
 
       handlePreview.style.color = "#1f7a0d";
+      handlePreview.style.textShadow = "";
     }
   }
 
@@ -1179,7 +1467,7 @@ highrollersTodayBtn.addEventListener("click", () => {
         handle.textContent =
           entry.rankEmoji + " " + entry.handle;
 
-        handle.style.color = entry.color;
+        applyHandleColor(handle, entry.color);
 
         const scoville =
           document.createElement("span");
@@ -1233,7 +1521,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
         handle.className = "highrollers-handle";
         handle.textContent = entry.handle;
-        handle.style.color = entry.color;
+        applyHandleColor(handle, entry.color);
 
         const text =
           document.createElement("span");
@@ -1641,7 +1929,29 @@ highrollersTodayBtn.addEventListener("click", () => {
   function formatTimestamp(isoString) {
     if (!isoString) return "";
 
-    const date = new Date(isoString);
+    let timestamp = isoString;
+
+    // SQLite timestamps are stored as UTC but normally arrive without
+    // a timezone marker, for example "2026-09-24 18:13:00".
+    // Mark those values as UTC so the browser converts them correctly
+    // to the viewer's real local timezone, including BST/GMT changes.
+    if (typeof timestamp === "string") {
+      timestamp = timestamp.trim();
+
+      const hasTimezone =
+        /(?:Z|[+-]\d{2}:?\d{2})$/i.test(timestamp);
+
+      if (!hasTimezone) {
+        timestamp = timestamp.replace(" ", "T") + "Z";
+      }
+    }
+
+    const date = new Date(timestamp);
+
+    if (Number.isNaN(date.getTime())) {
+      console.warn("Invalid ChilliChat timestamp:", isoString);
+      return "";
+    }
 
     return date.toLocaleTimeString([], {
       hour: "2-digit",
@@ -1720,7 +2030,7 @@ highrollersTodayBtn.addEventListener("click", () => {
         user.handle +
         equippedStr;
 
-      name.style.color = user.color;
+      applyHandleColor(name, user.color);
 
       name.addEventListener("click", () => {
         openUserProfile(user.handle);
@@ -1883,8 +2193,9 @@ highrollersTodayBtn.addEventListener("click", () => {
     return panel;
   }
 
-  sendBtn.addEventListener("click", () => {
+  sendBtn.addEventListener("click", (e) => {
     buzz();
+    spawnIconRipple(sendBtn, e);
     sendMessage();
   });
 
@@ -1983,259 +2294,59 @@ highrollersTodayBtn.addEventListener("click", () => {
 
   // ---- Reactions & heat rating ----
 
-    function spawnFloatingReaction(
-    msgEl,
-    emoji
-  ) {
-    const float =
-      document.createElement("span");
-
-    float.className =
-      "floating-reaction";
-
-    float.textContent = emoji;
-
-    float.style.left =
-      20 + Math.random() * 60 + "%";
-
-    msgEl.appendChild(float);
-
-    float.addEventListener(
-      "animationend",
-      () => float.remove()
-    );
+  function emptyReactionCounts() {
+    return {
+      chilli: 0,
+      heart: 0,
+      laugh: 0,
+      down: 0,
+    };
   }
 
-  function buildReactionBarOld(
-    messageId,
-    counts,
-    heatRating
-  ) {
-    const bar =
-      document.createElement("div");
-
-        bar.className =
-      "reaction-bar";
-
-    const pillsWrap =
-      document.createElement("span");
-
-    pillsWrap.className =
-      "reaction-pills";
-
-    bar.appendChild(pillsWrap);
-
-    const addBtn =
-      document.createElement("button");
-
-    addBtn.className =
-      "reaction-add-btn";
-
-    addBtn.textContent = "🌶️";
-    addBtn.title = "React";
-
-    bar.appendChild(addBtn);
-
-    const picker =
-      document.createElement("div");
-
-    picker.className =
-      "reaction-picker hidden";
-
-    REACTIONS.forEach((r) => {
-      const pickBtn =
-        document.createElement("button");
-
-      pickBtn.className =
-        "reaction-pick-btn";
-
-      pickBtn.dataset.reaction =
-        r.key;
-
-      pickBtn.textContent =
-        r.emoji;
-
-      pickBtn.addEventListener(
-        "click",
-        () => {
-          buzz();
-
-          socket.emit("reaction", {
-            messageId: messageId,
-            handle: myHandle,
-            reactionType: r.key,
-          });
-
-          picker.classList.add("hidden");
-        }
-      );
-
-      picker.appendChild(pickBtn);
-    });
-
-    bar.appendChild(picker);
-
-    addBtn.addEventListener(
-      "click",
-      () => {
-        buzz();
-        picker.classList.toggle("hidden");
-      }
-    );
-
-    const heatBadge =
-      document.createElement("span");
-
-    heatBadge.className =
-      "heat-badge";
-
-    heatBadge.textContent =
-      heatRating
-        ? "🔥 " + heatRating
-        : "";
-
-    bar.appendChild(heatBadge);
-
-    if (myIsModerator) {
-      const delBtn =
-        document.createElement("button");
-
-      delBtn.className =
-        "mod-delete-btn";
-
-      delBtn.textContent = "🗑️";
-
-      delBtn.title =
-        "Delete message";
-
-      delBtn.addEventListener(
-        "click",
-        () => {
-          buzz();
-          if (
-            confirm(
-              "Delete this message?"
-            )
-          ) {
-            socket.emit(
-              "moderatorDeleteMessage",
-              { messageId }
-            );
-          }
-        }
-      );
-
-      bar.appendChild(delBtn);
-    }
-
-    renderPills(
-      pillsWrap,
-      counts
-    );
-
-    return bar;
+  function reactionTargetKey(targetType, targetId) {
+    return String(targetType || "text") + ":" + String(targetId);
   }
 
-  function renderPillsOld(
-    pillsWrap,
-    counts
-  ) {
-    pillsWrap.innerHTML = "";
+  function getReactionTargetElement(targetType, targetId) {
+    const selectors = {
+      text: '[data-message-id="' + targetId + '"]',
+      voice: '[data-clip-id="' + targetId + '"]',
+      photo: '[data-photo-id="' + targetId + '"]',
+    };
 
-    REACTIONS.forEach((r) => {
-      const count =
-        counts[r.key] || 0;
-
-      if (count > 0) {
-        const pill =
-          document.createElement("span");
-
-        pill.className =
-          "reaction-pill";
-
-        pill.textContent =
-          r.emoji + " " + count;
-
-        pillsWrap.appendChild(pill);
-      }
-    });
+    const selector = selectors[targetType];
+    return selector ? messagesBox.querySelector(selector) : null;
   }
 
-  socket.on(
-    
-    ({
-      messageId,
-      counts,
-      heatRating,
-    }) => {
-      const msgEl =
-        messagesBox.querySelector(
-          '[data-message-id="' +
-            messageId +
-            '"]'
-        );
+  function reactionTargetLabel(targetType) {
+    if (targetType === "voice") return "voice clip";
+    if (targetType === "photo") return "photo";
+    return "message";
+  }
 
-      if (!msgEl) return;
-
-      const prevCounts =
-        lastKnownCounts[
-          messageId
-        ] || {
-          chilli: 0,
-          heart: 0,
-          laugh: 0,
-          down: 0,
-        };
-
-      REACTIONS.forEach((r) => {
-        if (
-          (counts[r.key] || 0) >
-          (prevCounts[r.key] || 0)
-        ) {
-          spawnFloatingReaction(
-            msgEl,
-            r.emoji
-          );
-        }
-      });
-
-      lastKnownCounts[messageId] =
-        counts;
-
-      const pillsWrap =
-        msgEl.querySelector(
-          ".reaction-pills"
-        );
-
-      if (pillsWrap) {
-        renderPills(
-          pillsWrap,
-          counts
-        );
-      }
-
-      const heatBadge =
-        msgEl.querySelector(
-          ".heat-badge"
-        );
-
-      if (heatBadge) {
-        heatBadge.textContent =
-          heatRating
-            ? "🔥 " + heatRating
-            : "";
-      }
-    }
-  );
-
-    // ---- Reactions (rebuilt) ----
+  function reactionChilliSvg() {
+    return `
+      <svg class="reaction-chilli-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <path class="reaction-chilli-stem"
+          d="M19.4 8.1c.3-3.1 2.2-5.2 5.7-6.1-.7 3.2-2.3 5.6-5 7.2"
+          fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+        <path class="reaction-chilli-body"
+          d="M19.8 7.9c-3.7-1.8-8.3-.8-10.5 2.8-2.5 4.2-.8 9.7 3 12.7 3.6 2.9 8.8 3.2 12.5.5 3.1-2.3 4.9-6 5.1-9.7-2.1 2.2-4.7 3.2-7 2.6-2.5-.7-4-2.8-3.7-5.1.2-1.5 1.1-2.8 2.5-3.7-.6 0-1.3 0-1.9-.1Z"
+          fill="currentColor" />
+        <path class="reaction-chilli-shine"
+          d="M12.2 11.3c-1.3 1.8-1.4 4-.4 5.9"
+          fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="1.4" stroke-linecap="round" />
+      </svg>`;
+  }
 
   let pickerEl = null;
-  let pickerMessageId = null;
+  let pickerTargetType = null;
+  let pickerTargetId = null;
 
   function closePicker() {
     if (pickerEl) pickerEl.classList.add("hidden");
-    pickerMessageId = null;
+    pickerTargetType = null;
+    pickerTargetId = null;
   }
 
   function getPicker() {
@@ -2249,13 +2360,16 @@ highrollersTodayBtn.addEventListener("click", () => {
       b.type = "button";
       b.className = "reaction-pick-btn";
       b.textContent = r.emoji;
+      b.title = "React with " + r.key;
+      b.setAttribute("aria-label", "React with " + r.key);
 
       b.addEventListener("click", function () {
         buzz();
 
-        if (pickerMessageId !== null) {
+        if (pickerTargetType !== null && pickerTargetId !== null) {
           socket.emit("reaction", {
-            messageId: pickerMessageId,
+            targetType: pickerTargetType,
+            targetId: pickerTargetId,
             handle: myHandle,
             reactionType: r.key,
           });
@@ -2271,12 +2385,13 @@ highrollersTodayBtn.addEventListener("click", () => {
     return pickerEl;
   }
 
-  function openPicker(messageId, anchorBtn) {
+  function openPicker(targetType, targetId, anchorEl) {
     const p = getPicker();
-    pickerMessageId = messageId;
+    pickerTargetType = targetType;
+    pickerTargetId = targetId;
     p.classList.remove("hidden");
 
-    const rect = anchorBtn.getBoundingClientRect();
+    const rect = anchorEl.getBoundingClientRect();
     const w = p.offsetWidth;
     const h = p.offsetHeight;
 
@@ -2294,19 +2409,20 @@ highrollersTodayBtn.addEventListener("click", () => {
 
   document.addEventListener("click", function (e) {
     if (
-      e.target.closest(".reaction-add-btn") ||
+      e.target.closest(".reaction-chilli-trigger") ||
       e.target.closest(".reaction-picker-fixed")
     ) {
       return;
     }
+
     closePicker();
   });
 
   messagesBox.addEventListener("scroll", closePicker);
 
-  function burstReaction(msgEl, emoji) {
+  function burstReaction(targetEl, emoji) {
     try {
-      const rect = msgEl.getBoundingClientRect();
+      const rect = targetEl.getBoundingClientRect();
 
       for (let i = 0; i < 3; i++) {
         const el = document.createElement("span");
@@ -2341,9 +2457,11 @@ highrollersTodayBtn.addEventListener("click", () => {
     });
   }
 
-  function buildReactionBar(messageId, counts, heatRating) {
+  function buildReactionBar(targetType, targetId, counts, heatRating) {
     const bar = document.createElement("div");
-    bar.className = "reaction-bar";
+    bar.className = "reaction-bar content-reaction-bar";
+    bar.dataset.reactionTargetType = targetType;
+    bar.dataset.reactionTargetId = targetId;
 
     const pillsWrap = document.createElement("span");
     pillsWrap.className = "reaction-pills";
@@ -2351,22 +2469,29 @@ highrollersTodayBtn.addEventListener("click", () => {
 
     const addBtn = document.createElement("button");
     addBtn.type = "button";
-    addBtn.className = "reaction-add-btn";
-    addBtn.textContent = "🌶️";
-    addBtn.title = "React";
+    addBtn.className = "reaction-chilli-trigger";
+    addBtn.innerHTML = reactionChilliSvg();
+    addBtn.title = "React to this " + reactionTargetLabel(targetType);
+    addBtn.setAttribute(
+      "aria-label",
+      "React to this " + reactionTargetLabel(targetType)
+    );
     bar.appendChild(addBtn);
 
-    addBtn.addEventListener("click", function () {
+    addBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
       buzz();
+      spawnIconRipple(addBtn, e);
 
       if (
         pickerEl &&
         !pickerEl.classList.contains("hidden") &&
-        pickerMessageId === messageId
+        pickerTargetType === targetType &&
+        String(pickerTargetId) === String(targetId)
       ) {
         closePicker();
       } else {
-        openPicker(messageId, addBtn);
+        openPicker(targetType, targetId, addBtn);
       }
     });
 
@@ -2375,7 +2500,9 @@ highrollersTodayBtn.addEventListener("click", () => {
     heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
     bar.appendChild(heatBadge);
 
-    if (myIsModerator) {
+    // Text-message moderation used to live inside the old reaction bar.
+    // Preserve that exact behaviour here; voice/photo already have their own delete buttons.
+    if (myIsModerator && targetType === "text") {
       const delBtn = document.createElement("button");
       delBtn.type = "button";
       delBtn.className = "mod-delete-btn";
@@ -2386,56 +2513,51 @@ highrollersTodayBtn.addEventListener("click", () => {
         buzz();
 
         if (confirm("Delete this message?")) {
-          socket.emit("moderatorDeleteMessage", { messageId: messageId });
+          socket.emit("moderatorDeleteMessage", { messageId: targetId });
         }
       });
 
       bar.appendChild(delBtn);
     }
 
-    renderPills(pillsWrap, counts);
-
+    renderPills(pillsWrap, counts || emptyReactionCounts());
     return bar;
   }
 
   socket.on("reactionUpdate", function (data) {
-    console.log("[reaction] update received for message", data.messageId);
+    const targetType = data.targetType || "text";
+    const targetId =
+      data.targetId !== undefined && data.targetId !== null
+        ? data.targetId
+        : data.messageId;
 
-    const messageId = data.messageId;
-    const counts = data.counts || {};
+    if (targetId === undefined || targetId === null) return;
+
+    const counts = data.counts || emptyReactionCounts();
     const heatRating = data.heatRating;
+    const targetEl = getReactionTargetElement(targetType, targetId);
 
-    const msgEl = messagesBox.querySelector(
-      '[data-message-id="' + messageId + '"]'
-    );
+    if (!targetEl) return;
 
-    if (!msgEl) return;
+    const key = reactionTargetKey(targetType, targetId);
+    const prev = lastKnownCounts[key] || emptyReactionCounts();
+    lastKnownCounts[key] = counts;
 
-    const prev = lastKnownCounts[messageId] || {
-      chilli: 0,
-      heart: 0,
-      laugh: 0,
-      down: 0,
-    };
-
-    lastKnownCounts[messageId] = counts;
-
-    // Numbers first, so they always appear.
-    const pillsWrap = msgEl.querySelector(".reaction-pills");
+    const pillsWrap = targetEl.querySelector(".reaction-pills");
     if (pillsWrap) renderPills(pillsWrap, counts);
 
-    const heatBadge = msgEl.querySelector(".heat-badge");
+    const heatBadge = targetEl.querySelector(".heat-badge");
     if (heatBadge) {
       heatBadge.textContent = heatRating ? "🔥 " + heatRating : "";
     }
 
-    // Animation last, so it can never block the numbers.
     REACTIONS.forEach(function (r) {
       if ((counts[r.key] || 0) > (prev[r.key] || 0)) {
-        burstReaction(msgEl, r.emoji);
+        burstReaction(targetEl, r.emoji);
       }
     });
   });
+
   // ---- Incoming chat messages ----
 
   socket.on(
@@ -2467,8 +2589,7 @@ highrollersTodayBtn.addEventListener("click", () => {
       handleSpan.textContent =
         modTag(data.handle) + data.handle + ":"
 
-      handleSpan.style.color =
-        data.color;
+      applyHandleColor(handleSpan, data.color);
 
       handleSpan.addEventListener(
         "click",
@@ -2518,12 +2639,13 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       const reactionBar =
         buildReactionBar(
+          "text",
           data.id,
           counts,
           data.heatRating || null
         );
 
-      lastKnownCounts[data.id] =
+      lastKnownCounts[reactionTargetKey("text", data.id)] =
         counts;
 
       msgEl.appendChild(
@@ -2777,6 +2899,9 @@ highrollersTodayBtn.addEventListener("click", () => {
       msgEl.dataset.clipId =
         data.id;
 
+      const voiceCounts = data.counts || emptyReactionCounts();
+      lastKnownCounts[reactionTargetKey("voice", data.id)] = voiceCounts;
+
       const playBtn =
         document.createElement("button");
 
@@ -2869,8 +2994,7 @@ audio.preload = "auto";
       handleLine.textContent =
         data.handle;
 
-      handleLine.style.color =
-        data.color;
+      applyHandleColor(handleLine, data.color);
 
       handleLine.style.fontWeight =
         "bold";
@@ -2966,6 +3090,15 @@ audio.preload = "auto";
           delBtn
         );
       }
+
+      msgEl.appendChild(
+        buildReactionBar(
+          "voice",
+          data.id,
+          voiceCounts,
+          data.heatRating || null
+        )
+      );
 
       messagesBox.appendChild(
         msgEl
@@ -3142,12 +3275,17 @@ socket.on(
           data.color
         );
       } else {
+        const photoCounts = data.counts || emptyReactionCounts();
+        lastKnownCounts[reactionTargetKey("photo", data.id)] = photoCounts;
+
         renderActiveThumb(
           msgEl,
           data.handle,
           data.color,
           data.id,
-          data.remainingMs
+          data.remainingMs,
+          photoCounts,
+          data.heatRating || null
         );
 
         startThumbCountdown(
@@ -3183,7 +3321,9 @@ socket.on(
     handle,
     color,
     photoId,
-    remainingMs
+    remainingMs,
+    counts,
+    heatRating
   ) {
     msgEl.innerHTML = "";
     msgEl.classList.remove("expired");
@@ -3198,7 +3338,7 @@ socket.on(
     const handleLine = document.createElement("span");
     handleLine.className = "photo-thumb-handle clickable-handle";
     handleLine.textContent = handle;
-    handleLine.style.color = color;
+    applyHandleColor(handleLine, color);
     handleLine.addEventListener("click", (e) => {
       e.stopPropagation();
       openUserProfile(handle);
@@ -3246,6 +3386,15 @@ socket.on(
       });
       msgEl.appendChild(delBtn);
     }
+
+    msgEl.appendChild(
+      buildReactionBar(
+        "photo",
+        photoId,
+        counts || emptyReactionCounts(),
+        heatRating || null
+      )
+    );
   }
 
   function renderExpiredThumb(
@@ -3290,8 +3439,7 @@ socket.on(
     handleLine.textContent =
       handle;
 
-    handleLine.style.color =
-      color;
+    applyHandleColor(handleLine, color);
 
     const hint =
       document.createElement(
@@ -3380,6 +3528,7 @@ socket.on(
 
   function burnThumb(msgEl, photoId) {
     clearPhotoCountdown(photoId);
+    delete lastKnownCounts[reactionTargetKey("photo", photoId)];
 
     if (
       !msgEl ||
@@ -3818,7 +3967,7 @@ socket.on(
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = "rgba(57, 255, 20, 0.35)";
+    ctx.strokeStyle = themeRgba(0.35);
     ctx.lineWidth = 1;
     const gridSize = 40 * devicePixelRatio;
 
@@ -3847,8 +3996,8 @@ socket.on(
     const maxVisibleRadius = Math.hypot(w, h) * 0.75;
     const MIN_LABEL_GAP_PX = 22 * devicePixelRatio;
 
-    ctx.strokeStyle = "rgba(57, 255, 20, 0.5)";
-    ctx.fillStyle = "rgba(57, 255, 20, 0.6)";
+    ctx.strokeStyle = themeRgba(0.5);
+    ctx.fillStyle = themeRgba(0.6);
     ctx.font = 9 * devicePixelRatio + "px monospace";
     ctx.textAlign = "left";
 
@@ -3869,13 +4018,13 @@ socket.on(
     } 
 
     // Compass marker.
-    ctx.fillStyle = "#39ff14";
+    ctx.fillStyle = themePrimary();
     ctx.font = "bold " + 12 * devicePixelRatio + "px monospace";
     ctx.textAlign = "center";
     ctx.fillText("N", centerX, 16 * devicePixelRatio);
 
     if (myJitteredLat === null && knownLocations.length === 0) {
-      ctx.fillStyle = "#1f7a0d";
+      ctx.fillStyle = themeDim();
       ctx.font = 13 * devicePixelRatio + "px monospace";
       ctx.textAlign = "center";
       ctx.fillText("No locations to show yet.", w / 2, h / 2 + 30 * devicePixelRatio);
@@ -3952,7 +4101,7 @@ socket.on(
 
         // Proximity line from you to them — brighter when closer.
         const alpha = Math.max(0.15, 1 - distanceMiles / 100);
-        ctx.strokeStyle = "rgba(57, 255, 20, " + alpha.toFixed(2) + ")";
+        ctx.strokeStyle = themeRgba(alpha.toFixed(2));
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(centerX, centerY);
@@ -3971,13 +4120,13 @@ socket.on(
 
       ctx.beginPath();
       ctx.arc(px, py, 5 * devicePixelRatio, 0, Math.PI * 2);
-      ctx.fillStyle = loc.color || "#39ff14";
-      ctx.shadowColor = loc.color || "#39ff14";
+      ctx.fillStyle = loc.color || themePrimary();
+      ctx.shadowColor = loc.color || themePrimary();
       ctx.shadowBlur = 8 * devicePixelRatio;
       ctx.fill();
       ctx.shadowBlur = 0;
 
-            ctx.fillStyle = "#39ff14";
+            ctx.fillStyle = themePrimary();
       ctx.font = 11 * devicePixelRatio + "px monospace";
       ctx.textAlign = "center";
       ctx.fillText(loc.handle, px, py - 10 * devicePixelRatio);
