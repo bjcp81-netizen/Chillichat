@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Lexend:wght@400;700&family=IBM+Plex+Sans:wght@400;700&family=Fira+Sans:wght@400;700&family=Mulish:wght@400;700&family=Figtree:wght@400;700&family=Merriweather:wght@400;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Aldrich&family=Audiowide&family=Chakra+Petch:wght@400;700&family=Electrolize&family=Geo&family=Michroma&family=Orbitron:wght@400;700&family=Oxanium:wght@400;700&family=Pixelify+Sans:wght@400;700&family=Press+Start+2P&family=Quantico:wght@400;700&family=Russo+One&family=Share+Tech+Mono&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Kode+Mono:wght@400;700&family=Nova+Mono&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-               <link rel="stylesheet" href="style.css?v=1201" />
+               <link rel="stylesheet" href="style.css?v=1208" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -382,6 +382,34 @@
           <span>Location Sharing (~10mi accuracy)</span>
           <input type="checkbox" id="location-toggle" class="switch-checkbox" />
         </label>
+        <div class="options-row options-row-column profile-photo-options-row">
+          <span>Profile Picture</span>
+          <div id="profile-photo-controls" class="profile-photo-controls">
+            <button
+              type="button"
+              id="profile-photo-upload-btn"
+              class="profile-photo-control-btn profile-action-btn"
+            >
+              Upload Profile Picture
+            </button>
+            <button
+              type="button"
+              id="profile-photo-remove-btn"
+              class="profile-photo-control-btn profile-action-btn hidden"
+            >
+              Remove Profile Picture
+            </button>
+            <input
+              type="file"
+              id="profile-photo-input"
+              class="hidden"
+              accept="image/jpeg,image/png,image/webp"
+            />
+          </div>
+          <p id="profile-photo-status" class="profile-photo-status options-profile-photo-status" aria-live="polite"></p>
+          <span class="profile-photo-options-hint">Images are rebuilt as a private 480 × 480 JPEG before upload.</span>
+        </div>
+
         <div class="options-row options-row-column">
           <span>My Bio (age, location, motto — max 150 chars)</span>
           <textarea id="bio-input" class="bio-textarea" maxlength="150" placeholder="e.g. 28, London. 'Bring the heat.'"></textarea>
@@ -395,10 +423,61 @@
     </div>
 
     <div id="highrollers-dropdown" class="users-dropdown">
-      <div class="highrollers-tabs">
-        <button id="highrollers-today-btn" class="highrollers-tab active">Today</button>
-        <button id="highrollers-week-btn" class="highrollers-tab">This Week</button>
-        <button id="highrollers-users-btn" class="highrollers-tab">🏆 Top Users</button>
+      <div class="highrollers-tabs highrollers-hd-tabs" role="tablist" aria-label="Highrollers leaderboard views">
+        <button
+          type="button"
+          id="highrollers-today-btn"
+          class="highrollers-tab highrollers-hd-tab active"
+          role="tab"
+          aria-selected="true"
+          title="Today"
+        >
+          <svg class="highrollers-tab-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="16" cy="16" r="10.5"/>
+            <circle cx="16" cy="16" r="1.5" fill="currentColor" stroke="none"/>
+            <path d="M16 8.5v7.5l5 3"/>
+            <path d="M16 3v2.2M16 26.8V29M3 16h2.2M26.8 16H29" opacity="0.55"/>
+            <path d="M7.1 7.1l1.6 1.6M23.3 23.3l1.6 1.6M24.9 7.1l-1.6 1.6M8.7 23.3l-1.6 1.6" opacity="0.4"/>
+          </svg>
+          <span class="highrollers-tab-label">Today</span>
+          <span class="highrollers-tab-beam" aria-hidden="true"></span>
+        </button>
+
+        <button
+          type="button"
+          id="highrollers-week-btn"
+          class="highrollers-tab highrollers-hd-tab"
+          role="tab"
+          aria-selected="false"
+          title="This Week"
+        >
+          <svg class="highrollers-tab-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5" y="7.5" width="22" height="19" rx="2.5"/>
+            <path d="M5 12.5h22M10 4v6M22 4v6"/>
+            <path d="M9.5 16h3M14.5 16h3M19.5 16h3M9.5 20.5h3M14.5 20.5h3M19.5 20.5h3" opacity="0.7"/>
+            <path d="M9.5 24h3M14.5 24h3" opacity="0.45"/>
+          </svg>
+          <span class="highrollers-tab-label">This Week</span>
+          <span class="highrollers-tab-beam" aria-hidden="true"></span>
+        </button>
+
+        <button
+          type="button"
+          id="highrollers-users-btn"
+          class="highrollers-tab highrollers-hd-tab"
+          role="tab"
+          aria-selected="false"
+          title="Top Users"
+        >
+          <svg class="highrollers-tab-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10 5h12v5.5c0 4-2.3 7-6 7s-6-3-6-7z"/>
+            <path d="M10 8H6.5v2.5c0 3 1.6 5 4.6 5.5M22 8h3.5v2.5c0 3-1.6 5-4.6 5.5" opacity="0.7"/>
+            <path d="M16 17.5v5M11.5 27h9M13 22.5h6"/>
+            <path d="m16 8 1.2 2.4 2.7.4-2 1.9.5 2.7-2.4-1.3-2.4 1.3.5-2.7-2-1.9 2.7-.4z" opacity="0.8"/>
+          </svg>
+          <span class="highrollers-tab-label">Top Users</span>
+          <span class="highrollers-tab-beam" aria-hidden="true"></span>
+        </button>
       </div>
       <ol id="highrollers-list" class="highrollers-list"></ol>
       <ol id="user-leaderboard-list" class="highrollers-list hidden"></ol>
@@ -463,38 +542,183 @@
         </div>
     </div>
   </div>
-<div id="profile-overlay" class="photo-viewer-overlay hidden">
-    <div class="profile-panel">
-      <button id="profile-close-btn" class="cancel-recording-btn profile-close-btn">✕</button>
-      <h2 id="profile-handle" class="profile-handle"></h2>
-      <p id="profile-rank" class="profile-rank"></p>
-      <p id="profile-bio" class="profile-bio"></p>
-      <div id="profile-reactions" class="profile-reactions"></div>
-      <p class="profile-badges-title">Badges</p>
-      <div id="profile-badges-grid" class="profile-badges-grid"></div>
-    </div>
+<div id="profile-overlay" class="photo-viewer-overlay profile-overlay hidden">
+    <section class="profile-panel" role="dialog" aria-modal="true" aria-labelledby="profile-handle">
+      <button
+        type="button"
+        id="profile-close-btn"
+        class="profile-close-btn profile-action-btn"
+        title="Close profile"
+        aria-label="Close profile"
+      >
+        <svg class="profile-close-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="16" cy="16" r="12" opacity="0.35"></circle>
+          <path d="M11 11l10 10M21 11 11 21"></path>
+        </svg>
+      </button>
+
+      <div class="profile-summary">
+        <div class="profile-avatar-column">
+          <div id="profile-avatar" class="profile-avatar-large" aria-label="Profile picture"></div>
+
+        </div>
+
+        <div class="profile-identity">
+          <h2 id="profile-handle" class="profile-handle"></h2>
+          <p id="profile-rank" class="profile-rank"></p>
+          <div id="profile-reactions" class="profile-reactions"></div>
+        </div>
+      </div>
+
+      <section class="profile-bio-section" aria-label="User bio">
+        <div class="profile-section-heading">BIO</div>
+        <p id="profile-bio" class="profile-bio"></p>
+      </section>
+
+      <section class="profile-badges-section" aria-label="Achievement badges">
+        <div class="profile-badges-heading-row">
+          <span class="profile-section-heading">ACHIEVEMENTS</span>
+          <span id="profile-badge-count" class="profile-badge-count"></span>
+        </div>
+
+        <div id="profile-badge-detail" class="profile-badge-detail hidden" aria-live="polite">
+          <div id="profile-badge-detail-name" class="profile-badge-detail-name"></div>
+          <div id="profile-badge-detail-status" class="profile-badge-detail-status"></div>
+          <button
+            type="button"
+            id="profile-badge-equip-btn"
+            class="profile-badge-equip-btn profile-action-btn hidden"
+          >
+            Equip badge
+          </button>
+        </div>
+
+        <div class="profile-badges-scroll">
+          <div id="profile-badges-grid" class="profile-badges-grid"></div>
+        </div>
+      </section>
+    </section>
   </div>
  <div id="map-overlay" class="photo-viewer-overlay hidden">
     <div class="map-panel">
-       <div class="map-header">
-        <span>LOCATION RADAR</span>
-        <button id="map-close-btn" class="cancel-recording-btn">✕</button>
+      <div class="map-header">
+        <span>GLOBAL LOCATION RADAR</span>
+        <button id="map-close-btn" class="cancel-recording-btn" aria-label="Close map">✕</button>
       </div>
+
       <div class="map-toolbar">
-        <div id="map-weather-hud" class="map-weather-hud">YOUR AREA: —</div>
-        <label class="map-flights-toggle">
-          <input type="checkbox" id="flights-toggle" checked />
-          <span>✈ Flights</span>
-        </label>
+        <div id="map-weather-hud" class="map-weather-hud">HOME DATA: —</div>
       </div>
+
+      <div class="map-layer-controls" aria-label="Radar live data layers">
+        <label class="map-layer-toggle" title="Live regional aircraft via OpenSky">
+          <input type="checkbox" id="flights-toggle" checked />
+          <span>✈ FLIGHTS</span>
+        </label>
+        <label class="map-layer-toggle" title="Named local points of interest near your shared location via OpenStreetMap">
+          <input type="checkbox" id="pois-toggle" checked />
+          <span>◆ PLACES</span>
+        </label>
+        <label class="map-layer-toggle" title="Magnitude 2.5+ earthquakes from the last day via USGS">
+          <input type="checkbox" id="earthquakes-toggle" checked />
+          <span>◉ QUAKES</span>
+        </label>
+        <span id="map-data-status" class="map-data-status">LOADING MAP DATA…</span>
+      </div>
+
+      <div class="map-region-controls" aria-label="Radar map shortcuts">
+        <button type="button" id="map-home-btn" class="map-region-btn map-home-btn active" aria-label="Home view" aria-pressed="true">
+          <svg class="map-region-icon map-home-icon" viewBox="0 0 48 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 17 24 5l16 12"/>
+            <path d="M12 15v12h24V15"/>
+            <path d="M20 27v-8h8v8"/>
+            <circle cx="24" cy="13" r="2.4" fill="currentColor" stroke="none"/>
+          </svg>
+          <span class="map-region-label">HOME</span>
+        </button>
+
+        <button type="button" id="map-fit-btn" class="map-region-btn" aria-label="Fit all users" aria-pressed="false">
+          <svg class="map-region-icon map-users-icon" viewBox="0 0 48 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="18" cy="12" r="5"/>
+            <circle cx="32" cy="14" r="4"/>
+            <path d="M7 28c.8-7 4.6-10.5 11-10.5S28.2 21 29 28"/>
+            <path d="M28 20c1.4-1.2 3-1.8 5-1.8 5 0 7.5 3.2 8 8.8"/>
+          </svg>
+          <span class="map-region-label">FIT USERS</span>
+        </button>
+
+        <button type="button" class="map-region-btn" data-map-region="uk" aria-label="United Kingdom view" aria-pressed="false">
+          <svg class="map-flag-icon" viewBox="0 0 60 36" aria-hidden="true">
+            <rect width="60" height="36" rx="2" fill="#012169"/>
+            <path d="M0 0 60 36M60 0 0 36" stroke="#fff" stroke-width="8"/>
+            <path d="M0 0 60 36M60 0 0 36" stroke="#C8102E" stroke-width="4"/>
+            <path d="M30 0v36M0 18h60" stroke="#fff" stroke-width="12"/>
+            <path d="M30 0v36M0 18h60" stroke="#C8102E" stroke-width="7"/>
+          </svg>
+          <span class="map-region-label">UK</span>
+        </button>
+
+        <button type="button" class="map-region-btn" data-map-region="usa" aria-label="United States view" aria-pressed="false">
+          <svg class="map-flag-icon" viewBox="0 0 60 36" aria-hidden="true">
+            <rect width="60" height="36" rx="2" fill="#fff"/>
+            <g fill="#B22234">
+              <rect y="0" width="60" height="3"/>
+              <rect y="6" width="60" height="3"/>
+              <rect y="12" width="60" height="3"/>
+              <rect y="18" width="60" height="3"/>
+              <rect y="24" width="60" height="3"/>
+              <rect y="30" width="60" height="3"/>
+            </g>
+            <rect width="26" height="19" fill="#3C3B6E"/>
+            <g fill="#fff">
+              <circle cx="4" cy="4" r="1"/><circle cx="10" cy="4" r="1"/><circle cx="16" cy="4" r="1"/><circle cx="22" cy="4" r="1"/>
+              <circle cx="7" cy="9" r="1"/><circle cx="13" cy="9" r="1"/><circle cx="19" cy="9" r="1"/>
+              <circle cx="4" cy="14" r="1"/><circle cx="10" cy="14" r="1"/><circle cx="16" cy="14" r="1"/><circle cx="22" cy="14" r="1"/>
+            </g>
+          </svg>
+          <span class="map-region-label">USA</span>
+        </button>
+
+        <button type="button" class="map-region-btn" data-map-region="canada" aria-label="Canada view" aria-pressed="false">
+          <svg class="map-flag-icon" viewBox="0 0 60 36" aria-hidden="true">
+            <rect width="60" height="36" rx="2" fill="#fff"/>
+            <rect width="13" height="36" fill="#D80621"/>
+            <rect x="47" width="13" height="36" fill="#D80621"/>
+            <path d="M30 7l2.2 5 4.7-2.2-1.4 5.2 5 1.3-4.4 3.2 2.7 4.1-6.3-.9L30 30l-2.5-7.3-6.3.9 2.7-4.1-4.4-3.2 5-1.3-1.4-5.2 4.7 2.2z" fill="#D80621"/>
+          </svg>
+          <span class="map-region-label">CANADA</span>
+        </button>
+
+        <button type="button" class="map-region-btn" data-map-region="australia" aria-label="Australia view" aria-pressed="false">
+          <svg class="map-flag-icon" viewBox="0 0 60 36" aria-hidden="true">
+            <rect width="60" height="36" rx="2" fill="#012169"/>
+            <g transform="scale(.48)">
+              <path d="M0 0 60 36M60 0 0 36" stroke="#fff" stroke-width="8"/>
+              <path d="M0 0 60 36M60 0 0 36" stroke="#C8102E" stroke-width="4"/>
+              <path d="M30 0v36M0 18h60" stroke="#fff" stroke-width="12"/>
+              <path d="M30 0v36M0 18h60" stroke="#C8102E" stroke-width="7"/>
+            </g>
+            <g fill="#fff">
+              <circle cx="44" cy="8" r="2"/><circle cx="50" cy="17" r="1.6"/><circle cx="42" cy="24" r="1.6"/><circle cx="53" cy="28" r="1.4"/><circle cx="31" cy="27" r="2.3"/>
+            </g>
+          </svg>
+          <span class="map-region-label">AUSTRALIA</span>
+        </button>
+      </div>
+
       <canvas id="map-canvas" class="map-canvas"></canvas>
-            <div class="map-legend">
+
+      <div class="map-legend">
         <span>🟢 USER</span>
         <span>🟡 YOU</span>
         <span>🔵 AIRCRAFT</span>
+        <span>🟣 POI</span>
+        <span>🟠 QUAKE</span>
         <span>🔷 CITY</span>
       </div>
-      <div class="map-hint">Scroll/pinch to zoom · drag to pan · ~10mi accuracy · weather + air quality via Open-Meteo · flights via OpenSky · UK outline is approximate</div>
+
+      <div class="map-hint">HOME centres on your own approximate location · country flag buttons jump to national views · FIT USERS shows everyone · scroll/pinch to zoom · drag to pan · locations remain ~10mi approximate</div>
+      <div class="map-source-line">Weather/AQI: Open-Meteo · Flights: OpenSky · Places: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> · Earthquakes: USGS</div>
     </div>
   </div>
 
@@ -517,6 +741,6 @@
   <audio id="icon-highroller-sound" src="B42strt.ogg" preload="auto"></audio>
   <script src="/socket.io/socket.io.js"></script>
       <script src="voice.js?v=1"></script>
-              <script src="app.js?v=1201"></script>
+              <script src="app.js?v=1208"></script>
 </body>
 </html>

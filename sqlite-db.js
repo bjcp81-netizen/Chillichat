@@ -56,6 +56,11 @@ function convertSql(sql, params = []) {
     "COALESCE(SUM(CASE WHEN reaction = 'down' THEN 1 ELSE 0 END), 0)"
   );
 
+  converted = converted.replace(
+    /COUNT\(\*\)\s+FILTER\s*\(\s*WHERE\s+reaction\s*=\s*'poo'\s*\)/gi,
+    "COALESCE(SUM(CASE WHEN reaction = 'poo' THEN 1 ELSE 0 END), 0)"
+  );
+
   // PostgreSQL GREATEST -> SQLite MAX
   converted = converted.replace(
     /\bGREATEST\s*\(/gi,

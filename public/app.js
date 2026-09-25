@@ -11,34 +11,186 @@ document.addEventListener("DOMContentLoaded", function () {
   const WHEEL_ITEM_HEIGHT = 32;
 
   const REACTIONS = [
-    { key: "chilli", emoji: "🌶️" },
-    { key: "heart", emoji: "❤️" },
-    { key: "laugh", emoji: "😂" },
-    { key: "down", emoji: "👎" },
+    { key: "chilli", emoji: "🌶️", label: "Chilli" },
+    { key: "heart", emoji: "❤️", label: "Loveheart" },
+    { key: "laugh", emoji: "😂", label: "Laugh" },
+    { key: "down", emoji: "👎", label: "Thumbs down" },
+    { key: "poo", emoji: "💩", label: "Jobbies" },
   ];
 
   const lastKnownCounts = {};
 
+  // Profile photos are cached client-side by handle so live messages do not
+  // need to resend the same image on every Socket.IO event.
+  const profilePhotoByHandle = Object.create(null);
+
+  function profileInitial(handle) {
+    const chars = Array.from(String(handle || "?").trim());
+    return (chars[0] || "?").toUpperCase();
+  }
+
+  function rememberProfilePhoto(handle, profilePhoto) {
+    if (!handle) return;
+    profilePhotoByHandle[handle] = profilePhoto || "";
+  }
+
+  function applyProfileAvatar(el, handle, profilePhoto) {
+    if (!el) return;
+
+    const safeHandle = String(handle || "");
+    const photo =
+      profilePhoto !== undefined
+        ? profilePhoto
+        : profilePhotoByHandle[safeHandle] || "";
+
+    const isThumbnail = el.classList.contains("profile-avatar-thumb");
+
+    el.dataset.profileAvatarHandle = safeHandle;
+
+    if (photo) {
+      el.classList.add("has-photo");
+      el.classList.remove("avatar-empty");
+      el.style.backgroundImage = 'url("' + photo + '")';
+      el.textContent = "";
+    } else {
+      el.classList.remove("has-photo");
+      el.style.backgroundImage = "";
+
+      if (isThumbnail) {
+        // Chat/user-list thumbnails are photo-only. The handle itself already
+        // opens the profile, so do not create a second letter-in-a-circle button.
+        el.classList.add("avatar-empty");
+        el.textContent = "";
+      } else {
+        // The large avatar inside the profile may still use the user's initial
+        // when they have not chosen a profile picture.
+        el.classList.remove("avatar-empty");
+        el.textContent = profileInitial(safeHandle);
+      }
+    }
+  }
+
+  function createProfileAvatar(handle, profilePhoto, extraClass) {
+    // Thumbnails are decorative only. The coloured handle remains the single
+    // clear click target for opening profiles. Keeping an empty span lets a
+    // newly uploaded photo appear live without rebuilding every message row.
+    const el = document.createElement("span");
+
+    el.className =
+      "profile-avatar-thumb" +
+      (extraClass ? " " + extraClass : "");
+
+    el.setAttribute("aria-hidden", "true");
+    applyProfileAvatar(el, handle, profilePhoto);
+
+    return el;
+  }
+
+  function refreshProfileAvatars(handle, profilePhoto) {
+    rememberProfilePhoto(handle, profilePhoto);
+
+    document
+      .querySelectorAll("[data-profile-avatar-handle]")
+      .forEach((el) => {
+        if (el.dataset.profileAvatarHandle === String(handle || "")) {
+          applyProfileAvatar(el, handle, profilePhoto);
+        }
+      });
+  }
+
   const BADGE_DEFS_CLIENT = {
-    fresh_face: { emoji: "🌱", name: "Fresh Face" },
-    ice_breaker: { emoji: "💬", name: "Ice Breaker" },
-    first_burn: { emoji: "🌶️", name: "First Burn" },
-    well_liked: { emoji: "❤️", name: "Well Liked" },
-    crowd_pleaser: { emoji: "😂", name: "Crowd Pleaser" },
-    spice_merchant: { emoji: "🌶️", name: "Spice Merchant" },
-    friendly_flame: { emoji: "🤝", name: "Friendly Flame" },
-    top_banter: { emoji: "💡", name: "Top Banter" },
-    fire_extinguisher: { emoji: "🧯", name: "Fire Extinguisher" },
-    melted_keyboard: { emoji: "🫠", name: "Melted Keyboard" },
-    meme_machine: { emoji: "🤣", name: "Meme Machine" },
-    heartbreaker: { emoji: "❤️", name: "Heartbreaker" },
-    spice_lord: { emoji: "🌶️", name: "Spice Lord" },
-    pepper_royalty: { emoji: "👑", name: "Pepper Royalty" },
-    beta_tester: { emoji: "🚀", name: "Beta Tester" },
-    lightning_fingers: { emoji: "⚡", name: "Lightning Fingers" },
-    streak_7: { emoji: "🔥", name: "7-Day Streak" },
-    streak_30: { emoji: "🌋", name: "30-Day Streak" },
-    streak_100: { emoji: "☄️", name: "100-Day Streak" },
+    fresh_face: { emoji: "🌱", name: "Fresh Face", description: "Create your ChilliChat identity." },
+    ice_breaker: { emoji: "💬", name: "Ice Breaker", description: "Send your first text message." },
+    first_burn: { emoji: "🌶️", name: "First Burn", description: "Receive your first reaction." },
+    well_liked: { emoji: "❤️", name: "Well Liked", description: "Receive 25 Loveheart reactions." },
+    crowd_pleaser: { emoji: "😂", name: "Crowd Pleaser", description: "Receive 50 Laugh reactions." },
+    spice_merchant: { emoji: "🌶️", name: "Spice Merchant", description: "Receive 100 Chilli reactions." },
+    friendly_flame: { emoji: "🤝", name: "Friendly Flame", description: "Receive 100 positive reactions." },
+    top_banter: { emoji: "💡", name: "Top Banter", description: "Receive 500 reactions of any kind." },
+    fire_extinguisher: { emoji: "🧯", name: "Fire Extinguisher", description: "Receive 100 Thumbs Down reactions." },
+    melted_keyboard: { emoji: "🫠", name: "Melted Keyboard", description: "Send 1,000 text messages." },
+    meme_machine: { emoji: "🤣", name: "Meme Machine", description: "Receive 250 Laugh reactions." },
+    heartbreaker: { emoji: "❤️", name: "Heartbreaker", description: "Receive 500 Loveheart reactions." },
+    spice_lord: { emoji: "🌶️", name: "Spice Lord", description: "Reach 1,000,000 Scoville." },
+    pepper_royalty: { emoji: "👑", name: "Pepper Royalty", description: "Reach 2,200,000 Scoville." },
+    beta_tester: { emoji: "🚀", name: "Beta Tester", description: "Be part of ChilliChat's early testing era." },
+    lightning_fingers: { emoji: "⚡", name: "Lightning Fingers", description: "Send 100 messages without going idle." },
+    streak_7: { emoji: "🔥", name: "7-Day Streak", description: "Keep a 7-day ChilliChat activity streak." },
+    streak_30: { emoji: "🌋", name: "30-Day Streak", description: "Keep a 30-day ChilliChat activity streak." },
+    streak_100: { emoji: "☄️", name: "100-Day Streak", description: "Keep a 100-day ChilliChat activity streak." },
+
+    // Achievement Expansion Pack
+    first_words: { emoji: "👋", name: "First Words", description: "Send 10 text messages." },
+    chatty_bastard: { emoji: "🗣️", name: "Chatty Bastard", description: "Send 250 text messages." },
+    professional_gobshite: { emoji: "📣", name: "Professional Gobshite", description: "Send 2,500 text messages." },
+    veteran: { emoji: "🎖️", name: "Veteran", description: "Send 5,000 text messages." },
+    getting_spicy: { emoji: "🌶️", name: "Getting Spicy", description: "Receive 25 Chilli reactions." },
+    human_hot_sauce: { emoji: "🔥", name: "Human Hot Sauce", description: "Receive 500 Chilli reactions." },
+    love_machine: { emoji: "💘", name: "Love Machine", description: "Receive 100 Loveheart reactions." },
+    heart_collector: { emoji: "💝", name: "Heart Collector", description: "Receive 1,000 Loveheart reactions." },
+    comedy_gold: { emoji: "🥇", name: "Comedy Gold", description: "Receive 100 Laugh reactions." },
+    class_clown: { emoji: "🤡", name: "Class Clown", description: "Receive 1,000 Laugh reactions." },
+    jobbie_magnet: { emoji: "💩", name: "Jobbie Magnet", description: "Receive 25 Jobbies." },
+    public_toilet: { emoji: "🚽", name: "Public Toilet", description: "Receive 100 Jobbies. Somehow this is an achievement." },
+    controversial: { emoji: "⚠️", name: "Controversial", description: "Receive 50 Thumbs Down reactions." },
+    good_egg: { emoji: "🥚", name: "Good Egg", description: "Receive 250 positive reactions." },
+    full_spectrum: { emoji: "🌈", name: "Full Spectrum", description: "Receive at least one of all five reaction types." },
+    sweet_and_sour: { emoji: "🌶️💩", name: "Sweet & Sour", description: "Receive 100 Chillis and 100 Jobbies." },
+    match_lighter: { emoji: "🔥", name: "Match Lighter", description: "Have 25 reactions active across other users' content." },
+    serial_reactor: { emoji: "🎯", name: "Serial Reactor", description: "Have 250 reactions active across other users' content." },
+    shutterbug: { emoji: "📸", name: "Shutterbug", description: "Send 25 photos." },
+    open_mic: { emoji: "🎙️", name: "Open Mic", description: "Send 25 voice clips after this achievement system is installed." },
+    radio_chatter: { emoji: "📻", name: "Radio Chatter", description: "Send 250 voice clips after this achievement system is installed." },
+    regular: { emoji: "📆", name: "Regular", description: "Post text messages on 30 different days." },
+    still_burning: { emoji: "🔥", name: "Still Burning", description: "Reach a 14-day activity streak." },
+    unstoppable: { emoji: "🌋", name: "Unstoppable", description: "Reach a 60-day activity streak." },
+    high_roller: { emoji: "🎰", name: "High Roller", description: "Reach the Scoville Top 20." },
+    podium_finish: { emoji: "🥉", name: "Podium Finish", description: "Reach the Scoville Top 3." },
+    king_of_hill: { emoji: "👑", name: "King of the Hill", description: "Reach #1 on the Scoville leaderboard." },
+    nuclear_take: { emoji: "☢️", name: "Nuclear Take", description: "Have one piece of content reach a Heat rating of 95 or more." },
+    agent_of_chaos: { emoji: "🧨", name: "Agent of Chaos", description: "Get all five reaction types on the same piece of content." },
+
+    // Achievement Expansion v2 — Legendary & Unhinged long-game badges
+    terminally_online: { emoji: "🧠", name: "Terminally Online", rarity: "rare", description: "Send 10,000 text messages. The logout button is becoming concerned." },
+    will_you_shut_up: { emoji: "📢", name: "Will You Shut The Fuck Up", rarity: "epic", description: "Send 25,000 text messages. An extraordinary commitment to not shutting up." },
+    industrial_gobshite: { emoji: "🏭", name: "Industrial Gobshite", rarity: "unhinged", description: "Send 50,000 text messages. Gobshite production has reached industrial scale." },
+    capsaicin_addict: { emoji: "🌶️", name: "Capsaicin Addict", rarity: "rare", description: "Receive 2,500 Chilli reactions." },
+    walking_heartburn: { emoji: "🔥", name: "Walking Heartburn", rarity: "legendary", description: "Receive 10,000 Chilli reactions. Antacids sold separately." },
+    dangerously_likeable: { emoji: "💖", name: "Dangerously Likeable", rarity: "legendary", description: "Receive 5,000 Loveheart reactions." },
+    comedy_weapon: { emoji: "😂", name: "Comedy Weapon", rarity: "legendary", description: "Receive 5,000 Laugh reactions." },
+    shit_magnet: { emoji: "💩", name: "Shit Magnet", rarity: "rare", description: "Receive 500 Jobbies. They have started following you home." },
+    lord_of_bog: { emoji: "🚽", name: "Lord of the Bog", rarity: "epic", description: "Receive 2,500 Jobbies. The porcelain throne is yours." },
+    beyond_saving: { emoji: "🧻", name: "Beyond Saving", rarity: "unhinged", description: "Receive 5,000 Jobbies. No amount of toilet roll can fix this." },
+    public_enemy: { emoji: "🚨", name: "Public Enemy", rarity: "epic", description: "Receive 1,000 Thumbs Down reactions." },
+    marmite: { emoji: "🥪", name: "Marmite", rarity: "epic", description: "Receive at least 1,000 positive and 1,000 negative reactions. Loved and hated in equal measure." },
+    reaction_completionist: { emoji: "🌈", name: "Reaction Completionist", rarity: "legendary", description: "Receive at least 1,000 of every ChilliChat reaction type." },
+    scoville_overlord: { emoji: "🌋", name: "Scoville Overlord", rarity: "legendary", description: "Reach 5,000,000 Scoville." },
+    thermonuclear: { emoji: "☢️", name: "Thermonuclear", rarity: "unhinged", description: "Reach 10,000,000 Scoville. The scale has filed a complaint." },
+    wont_shut_up_either: { emoji: "🎙️", name: "Won't Shut Up Either", rarity: "epic", description: "Send 1,000 voice clips after lifetime voice counting was introduced." },
+    human_radio_station: { emoji: "📡", name: "Human Radio Station", rarity: "unhinged", description: "Send 5,000 voice clips after lifetime voice counting was introduced." },
+    david_baileys_evil_twin: { emoji: "📸", name: "David Bailey's Evil Twin", rarity: "epic", description: "Send 1,000 disappearing photos." },
+    furniture_now: { emoji: "🛋️", name: "Furniture Now", rarity: "rare", description: "Post text messages on 180 different days. You are part of the fixtures." },
+    basically_lives_here: { emoji: "🏠", name: "Basically Lives Here", rarity: "legendary", description: "Post text messages on 365 different days." },
+    send_help: { emoji: "🆘", name: "Send Help", rarity: "epic", description: "Reach a 180-day activity streak." },
+    touch_grass_immediately: { emoji: "🌱", name: "Touch Grass Immediately", rarity: "unhinged", description: "Reach a 365-day activity streak. Somebody open a fucking window." },
+    what_is_outside: { emoji: "🌳", name: "What Is Outside?", rarity: "unhinged", description: "Reach a 500-day activity streak. Outside remains unverified." },
+    old_furniture: { emoji: "🪑", name: "Old Furniture", rarity: "rare", description: "Keep the same ChilliChat identity for one year." },
+    ancient_relic: { emoji: "🦖", name: "Ancient Relic", rarity: "legendary", description: "Keep the same ChilliChat identity for two years." },
+    reaction_chemist: { emoji: "🧪", name: "Reaction Chemist", rarity: "epic", description: "Have 5,000 reactions active across other users' content." },
+    button_masher: { emoji: "🖱️", name: "Button Masher", rarity: "unhinged", description: "Have 10,000 reactions active across other users' content. Your mouse deserves compensation." },
+    everybody_knows_this_bastard: { emoji: "🤝", name: "Everybody Knows This Bastard", rarity: "legendary", description: "React to content from 100 different ChilliChat handles." },
+    comment_section_warlord: { emoji: "⚔️", name: "Comment Section Warlord", rarity: "epic", description: "Get 100 total reactions on one piece of content." },
+    mutually_assured_destruction: { emoji: "💣", name: "Mutually Assured Destruction", rarity: "unhinged", description: "Get at least 25 of every reaction type on one piece of content." },
+    chernobyl_take: { emoji: "☣️", name: "Chernobyl Take", rarity: "legendary", description: "Reach Heat 100 with at least 50 total reactions on one piece of content." },
+    untouchable: { emoji: "👑", name: "Untouchable", rarity: "legendary", description: "Reach #1 on the Scoville leaderboard on 7 separate calendar days." },
+    king_kong_of_chillichat: { emoji: "🦍", name: "King Kong of ChilliChat", rarity: "unhinged", description: "Reach #1 on the Scoville leaderboard on 30 separate calendar days." },
+    reputation_funeral: { emoji: "🪦", name: "Reputation Funeral", rarity: "epic", description: "Fall to -1,000 Scoville or worse after reputation-history tracking begins." },
+    somehow_still_here: { emoji: "🧟", name: "Somehow Still Here", rarity: "epic", description: "After reaching -1,000 Scoville or worse, claw your way back to zero or above." },
+    keyboard_warranty_void: { emoji: "⌨️", name: "Keyboard Warranty Void", rarity: "legendary", description: "Send 1,000 text messages without going idle." },
+    absolute_weapon: { emoji: "💀", name: "Absolute Weapon", rarity: "rare", description: "Unlock 40 achievements." },
+    badge_goblin: { emoji: "🏅", name: "Badge Goblin", rarity: "epic", description: "Unlock 55 achievements. You are now checking this screen far too often." },
+    achievement_dragon: { emoji: "🐉", name: "Achievement Dragon", rarity: "legendary", description: "Unlock 70 achievements and sit on the collection like treasure." },
+    nothing_left_for_you: { emoji: "🌌", name: "There Is Nothing Left For You", rarity: "unhinged", description: "Unlock every non-collection achievement currently in ChilliChat. You absolute lunatic." },
   };
 
  const FONT_MAP = {
@@ -390,6 +542,17 @@ document.addEventListener("DOMContentLoaded", function () {
   const profileReactions = document.getElementById("profile-reactions");
   const profileBio = document.getElementById("profile-bio");
   const profileBadgesGrid = document.getElementById("profile-badges-grid");
+  const profileBadgeCount = document.getElementById("profile-badge-count");
+  const profileBadgeDetail = document.getElementById("profile-badge-detail");
+  const profileBadgeDetailName = document.getElementById("profile-badge-detail-name");
+  const profileBadgeDetailStatus = document.getElementById("profile-badge-detail-status");
+  const profileBadgeEquipBtn = document.getElementById("profile-badge-equip-btn");
+  const profileAvatar = document.getElementById("profile-avatar");
+  const profilePhotoControls = document.getElementById("profile-photo-controls");
+  const profilePhotoUploadBtn = document.getElementById("profile-photo-upload-btn");
+  const profilePhotoRemoveBtn = document.getElementById("profile-photo-remove-btn");
+  const profilePhotoInput = document.getElementById("profile-photo-input");
+  const profilePhotoStatus = document.getElementById("profile-photo-status");
 
   const optionsToggleBtn = document.getElementById("options-toggle-btn");
   const optionsDropdown = document.getElementById("options-dropdown");
@@ -668,11 +831,41 @@ const FONT_LABELS = {
     notificationsToggle.checked = notificationsEnabled;
   }
 
-   optionsToggleBtn.addEventListener("click", (e) => {
+   function closePrimaryUiPanels(except) {
+    if (except !== "options") {
+      optionsDropdown.classList.remove("open");
+    }
+
+    if (except !== "users") {
+      usersDropdown.classList.remove("open");
+    }
+
+    if (except !== "highrollers") {
+      highrollersDropdown.classList.remove("open");
+    }
+
+    if (except !== "map") {
+      const liveMapOverlay = document.getElementById("map-overlay");
+      if (liveMapOverlay) {
+        liveMapOverlay.classList.add("hidden");
+      }
+    }
+  }
+
+  optionsToggleBtn.addEventListener("click", (e) => {
     buzz();
     playSound(iconOptionsSound);
     spawnIconRipple(optionsToggleBtn, e);
-    optionsDropdown.classList.toggle("open");
+
+    const wasOpen = optionsDropdown.classList.contains("open");
+
+    // Close every top-level panel first. If Options was already open,
+    // leave everything closed; otherwise open Options cleanly.
+    closePrimaryUiPanels();
+
+    if (!wasOpen) {
+      optionsDropdown.classList.add("open");
+    }
   });
 
   const fontWheel = createWheel({
@@ -1363,7 +1556,16 @@ function createWheel({
     buzz();
     playSound(iconUsersSound);
     spawnIconRipple(usersToggleBtn, e);
-    usersDropdown.classList.toggle("open");
+
+    const wasOpen = usersDropdown.classList.contains("open");
+
+    // True toggle: second press closes Users; switching icons closes the
+    // previous panel before opening this one.
+    closePrimaryUiPanels();
+
+    if (!wasOpen) {
+      usersDropdown.classList.add("open");
+    }
   });
 
    highrollersToggleBtn.addEventListener("click", (e) => {
@@ -1371,32 +1573,58 @@ function createWheel({
     playSound(iconHighrollerSound);
     spawnIconRipple(highrollersToggleBtn, e);
 
-    highrollersDropdown.classList.toggle("open");
+    const wasOpen = highrollersDropdown.classList.contains("open");
 
-    if (
-      highrollersDropdown.classList.contains("open")
-    ) {
+    // True toggle: second press closes Highrollers; switching icons closes
+    // the previous top-level panel before opening this one.
+    closePrimaryUiPanels();
+
+    if (!wasOpen) {
+      highrollersDropdown.classList.add("open");
       requestHighrollers("day");
     }
   });
 
-highrollersTodayBtn.addEventListener("click", () => {
-    buzz();
+function primeHighrollersHdButton(button) {
+    if (!button) return;
+
+    button.addEventListener("pointerdown", () => {
+      buzz(18);
+      button.classList.add("is-pressing");
+    });
+
+    const release = () => {
+      button.classList.remove("is-pressing");
+    };
+
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+    button.addEventListener("pointerleave", release);
+  }
+
+  [
+    highrollersTodayBtn,
+    highrollersWeekBtn,
+    highrollersUsersBtn,
+  ].forEach(primeHighrollersHdButton);
+
+  highrollersTodayBtn.addEventListener("click", (event) => {
     playSound(btnfxSound);
+    spawnIconRipple(highrollersTodayBtn, event);
     setHighrollersTab("day");
     requestHighrollers("day");
   });
 
-  highrollersWeekBtn.addEventListener("click", () => {
-    buzz();
+  highrollersWeekBtn.addEventListener("click", (event) => {
     playSound(btnfxSound);
+    spawnIconRipple(highrollersWeekBtn, event);
     setHighrollersTab("week");
     requestHighrollers("week");
   });
 
-  highrollersUsersBtn.addEventListener("click", () => {
-    buzz();
+  highrollersUsersBtn.addEventListener("click", (event) => {
     playSound(btnfxSound);
+    spawnIconRipple(highrollersUsersBtn, event);
     setHighrollersTab("users");
     socket.emit("getUserLeaderboard");
   });
@@ -1417,6 +1645,10 @@ highrollersTodayBtn.addEventListener("click", () => {
       mode === "users"
     );
 
+    highrollersTodayBtn.setAttribute("aria-selected", String(mode === "day"));
+    highrollersWeekBtn.setAttribute("aria-selected", String(mode === "week"));
+    highrollersUsersBtn.setAttribute("aria-selected", String(mode === "users"));
+
     highrollersList.classList.toggle(
       "hidden",
       mode === "users"
@@ -1434,6 +1666,25 @@ highrollersTodayBtn.addEventListener("click", () => {
 
   const MEDALS = ["🥇", "🥈", "🥉"];
 
+  function buildHighrollersCardHeader(markerText, handleText, handleColor) {
+    const header = document.createElement("div");
+    header.className = "highrollers-card-header";
+
+    const marker = document.createElement("span");
+    marker.className = "highrollers-heat";
+    marker.textContent = markerText;
+
+    const handle = document.createElement("span");
+    handle.className = "highrollers-handle";
+    handle.textContent = handleText;
+    applyHandleColor(handle, handleColor);
+
+    header.appendChild(marker);
+    header.appendChild(handle);
+
+    return header;
+  }
+
   socket.on(
     "userLeaderboardResult",
     ({ leaderboard }) => {
@@ -1441,7 +1692,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       if (leaderboard.length === 0) {
         const li = document.createElement("li");
-        li.className = "highrollers-empty";
+        li.className = "highrollers-empty highrollers-card";
         li.textContent =
           "No users on the board yet.";
 
@@ -1451,28 +1702,18 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       leaderboard.forEach((entry, index) => {
         const li = document.createElement("li");
-        li.className = "highrollers-item";
+        li.className =
+          "highrollers-item highrollers-card highrollers-user-card";
 
-        const position =
-          document.createElement("span");
+        const header = buildHighrollersCardHeader(
+          MEDALS[index] || "#" + (index + 1),
+          entry.rankEmoji + " " + entry.handle,
+          entry.color
+        );
 
-        position.className = "highrollers-heat";
-        position.textContent =
-          MEDALS[index] || "#" + (index + 1);
-
-        const handle =
-          document.createElement("span");
-
-        handle.className = "highrollers-handle";
-        handle.textContent =
-          entry.rankEmoji + " " + entry.handle;
-
-        applyHandleColor(handle, entry.color);
-
-        const scoville =
-          document.createElement("span");
-
-        scoville.className = "highrollers-text";
+        const scoville = document.createElement("div");
+        scoville.className =
+          "highrollers-text highrollers-card-body highrollers-user-summary";
 
         // Keep entry.scho because the server currently
         // appears to send the value under that property.
@@ -1481,8 +1722,7 @@ highrollersTodayBtn.addEventListener("click", () => {
           " Scoville — " +
           entry.rankName;
 
-        li.appendChild(position);
-        li.appendChild(handle);
+        li.appendChild(header);
         li.appendChild(scoville);
 
         userLeaderboardList.appendChild(li);
@@ -1497,7 +1737,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       if (entries.length === 0) {
         const li = document.createElement("li");
-        li.className = "highrollers-empty";
+        li.className = "highrollers-empty highrollers-card";
         li.textContent =
           "No hot takes yet — react to some messages!";
 
@@ -1507,31 +1747,22 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       entries.forEach((entry) => {
         const li = document.createElement("li");
-        li.className = "highrollers-item";
+        li.className =
+          "highrollers-item highrollers-card highrollers-message-card";
 
-        const heat =
-          document.createElement("span");
+        const header = buildHighrollersCardHeader(
+          "🔥 " + entry.heatRating,
+          entry.handle,
+          entry.color
+        );
 
-        heat.className = "highrollers-heat";
-        heat.textContent =
-          "🔥 " + entry.heatRating;
+        const message = document.createElement("div");
+        message.className =
+          "highrollers-text highrollers-card-body highrollers-message-text";
+        message.textContent = entry.text;
 
-        const handle =
-          document.createElement("span");
-
-        handle.className = "highrollers-handle";
-        handle.textContent = entry.handle;
-        applyHandleColor(handle, entry.color);
-
-        const text =
-          document.createElement("span");
-
-        text.className = "highrollers-text";
-        text.textContent = entry.text;
-
-        li.appendChild(heat);
-        li.appendChild(handle);
-        li.appendChild(text);
+        li.appendChild(header);
+        li.appendChild(message);
 
         highrollersList.appendChild(li);
       });
@@ -1655,6 +1886,10 @@ highrollersTodayBtn.addEventListener("click", () => {
       }
 
       startIdleWatcher();
+      syncOwnProfilePhotoControls();
+      // Restore the user's consented approximate location after a fresh join
+      // or reconnect so HOME/weather/radar do not silently fall back to the UK.
+      restoreLocationPreference();
     }
   );
 
@@ -1706,14 +1941,30 @@ highrollersTodayBtn.addEventListener("click", () => {
 
   socket.on(
     "badgeUnlocked",
-    ({ emoji, name }) => {
-      showSystemMessage(
-        "🏅 Badge unlocked: " +
-          emoji +
-          " " +
-          name +
-          "!"
-      );
+    ({ emoji, name, rarity }) => {
+      const tier = String(rarity || "common").toLowerCase();
+
+      if (tier === "unhinged") {
+        showSystemMessage(
+          "💀 UNHINGED ACHIEVEMENT UNLOCKED — " + emoji + " " + name + "!"
+        );
+      } else if (tier === "legendary") {
+        showSystemMessage(
+          "🏆 LEGENDARY ACHIEVEMENT UNLOCKED — " + emoji + " " + name + "!"
+        );
+      } else if (tier === "epic") {
+        showSystemMessage(
+          "💜 EPIC ACHIEVEMENT UNLOCKED — " + emoji + " " + name + "!"
+        );
+      } else if (tier === "rare") {
+        showSystemMessage(
+          "💎 RARE ACHIEVEMENT UNLOCKED — " + emoji + " " + name + "!"
+        );
+      } else {
+        showSystemMessage(
+          "🏅 Badge unlocked: " + emoji + " " + name + "!"
+        );
+      }
     }
   );
 
@@ -1750,8 +2001,273 @@ highrollersTodayBtn.addEventListener("click", () => {
     }
   );
 
+  let currentProfileData = null;
+  let activeProfileBadgeKey = null;
+
+  function syncProfileOverlayViewport() {
+    const appHeader = document.querySelector(".app-header");
+    const headerBottom = appHeader
+      ? Math.max(0, Math.round(appHeader.getBoundingClientRect().bottom))
+      : 0;
+
+    const availableHeight = Math.max(0, window.innerHeight - headerBottom);
+
+    // Keep the entire profile below the permanent ChilliChat header divider.
+    // This mirrors the Radar positioning logic so the avatar/header/close
+    // control cannot disappear behind Options / Users / Map / Highrollers.
+    profileOverlay.style.top = headerBottom + "px";
+    profileOverlay.style.bottom = "0";
+    profileOverlay.style.left = "0";
+    profileOverlay.style.right = "0";
+    profileOverlay.style.setProperty(
+      "--profile-available-height",
+      availableHeight + "px"
+    );
+  }
+
+
+  function hideProfileBadgeDetail() {
+    activeProfileBadgeKey = null;
+
+    if (profileBadgeDetail) {
+      profileBadgeDetail.classList.add("hidden");
+    }
+
+    if (profileBadgeEquipBtn) {
+      profileBadgeEquipBtn.classList.add("hidden");
+      profileBadgeEquipBtn.dataset.badgeKey = "";
+    }
+
+    if (profileBadgesGrid) {
+      profileBadgesGrid
+        .querySelectorAll(".profile-badge.detail-open")
+        .forEach((cell) => cell.classList.remove("detail-open"));
+    }
+  }
+
+  function formatBadgeEarnedDate(value) {
+    if (!value) return "";
+
+    let stamp = String(value).trim();
+    if (!/(?:Z|[+-]\d{2}:?\d{2})$/i.test(stamp)) {
+      stamp = stamp.replace(" ", "T") + "Z";
+    }
+
+    const date = new Date(stamp);
+    if (Number.isNaN(date.getTime())) return "";
+
+    return date.toLocaleDateString([], {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  function showProfileBadgeDetail(key, cell, data) {
+    const def = BADGE_DEFS_CLIENT[key];
+    if (!def) return;
+
+    if (activeProfileBadgeKey === key) {
+      hideProfileBadgeDetail();
+      return;
+    }
+
+    hideProfileBadgeDetail();
+    activeProfileBadgeKey = key;
+    cell.classList.add("detail-open");
+
+    const isUnlocked = data.unlockedKeys.includes(key);
+    const isEquipped = data.equippedBadge === key;
+    const rarity = String(def.rarity || "common").toUpperCase();
+    const earnedAt =
+      data.badgeEarnedAt && data.badgeEarnedAt[key]
+        ? formatBadgeEarnedDate(data.badgeEarnedAt[key])
+        : "";
+
+    profileBadgeDetailName.textContent =
+      def.emoji + " " + def.name + " · " + rarity;
+
+    if (isUnlocked) {
+      profileBadgeDetailStatus.textContent =
+        "EARNED" +
+        (earnedAt ? " " + earnedAt : "") +
+        " — " +
+        (def.description || def.name);
+    } else {
+      profileBadgeDetailStatus.textContent =
+        "HOW TO UNLOCK — " + (def.description || def.name);
+    }
+
+    profileBadgeDetail.classList.remove("hidden");
+
+    if (isUnlocked && data.isOwn) {
+      profileBadgeEquipBtn.classList.remove("hidden");
+      profileBadgeEquipBtn.dataset.badgeKey = key;
+      profileBadgeEquipBtn.textContent =
+        isEquipped ? "Unequip badge" : "Equip badge";
+    }
+
+    requestAnimationFrame(() => {
+      profileBadgeDetail.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    });
+  }
+
+  function renderProfileBadges(data) {
+    profileBadgesGrid.innerHTML = "";
+    hideProfileBadgeDetail();
+
+    const unlockedCount = data.unlockedKeys.length;
+    const totalCount = Object.keys(BADGE_DEFS_CLIENT).length;
+
+    if (profileBadgeCount) {
+      profileBadgeCount.textContent =
+        unlockedCount + " / " + totalCount + " earned";
+    }
+
+    Object.keys(BADGE_DEFS_CLIENT).forEach((key) => {
+      const def = BADGE_DEFS_CLIENT[key];
+      const isUnlocked = data.unlockedKeys.includes(key);
+      const isEquipped = data.equippedBadge === key;
+      const badgeRarity =
+        String(def.rarity || "common").toLowerCase();
+
+      const cell = document.createElement("button");
+      cell.type = "button";
+
+      cell.className =
+        "profile-badge" +
+        (isUnlocked ? " unlocked" : "") +
+        (isEquipped ? " equipped" : "") +
+        " badge-rarity-" +
+        badgeRarity;
+
+      cell.dataset.badgeKey = key;
+      cell.dataset.badgeRarity = badgeRarity;
+
+      cell.innerHTML =
+        '<span class="profile-badge-emoji" aria-hidden="true">' +
+        def.emoji +
+        "</span>" +
+        '<span class="badge-name">' +
+        def.name +
+        "</span>";
+
+      cell.title =
+        (isUnlocked ? "Earned: " : "Locked: ") +
+        def.name +
+        " — click for details";
+
+      cell.setAttribute(
+        "aria-label",
+        (isUnlocked ? "Earned badge: " : "Locked badge: ") +
+          def.name +
+          ". Click for details."
+      );
+
+      cell.addEventListener("click", (event) => {
+        buzz([14, 8, 22]);
+        spawnIconRipple(cell, event);
+        showProfileBadgeDetail(key, cell, data);
+      });
+
+      profileBadgesGrid.appendChild(cell);
+    });
+  }
+
+  function setProfilePhotoStatus(message, isError) {
+    if (!profilePhotoStatus) return;
+
+    profilePhotoStatus.textContent = message || "";
+    profilePhotoStatus.classList.toggle("error", !!isError);
+  }
+
+  function syncOwnProfilePhotoControls() {
+    if (!profilePhotoUploadBtn || !profilePhotoRemoveBtn) return;
+
+    const hasPhoto = !!(
+      myHandle &&
+      profilePhotoByHandle[myHandle]
+    );
+
+    profilePhotoUploadBtn.textContent = hasPhoto
+      ? "Change Profile Picture"
+      : "Upload Profile Picture";
+
+    profilePhotoRemoveBtn.classList.toggle("hidden", !hasPhoto);
+  }
+
+  function compressProfilePhoto(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !file.type || !file.type.startsWith("image/")) {
+        reject(new Error("Please choose an image file."));
+        return;
+      }
+
+      if (file.size > 12 * 1024 * 1024) {
+        reject(new Error("That source image is too large. Please choose one under 12 MB."));
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+
+      image.onload = () => {
+        try {
+          const size = 480;
+          const sourceWidth = image.naturalWidth || image.width;
+          const sourceHeight = image.naturalHeight || image.height;
+          const sourceSize = Math.min(sourceWidth, sourceHeight);
+          const sourceX = Math.max(0, (sourceWidth - sourceSize) / 2);
+          const sourceY = Math.max(0, (sourceHeight - sourceSize) / 2);
+
+          const canvas = document.createElement("canvas");
+          canvas.width = size;
+          canvas.height = size;
+
+          const ctx = canvas.getContext("2d", { alpha: false });
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(0, 0, size, size);
+          ctx.drawImage(
+            image,
+            sourceX,
+            sourceY,
+            sourceSize,
+            sourceSize,
+            0,
+            0,
+            size,
+            size
+          );
+
+          // Canvas re-encoding creates a fresh JPEG from pixels only, so the
+          // source file's EXIF/GPS/camera metadata is not uploaded.
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+
+          URL.revokeObjectURL(objectUrl);
+          resolve(dataUrl);
+        } catch (err) {
+          URL.revokeObjectURL(objectUrl);
+          reject(err);
+        }
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("ChilliChat could not read that image."));
+      };
+
+      image.src = objectUrl;
+    });
+  }
+
   socket.on("userProfileResult", (data) => {
-        profileHandle.textContent = modTag(data.handle) + data.handle;
+    currentProfileData = data;
+    rememberProfilePhoto(data.handle, data.profilePhoto || "");
+
+    profileHandle.textContent = modTag(data.handle) + data.handle;
 
     profileRank.textContent =
       data.rankEmoji +
@@ -1765,94 +2281,173 @@ highrollersTodayBtn.addEventListener("click", () => {
       ? data.bio
       : data.isOwn
       ? "No bio set yet — add one in Options!"
-      : "";
+      : "No bio added yet.";
 
     if (data.isOwn) {
       bioInput.value = data.bio || "";
     }
 
+    applyProfileAvatar(profileAvatar, data.handle, data.profilePhoto || "");
+
+    // Profile-picture editing now lives in Options, not inside the profile.
+    // Opening someone else's profile must never hide or alter my own controls.
+    if (data.isOwn) {
+      syncOwnProfilePhotoControls();
+    }
+
     profileReactions.innerHTML = "";
 
-    const reactionLabels = [
-      { key: "chilli", emoji: "🌶️" },
-      { key: "heart", emoji: "❤️" },
-      { key: "laugh", emoji: "😂" },
-      { key: "down", emoji: "👎" },
-    ];
-
-    reactionLabels.forEach((r) => {
-      const pill =
-        document.createElement("span");
+    REACTIONS.forEach((r) => {
+      const pill = document.createElement("span");
 
       pill.className =
-        "profile-reaction-pill";
+        "profile-reaction-pill profile-reaction-" + r.key;
 
-      pill.textContent =
-        r.emoji +
-        " " +
-        (data.reactions[r.key] || 0);
+      pill.innerHTML =
+        reactionIconSvg(r.key, "reaction-profile-icon") +
+        '<span class="reaction-profile-count">' +
+        (data.reactions[r.key] || 0) +
+        "</span>";
+
+      pill.title = r.label + " received";
+      pill.setAttribute(
+        "aria-label",
+        r.label + " received: " + (data.reactions[r.key] || 0)
+      );
 
       profileReactions.appendChild(pill);
     });
 
-    profileBadgesGrid.innerHTML = "";
-
-    Object.keys(BADGE_DEFS_CLIENT).forEach(
-      (key) => {
-        const def = BADGE_DEFS_CLIENT[key];
-
-        const isUnlocked =
-          data.unlockedKeys.includes(key);
-
-        const isEquipped =
-          data.equippedBadge === key;
-
-        const cell =
-          document.createElement("div");
-
-        cell.className =
-          "profile-badge" +
-          (isUnlocked ? " unlocked" : "") +
-          (isEquipped ? " equipped" : "");
-
-        cell.innerHTML =
-          def.emoji +
-          '<span class="badge-name">' +
-          def.name +
-          "</span>";
-
-        if (isUnlocked && data.isOwn) {
-          cell.addEventListener(
-            "click",
-            () => {
-              buzz();
-
-              const newEquipped =
-                isEquipped ? null : key;
-
-              socket.emit("equipBadge", {
-                badgeKey: newEquipped,
-              });
-            }
-          );
-        }
-
-        profileBadgesGrid.appendChild(cell);
-      }
-    );
-
+    renderProfileBadges(data);
+    syncProfileOverlayViewport();
     profileOverlay.classList.remove("hidden");
+
+    // Re-measure once visible in case browser zoom/font layout changed the
+    // header height during this frame.
+    requestAnimationFrame(syncProfileOverlayViewport);
   });
 
-  profileCloseBtn.addEventListener("click", () => {
-    buzz();
+  if (profileBadgeEquipBtn) {
+    profileBadgeEquipBtn.addEventListener("click", (event) => {
+      if (!currentProfileData || !currentProfileData.isOwn) return;
+
+      const badgeKey = profileBadgeEquipBtn.dataset.badgeKey;
+      if (!badgeKey) return;
+
+      buzz([18, 8, 18]);
+      spawnIconRipple(profileBadgeEquipBtn, event);
+
+      const newEquipped =
+        currentProfileData.equippedBadge === badgeKey
+          ? null
+          : badgeKey;
+
+      currentProfileData.equippedBadge = newEquipped;
+
+      socket.emit("equipBadge", {
+        badgeKey: newEquipped,
+      });
+
+      renderProfileBadges(currentProfileData);
+    });
+  }
+
+  if (profilePhotoUploadBtn && profilePhotoInput) {
+    profilePhotoUploadBtn.addEventListener("click", (event) => {
+      buzz([18, 8, 20]);
+      spawnIconRipple(profilePhotoUploadBtn, event);
+      profilePhotoInput.click();
+    });
+
+    profilePhotoInput.addEventListener("change", async (event) => {
+      const file = event.target.files && event.target.files[0];
+      profilePhotoInput.value = "";
+
+      if (!file) return;
+
+      try {
+        setProfilePhotoStatus("Preparing secure 480 × 480 photo…", false);
+        const imageData = await compressProfilePhoto(file);
+        setProfilePhotoStatus("Uploading sanitized profile photo…", false);
+        socket.emit("updateProfilePhoto", { imageData });
+      } catch (err) {
+        setProfilePhotoStatus(
+          err && err.message ? err.message : "Could not prepare that photo.",
+          true
+        );
+      }
+    });
+  }
+
+  if (profilePhotoRemoveBtn) {
+    profilePhotoRemoveBtn.addEventListener("click", (event) => {
+      buzz([20, 10, 20]);
+      spawnIconRipple(profilePhotoRemoveBtn, event);
+      setProfilePhotoStatus("Removing profile photo…", false);
+      socket.emit("updateProfilePhoto", { imageData: null });
+    });
+  }
+
+  socket.on("profilePhotoUpdateResult", (data) => {
+    if (!data || !data.success) {
+      setProfilePhotoStatus(
+        (data && data.message) || "Profile photo update failed.",
+        true
+      );
+      return;
+    }
+
+    rememberProfilePhoto(myHandle, data.profilePhoto || "");
+    refreshProfileAvatars(myHandle, data.profilePhoto || "");
+    syncOwnProfilePhotoControls();
+
+    if (currentProfileData && currentProfileData.isOwn) {
+      currentProfileData.profilePhoto = data.profilePhoto || "";
+      applyProfileAvatar(
+        profileAvatar,
+        currentProfileData.handle,
+        currentProfileData.profilePhoto
+      );
+    }
+
+    setProfilePhotoStatus(
+      data.profilePhoto ? "Profile photo updated." : "Profile photo removed.",
+      false
+    );
+  });
+
+  socket.on("profilePhotoUpdated", ({ handle, profilePhoto }) => {
+    refreshProfileAvatars(handle, profilePhoto || "");
+
+    if (handle === myHandle) {
+      syncOwnProfilePhotoControls();
+    }
+
+    if (
+      currentProfileData &&
+      currentProfileData.handle === handle
+    ) {
+      currentProfileData.profilePhoto = profilePhoto || "";
+      applyProfileAvatar(profileAvatar, handle, profilePhoto || "");
+    }
+  });
+
+  function closeProfile() {
+    hideProfileBadgeDetail();
+    currentProfileData = null;
     profileOverlay.classList.add("hidden");
+  }
+
+  profileCloseBtn.addEventListener("click", (event) => {
+    buzz([18, 8, 22]);
+    spawnIconRipple(profileCloseBtn, event);
+    closeProfile();
   });
 
   profileOverlay.addEventListener("click", (e) => {
     if (e.target === profileOverlay) {
-      buzz();
-      profileOverlay.classList.add("hidden");
+      buzz(12);
+      closeProfile();
     }
   });
 
@@ -1994,6 +2589,12 @@ highrollersTodayBtn.addEventListener("click", () => {
     usersList.innerHTML = "";
 
     users.forEach((user) => {
+      rememberProfilePhoto(user.handle, user.profilePhoto || "");
+
+      if (user.handle === myHandle) {
+        syncOwnProfilePhotoControls();
+      }
+
       const li = document.createElement("li");
       li.className = "user-item";
 
@@ -2046,7 +2647,15 @@ highrollersTodayBtn.addEventListener("click", () => {
         (user.scho || 0).toLocaleString() +
         " Scoville";
 
+      const userAvatar = createProfileAvatar(
+        user.handle,
+        user.profilePhoto || "",
+        "users-list-avatar",
+        true
+      );
+
       row.appendChild(dot);
+      row.appendChild(userAvatar);
       row.appendChild(name);
       row.appendChild(scovilleLabel);
 
@@ -2300,6 +2909,7 @@ highrollersTodayBtn.addEventListener("click", () => {
       heart: 0,
       laugh: 0,
       down: 0,
+      poo: 0,
     };
   }
 
@@ -2322,6 +2932,58 @@ highrollersTodayBtn.addEventListener("click", () => {
     if (targetType === "voice") return "voice clip";
     if (targetType === "photo") return "photo";
     return "message";
+  }
+
+  function reactionIconSvg(reactionKey, extraClass) {
+    const className =
+      "reaction-hd-icon reaction-hd-" +
+      reactionKey +
+      (extraClass ? " " + extraClass : "");
+
+    const icons = {
+      chilli: `
+        <svg class="${className}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <path d="M40 15c1-8 6-12 14-13-2 8-6 13-13 16" fill="none" stroke="#39d353" stroke-width="5" stroke-linecap="round"/>
+          <path d="M40 15c-8-5-19-3-25 5-7 10-4 24 5 31 9 8 23 8 32 1 7-6 10-14 10-23-6 6-13 9-19 7-7-2-11-8-10-14 1-4 3-6 7-7Z" fill="#ff304f" stroke="#9d0b25" stroke-width="2.5"/>
+          <path d="M19 23c-3 6-2 13 2 18" fill="none" stroke="#ff9aa9" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+          <path d="M48 42c4-3 7-7 9-12" fill="none" stroke="#ff784f" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+        </svg>`,
+      heart: `
+        <svg class="${className}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <path d="M32 56 8 33C-3 21 4 6 18 7c7 0 12 4 14 9 3-5 8-9 15-9 14-1 21 14 10 26L32 56Z" fill="#ff2a6d" stroke="#9b0f3d" stroke-width="2.5"/>
+          <path d="M15 16c5-4 11-2 14 3" fill="none" stroke="#ffb3ca" stroke-width="4" stroke-linecap="round" opacity=".95"/>
+          <path d="M46 12c5 1 9 5 10 10" fill="none" stroke="#ff6f9d" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+        </svg>`,
+      laugh: `
+        <svg class="${className}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <circle cx="32" cy="31" r="26" fill="#ffd83d" stroke="#c58c00" stroke-width="2.5"/>
+          <path d="M15 25c4-5 9-5 13 0M36 25c4-5 9-5 13 0" fill="none" stroke="#553600" stroke-width="4" stroke-linecap="round"/>
+          <path d="M18 34c3 14 25 18 30 0Z" fill="#7a1f22" stroke="#553600" stroke-width="2"/>
+          <path d="M24 45c5 4 12 4 17 0-5-5-12-5-17 0Z" fill="#ff6b7f"/>
+          <path d="M11 27c-7 5-7 13 0 15 6 1 8-8 0-15ZM53 27c7 5 7 13 0 15-6 1-8-8 0-15Z" fill="#35b9ff" stroke="#0873ad" stroke-width="1.5"/>
+          <path d="M9 31c-2 3-2 6 0 8M55 31c2 3 2 6 0 8" fill="none" stroke="#bfeaff" stroke-width="2" stroke-linecap="round"/>
+        </svg>`,
+      down: `
+        <svg class="${className}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <path d="M20 8h29c5 0 8 4 7 9l-5 20c-1 4-4 6-8 6h-8l3 9c2 7-7 11-11 5L15 41H7V13h9l4-5Z" fill="#4fa3ff" stroke="#145a9e" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M7 13h9v28H7Z" fill="#246fb8"/>
+          <path d="M23 13h24M23 21h22M22 29h20" fill="none" stroke="#a8d6ff" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+          <path d="m27 42 8 1 3 9" fill="none" stroke="#0f4a84" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>`,
+      poo: `
+        <svg class="${className}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <path d="M22 22c-1-7 4-12 11-13-2 4 0 7 5 9 6 2 9 6 8 11 7 2 11 7 10 13-1 8-8 12-17 12H20C10 54 4 49 5 41c1-6 5-10 11-12-2-3-1-5 0-7 2-2 4-3 6-3Z" fill="#8b4b2b" stroke="#4d2616" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M18 30c4-4 9-5 14-4 5 0 10 2 14 5" fill="none" stroke="#c87843" stroke-width="4" stroke-linecap="round" opacity=".75"/>
+          <ellipse cx="24" cy="38" rx="5" ry="6" fill="#fff"/>
+          <ellipse cx="41" cy="38" rx="5" ry="6" fill="#fff"/>
+          <circle cx="25" cy="39" r="2" fill="#17120f"/>
+          <circle cx="40" cy="39" r="2" fill="#17120f"/>
+          <path d="M23 47c6 5 13 5 19 0" fill="none" stroke="#2d160e" stroke-width="3" stroke-linecap="round"/>
+          <path d="M18 20c5-2 10-1 13 2" fill="none" stroke="#e0a06d" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+        </svg>`,
+    };
+
+    return icons[reactionKey] || icons.chilli;
   }
 
   function reactionChilliSvg() {
@@ -2358,13 +3020,16 @@ highrollersTodayBtn.addEventListener("click", () => {
     REACTIONS.forEach(function (r) {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "reaction-pick-btn";
-      b.textContent = r.emoji;
-      b.title = "React with " + r.key;
-      b.setAttribute("aria-label", "React with " + r.key);
+      b.className = "reaction-pick-btn reaction-pick-" + r.key;
+      b.innerHTML =
+        reactionIconSvg(r.key, "reaction-picker-icon") +
+        '<span class="reaction-pick-label">' + r.label + "</span>";
+      b.title = "React with " + r.label;
+      b.setAttribute("aria-label", "React with " + r.label);
 
-      b.addEventListener("click", function () {
-        buzz();
+      b.addEventListener("click", function (event) {
+        buzz(22);
+        spawnIconRipple(b, event);
 
         if (pickerTargetType !== null && pickerTargetId !== null) {
           socket.emit("reaction", {
@@ -2420,22 +3085,41 @@ highrollersTodayBtn.addEventListener("click", () => {
 
   messagesBox.addEventListener("scroll", closePicker);
 
-  function burstReaction(targetEl, emoji) {
+  function burstReaction(targetEl, reactionKey) {
     try {
       const rect = targetEl.getBoundingClientRect();
 
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 4; i++) {
         const el = document.createElement("span");
-        el.className = "reaction-burst";
-        el.textContent = emoji;
-        el.style.left = rect.right - 90 + Math.random() * 60 + "px";
-        el.style.top = rect.top + rect.height / 2 + "px";
-        el.style.animationDelay = i * 130 + "ms";
+        el.className =
+          "reaction-burst reaction-burst-" + reactionKey;
+        el.dataset.reaction = reactionKey;
+        el.innerHTML = reactionIconSvg(
+          reactionKey,
+          "reaction-burst-icon"
+        );
+
+        const spread = Math.min(150, Math.max(70, rect.width * 0.7));
+        el.style.left =
+          rect.left +
+          rect.width / 2 -
+          44 +
+          (Math.random() - 0.5) * spread +
+          "px";
+        el.style.top =
+          rect.top +
+          Math.min(rect.height * 0.55, 50) +
+          "px";
+        el.style.setProperty(
+          "--burst-drift",
+          (Math.random() * 120 - 60).toFixed(0) + "px"
+        );
+        el.style.animationDelay = i * 115 + "ms";
         document.body.appendChild(el);
 
         setTimeout(function () {
           el.remove();
-        }, 2000);
+        }, 2900);
       }
     } catch (err) {
       console.error("Reaction animation failed:", err);
@@ -2450,8 +3134,13 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       if (count > 0) {
         const pill = document.createElement("span");
-        pill.className = "reaction-pill";
-        pill.textContent = r.emoji + " " + count;
+        pill.className =
+          "reaction-pill reaction-pill-" + r.key;
+        pill.innerHTML =
+          reactionIconSvg(r.key, "reaction-pill-icon") +
+          '<span class="reaction-pill-count">' + count + "</span>";
+        pill.title = r.label + ": " + count;
+        pill.setAttribute("aria-label", r.label + ": " + count);
         pillsWrap.appendChild(pill);
       }
     });
@@ -2553,7 +3242,7 @@ highrollersTodayBtn.addEventListener("click", () => {
 
     REACTIONS.forEach(function (r) {
       if ((counts[r.key] || 0) > (prev[r.key] || 0)) {
-        burstReaction(targetEl, r.emoji);
+        burstReaction(targetEl, r.key);
       }
     });
   });
@@ -2577,8 +3266,26 @@ highrollersTodayBtn.addEventListener("click", () => {
       msgEl.dataset.messageId =
         data.id;
 
+      if (Object.prototype.hasOwnProperty.call(data, "profilePhoto")) {
+        rememberProfilePhoto(data.handle, data.profilePhoto || "");
+      }
+
       const textLine =
         document.createElement("p");
+
+      textLine.className = "chat-message-line";
+
+      const messageAvatar = createProfileAvatar(
+        data.handle,
+        data.profilePhoto !== undefined
+          ? data.profilePhoto
+          : profilePhotoByHandle[data.handle] || "",
+        "chat-avatar-thumb",
+        true
+      );
+
+      const messageCopy = document.createElement("span");
+      messageCopy.className = "chat-message-copy";
 
       const handleSpan =
         document.createElement("span");
@@ -2617,25 +3324,23 @@ highrollersTodayBtn.addEventListener("click", () => {
           data.createdAt
         );
 
-      textLine.appendChild(
+      messageCopy.appendChild(
         handleSpan
       );
 
-      textLine.appendChild(
+      messageCopy.appendChild(
         textSpan
       );
 
-      textLine.appendChild(
+      messageCopy.appendChild(
         timeSpan
       );
 
+      textLine.appendChild(messageAvatar);
+      textLine.appendChild(messageCopy);
+
       const counts =
-        data.counts || {
-          chilli: 0,
-          heart: 0,
-          laugh: 0,
-          down: 0,
-        };
+        data.counts || emptyReactionCounts();
 
       const reactionBar =
         buildReactionBar(
@@ -2882,6 +3587,37 @@ highrollersTodayBtn.addEventListener("click", () => {
   micBtn.addEventListener("pointercancel", (e) => {
     finishMicPress(true, e);
   });
+
+  // Pointer capture above is the primary protection against a thumb drifting
+  // off the visible mic. These window-level listeners are a safe fallback for
+  // browsers/devices where pointer capture is unavailable or gets dropped.
+  // They only act on the one pointer that started the active mic hold.
+  window.addEventListener(
+    "pointermove",
+    (e) => {
+      if (!micPressActive || e.pointerId !== micPointerId) return;
+      moveMicPress(e);
+    },
+    { passive: false }
+  );
+
+  window.addEventListener(
+    "pointerup",
+    (e) => {
+      if (!micPressActive || e.pointerId !== micPointerId) return;
+      finishMicPress(false, e);
+    },
+    { passive: false }
+  );
+
+  window.addEventListener(
+    "pointercancel",
+    (e) => {
+      if (!micPressActive || e.pointerId !== micPointerId) return;
+      finishMicPress(true, e);
+    },
+    { passive: false }
+  );
  socket.on(
     "voiceClip",
     (data) => {
@@ -2898,6 +3634,10 @@ highrollersTodayBtn.addEventListener("click", () => {
 
       msgEl.dataset.clipId =
         data.id;
+
+      if (Object.prototype.hasOwnProperty.call(data, "profilePhoto")) {
+        rememberProfilePhoto(data.handle, data.profilePhoto || "");
+      }
 
       const voiceCounts = data.counts || emptyReactionCounts();
       lastKnownCounts[reactionTargetKey("voice", data.id)] = voiceCounts;
@@ -3044,9 +3784,20 @@ audio.preload = "auto";
         timeLine
       );
 
+      const voiceAvatar = createProfileAvatar(
+        data.handle,
+        data.profilePhoto !== undefined
+          ? data.profilePhoto
+          : profilePhotoByHandle[data.handle] || "",
+        "chat-avatar-thumb voice-avatar-thumb",
+        true
+      );
+
       msgEl.appendChild(
         playBtn
       );
+
+      msgEl.appendChild(voiceAvatar);
 
       msgEl.appendChild(
         meta
@@ -3268,6 +4019,10 @@ socket.on(
       msgEl.dataset.photoId =
         data.id;
 
+      if (Object.prototype.hasOwnProperty.call(data, "profilePhoto")) {
+        rememberProfilePhoto(data.handle, data.profilePhoto || "");
+      }
+
       if (data.expired) {
         renderExpiredThumb(
           msgEl,
@@ -3332,6 +4087,13 @@ socket.on(
     icon.className = "photo-thumb-icon";
     icon.textContent = "📷";
 
+    const photoAvatar = createProfileAvatar(
+      handle,
+      profilePhotoByHandle[handle] || "",
+      "chat-avatar-thumb photo-avatar-thumb",
+      true
+    );
+
     const meta = document.createElement("div");
     meta.className = "photo-thumb-meta";
 
@@ -3369,6 +4131,7 @@ socket.on(
     });
 
     msgEl.appendChild(icon);
+    msgEl.appendChild(photoAvatar);
     msgEl.appendChild(meta);
     msgEl.appendChild(revealBtn);
 
@@ -3420,6 +4183,13 @@ socket.on(
 
     icon.textContent = "📷";
 
+    const expiredPhotoAvatar = createProfileAvatar(
+      handle,
+      profilePhotoByHandle[handle] || "",
+      "chat-avatar-thumb photo-avatar-thumb",
+      true
+    );
+
     const meta =
       document.createElement(
         "div"
@@ -3463,6 +4233,8 @@ socket.on(
     msgEl.appendChild(
       icon
     );
+
+    msgEl.appendChild(expiredPhotoAvatar);
 
     msgEl.appendChild(
       meta
@@ -3727,12 +4499,40 @@ socket.on(
   const mapOverlay = document.getElementById("map-overlay");
   const mapCloseBtn = document.getElementById("map-close-btn");
   const mapCanvas = document.getElementById("map-canvas");
+  const mapHomeBtn = document.getElementById("map-home-btn");
+  const mapFitBtn = document.getElementById("map-fit-btn");
+  const mapRegionBtns = Array.from(document.querySelectorAll("[data-map-region]"));
+  const mapShortcutBtns = [
+    mapHomeBtn,
+    mapFitBtn,
+    ...mapRegionBtns,
+  ].filter(Boolean);
+  const mapWeatherHud = document.getElementById("map-weather-hud");
+  const mapDataStatus = document.getElementById("map-data-status");
+  const flightsToggle = document.getElementById("flights-toggle");
+  const poisToggle = document.getElementById("pois-toggle");
+  const earthquakesToggle = document.getElementById("earthquakes-toggle");
 
-   let myJitteredLat = null;
+  function syncMapOverlayViewport() {
+    const appHeader = document.querySelector(".app-header");
+    const headerBottom = appHeader
+      ? Math.max(0, Math.round(appHeader.getBoundingClientRect().bottom))
+      : 0;
+
+    // Keep the top ChilliChat icon row visible and clickable while Radar is open.
+    // The map fills only the viewport below the header instead of sitting behind it.
+    mapOverlay.style.top = headerBottom + "px";
+  }
+
+  let myJitteredLat = null;
   let myJitteredLon = null;
   let knownLocations = [];
   let knownFlights = [];
-  const flightsToggle = document.getElementById("flights-toggle");
+  let knownFlightRegion = null;
+  let knownPois = [];
+  let knownEarthquakes = [];
+  let mapPoisRequested = false;
+  let mapEarthquakesRequested = false;
 
   function milesToDegreesLat(miles) {
     return miles / 69;
@@ -3768,7 +4568,7 @@ socket.on(
       return;
     }
 
-        if (!window.isSecureContext) {
+    if (!window.isSecureContext) {
       showSystemMessage(
         "⚠️ Location needs a secure (https://) connection. This page isn't loaded over https, so browsers block location access here."
       );
@@ -3784,10 +4584,7 @@ socket.on(
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const jittered = jitterLocation(
-          pos.coords.latitude,
-          pos.coords.longitude
-        );
+        const jittered = jitterLocation(pos.coords.latitude, pos.coords.longitude);
 
         myJitteredLat = jittered.lat;
         myJitteredLon = jittered.lon;
@@ -3835,6 +4632,8 @@ socket.on(
       myJitteredLon = null;
       safeStorage.removeItem(STORAGE_LOCATION_LAT_KEY);
       safeStorage.removeItem(STORAGE_LOCATION_LON_KEY);
+      knownPois = [];
+      mapPoisRequested = false;
     }
 
     sendLocationUpdate(enabled);
@@ -3857,119 +4656,589 @@ socket.on(
     sendLocationUpdate(true);
   }
 
-       const mapWeatherHud = document.getElementById("map-weather-hud");
-
   socket.on("locationsUpdate", (locations) => {
     knownLocations = locations || [];
-    drawMap();
     updateWeatherHud();
+
+    if (!mapOverlay.classList.contains("hidden") && mapInitialFocusPending) {
+      mapInitialFocusPending = false;
+      requestAnimationFrame(() => focusMapHome());
+    } else {
+      drawMap();
+    }
   });
 
-  socket.on("flightsUpdate", (flights) => {
-    knownFlights = flights || [];
+  socket.on("flightsUpdate", (payload) => {
+    if (Array.isArray(payload)) {
+      knownFlights = payload;
+      knownFlightRegion = "legacy";
+    } else {
+      knownFlights = (payload && payload.flights) || [];
+      knownFlightRegion = payload && payload.region ? payload.region : null;
+    }
+    updateMapDataStatus();
     drawMap();
   });
 
-  if (flightsToggle) {
-    flightsToggle.addEventListener("change", () => {
-      buzz();
-      drawMap();
-    });
-  } 
+  socket.on("mapPoisUpdate", (payload) => {
+    knownPois = (payload && payload.pois) || [];
+    mapPoisRequested = true;
+    updateMapDataStatus();
+    drawMap();
+  });
 
-    function updateWeatherHud() {
+  socket.on("earthquakesUpdate", (payload) => {
+    knownEarthquakes = (payload && payload.earthquakes) || [];
+    mapEarthquakesRequested = true;
+    updateMapDataStatus();
+    drawMap();
+  });
+
+  function isUkCoordinate(lat, lon) {
+    return lat >= 49.0 && lat <= 61.5 && lon >= -9.5 && lon <= 3.5;
+  }
+
+  function isAustraliaCoordinate(lat, lon) {
+    return lat >= -45.5 && lat <= -9.0 && lon >= 111.0 && lon <= 155.5;
+  }
+
+  function isNorthAmericaCoordinate(lat, lon) {
+    return lat >= 15 && lat <= 85 && lon >= -171 && lon <= -50;
+  }
+
+  function homeMacroRegion(lat, lon) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return "world";
+    if (isUkCoordinate(lat, lon)) return "uk";
+    if (isAustraliaCoordinate(lat, lon)) return "australia";
+    if (isNorthAmericaCoordinate(lat, lon)) return "north-america";
+    return "world";
+  }
+
+  function preferredFlightRegion(lat, lon) {
+    const macro = homeMacroRegion(lat, lon);
+    if (macro === "uk") return "uk";
+    if (macro === "australia") return "australia";
+    if (macro === "north-america") {
+      // This is only an automatic default. The separate USA and CANADA
+      // buttons let border-area users explicitly choose either national feed.
+      return lat >= 49 ? "canada" : "usa";
+    }
+    return null;
+  }
+
+  function getOwnRadarLocation() {
+    const mine = knownLocations.find((loc) => loc.handle === myHandle);
+    if (mine && Number.isFinite(mine.lat) && Number.isFinite(mine.lon)) return mine;
+
+    if (myJitteredLat !== null && myJitteredLon !== null) {
+      return { handle: myHandle, lat: myJitteredLat, lon: myJitteredLon };
+    }
+
+    return null;
+  }
+
+  function selectAqiForLocation(loc) {
+    if (!loc || !loc.aqi) return null;
+
+    const macro = homeMacroRegion(loc.lat, loc.lon);
+    if (macro === "uk" && loc.aqi.eu) {
+      return { ...loc.aqi.eu, scheme: "EU" };
+    }
+
+    if ((macro === "north-america" || macro === "australia") && loc.aqi.us) {
+      return { ...loc.aqi.us, scheme: "US" };
+    }
+
+    if (loc.aqi.eu) return { ...loc.aqi.eu, scheme: "EU" };
+    if (loc.aqi.us) return { ...loc.aqi.us, scheme: "US" };
+
+    if (Number.isFinite(loc.aqi.value)) {
+      return {
+        value: loc.aqi.value,
+        label: loc.aqi.label || "",
+        color: loc.aqi.color || themePrimary(),
+        scheme: "",
+      };
+    }
+
+    return null;
+  }
+
+  function updateWeatherHud() {
     if (!mapWeatherHud) return;
 
     const mine = knownLocations.find((loc) => loc.handle === myHandle);
 
     if (!mine || !mine.weather) {
-      mapWeatherHud.textContent = "YOUR AREA: weather unavailable";
+      mapWeatherHud.textContent = locationToggle.checked
+        ? "HOME DATA: waiting for weather / AQI…"
+        : "HOME DATA: enable Location Sharing for local weather / AQI";
       return;
     }
 
     let text =
-      "YOUR AREA: " +
-      mine.weather.icon +
-      " " +
-      mine.weather.tempC +
-      "°C " +
+      "HOME: " +
+      mine.weather.icon + " " +
+      mine.weather.tempC + "°C " +
       mine.weather.desc;
 
-    if (mine.aqi) {
-      text += "  ·  AQI " + mine.aqi.value + " (" + mine.aqi.label + ")";
+    if (Number.isFinite(mine.weather.feelsC)) {
+      text += " · FEELS " + mine.weather.feelsC + "°";
+    }
+
+    if (Number.isFinite(mine.weather.windKmh)) {
+      text += " · WIND " + mine.weather.windKmh + "km/h";
+    }
+
+    const aqi = selectAqiForLocation(mine);
+    if (aqi) {
+      text += " · " + (aqi.scheme ? aqi.scheme + "-" : "") + "AQI " + aqi.value + " " + aqi.label;
+    }
+
+    if (mine.aqi && Number.isFinite(mine.aqi.pm25)) {
+      text += " · PM2.5 " + mine.aqi.pm25;
     }
 
     mapWeatherHud.textContent = text;
   }
 
-  // ---- Retro radar map ----
+  function getVisibleEarthquakes() {
+    if (!mapEarthquakesRequested || !mapCanvas) return [];
 
-  let mapScale = 6;
+    const w = mapCanvas.width;
+    const h = mapCanvas.height;
+    if (!w || !h) return [];
+
+    const dpr = window.devicePixelRatio || 1;
+    const origin = getMapOrigin();
+    const centerX = w / 2 + mapOffsetX;
+    const centerY = h / 2 + mapOffsetY;
+
+    return knownEarthquakes.filter((quake) => {
+      if (
+        !Number.isFinite(quake.lat) ||
+        !Number.isFinite(quake.lon) ||
+        !Number.isFinite(quake.magnitude)
+      ) {
+        return false;
+      }
+
+      const point = mapPoint(
+        quake.lat,
+        quake.lon,
+        origin,
+        centerX,
+        centerY
+      );
+
+      // Count only earthquakes that belong to the map area the user can
+      // actually see. This keeps UK/USA/Canada/Australia/HOME/FIT USERS
+      // totals honest instead of repeating the global USGS feed total.
+      return isPointNearCanvas(point, w, h, 0 * dpr);
+    });
+  }
+
+  function updateMapDataStatus(extraText) {
+    if (!mapDataStatus) return;
+
+    const parts = [];
+    if (flightsToggle && flightsToggle.checked) {
+      parts.push("FLIGHTS " + knownFlights.length + (knownFlightRegion ? " [" + knownFlightRegion.toUpperCase() + "]" : ""));
+    }
+    if (poisToggle && poisToggle.checked) {
+      parts.push(mapPoisRequested ? "PLACES " + knownPois.length : "PLACES …");
+    }
+    if (earthquakesToggle && earthquakesToggle.checked) {
+      parts.push(
+        mapEarthquakesRequested
+          ? "QUAKES " + getVisibleEarthquakes().length
+          : "QUAKES …"
+      );
+    }
+    if (extraText) parts.unshift(extraText);
+
+    mapDataStatus.textContent = parts.length ? parts.join("  ·  ") : "LAYERS OFF";
+  }
+
+  // ---- Global retro radar map ----
+  // The user's own approximate shared location is the default point of view.
+  // Great-circle distance + bearing keeps mates on other continents correctly
+  // positioned while HOME/UK/USA/CANADA/AUSTRALIA give intentional views.
+
+  const EARTH_RADIUS_MILES = 3958.7613;
+  const MAP_DEFAULT_LOCAL_SCALE = 0.55;
+  const MAP_MIN_SCALE = 0.012;
+  const MAP_MAX_SCALE = 60;
+
+  let mapScale = MAP_DEFAULT_LOCAL_SCALE;
   let mapOffsetX = 0;
   let mapOffsetY = 0;
   let mapDragging = false;
   let mapLastX = 0;
   let mapLastY = 0;
+  let mapGeography = null;
+  let mapGeographyLoading = false;
+  let mapInitialFocusPending = true;
+  let currentMapView = "home";
+
+  const MAP_GEOGRAPHY_SPECS = {
+    uk: { label: "UNITED KINGDOM", lat: 54.6, lon: -3.2, radiusMiles: 520 },
+    "north-america": { label: "NORTH AMERICA", lat: 49.0, lon: -106.0, radiusMiles: 4300 },
+    australia: { label: "AUSTRALIA", lat: -25.3, lon: 133.8, radiusMiles: 2200 },
+  };
+
+  const MAP_REGION_SPECS = {
+    uk: { label: "UNITED KINGDOM", lat: 54.6, lon: -3.2, scale: 0.72, flightRegion: "uk" },
+    usa: { label: "UNITED STATES", lat: 39.5, lon: -98.5, scale: 0.057, flightRegion: "usa" },
+    canada: { label: "CANADA", lat: 57.0, lon: -106.0, scale: 0.044, flightRegion: "canada" },
+    australia: { label: "AUSTRALIA", lat: -25.3, lon: 133.8, scale: 0.105, flightRegion: "australia" },
+  };
+
+  const MAP_CITIES = [
+    // UK
+    { name: "London", lat: 51.5074, lon: -0.1278, minScale: 0.16 },
+    { name: "Manchester", lat: 53.4808, lon: -2.2426, minScale: 0.24 },
+    { name: "Birmingham", lat: 52.4862, lon: -1.8904, minScale: 0.24 },
+    { name: "Edinburgh", lat: 55.9533, lon: -3.1883, minScale: 0.20 },
+    { name: "Glasgow", lat: 55.8642, lon: -4.2518, minScale: 0.24 },
+    { name: "Cardiff", lat: 51.4816, lon: -3.1791, minScale: 0.28 },
+    { name: "Belfast", lat: 54.5973, lon: -5.9301, minScale: 0.24 },
+    { name: "Nottingham", lat: 52.9548, lon: -1.1581, minScale: 0.34 },
+    // USA
+    { name: "Washington DC", lat: 38.9072, lon: -77.0369, minScale: 0.052 },
+    { name: "New York", lat: 40.7128, lon: -74.0060, minScale: 0.052 },
+    { name: "Boston", lat: 42.3601, lon: -71.0589, minScale: 0.070 },
+    { name: "Chicago", lat: 41.8781, lon: -87.6298, minScale: 0.058 },
+    { name: "Atlanta", lat: 33.7490, lon: -84.3880, minScale: 0.068 },
+    { name: "Miami", lat: 25.7617, lon: -80.1918, minScale: 0.070 },
+    { name: "Dallas", lat: 32.7767, lon: -96.7970, minScale: 0.064 },
+    { name: "Houston", lat: 29.7604, lon: -95.3698, minScale: 0.070 },
+    { name: "Denver", lat: 39.7392, lon: -104.9903, minScale: 0.064 },
+    { name: "Phoenix", lat: 33.4484, lon: -112.0740, minScale: 0.070 },
+    { name: "Los Angeles", lat: 34.0522, lon: -118.2437, minScale: 0.052 },
+    { name: "San Francisco", lat: 37.7749, lon: -122.4194, minScale: 0.066 },
+    { name: "Seattle", lat: 47.6062, lon: -122.3321, minScale: 0.064 },
+    // Canada
+    { name: "Ottawa", lat: 45.4215, lon: -75.6972, minScale: 0.050 },
+    { name: "Toronto", lat: 43.6532, lon: -79.3832, minScale: 0.055 },
+    { name: "Montreal", lat: 45.5017, lon: -73.5673, minScale: 0.060 },
+    { name: "Quebec City", lat: 46.8139, lon: -71.2080, minScale: 0.068 },
+    { name: "Winnipeg", lat: 49.8951, lon: -97.1384, minScale: 0.060 },
+    { name: "Calgary", lat: 51.0447, lon: -114.0719, minScale: 0.060 },
+    { name: "Edmonton", lat: 53.5461, lon: -113.4938, minScale: 0.064 },
+    { name: "Vancouver", lat: 49.2827, lon: -123.1207, minScale: 0.055 },
+    { name: "Halifax", lat: 44.6488, lon: -63.5752, minScale: 0.070 },
+    // Australia
+    { name: "Canberra", lat: -35.2809, lon: 149.1300, minScale: 0.082 },
+    { name: "Sydney", lat: -33.8688, lon: 151.2093, minScale: 0.082 },
+    { name: "Melbourne", lat: -37.8136, lon: 144.9631, minScale: 0.090 },
+    { name: "Brisbane", lat: -27.4698, lon: 153.0251, minScale: 0.090 },
+    { name: "Perth", lat: -31.9523, lon: 115.8613, minScale: 0.090 },
+    { name: "Adelaide", lat: -34.9285, lon: 138.6007, minScale: 0.100 },
+    { name: "Hobart", lat: -42.8821, lon: 147.3272, minScale: 0.120 },
+    { name: "Darwin", lat: -12.4634, lon: 130.8456, minScale: 0.120 },
+  ];
 
   function resizeMapCanvas() {
     const rect = mapCanvas.getBoundingClientRect();
-    mapCanvas.width = rect.width * devicePixelRatio;
-    mapCanvas.height = rect.height * devicePixelRatio;
+    const dpr = window.devicePixelRatio || 1;
+    mapCanvas.width = Math.max(1, Math.round(rect.width * dpr));
+    mapCanvas.height = Math.max(1, Math.round(rect.height * dpr));
   }
 
-    function milesBetween(lat1, lon1, lat2, lon2) {
-    const dLat = (lat2 - lat1) * 69;
-    const cos = Math.cos((((lat1 + lat2) / 2) * Math.PI) / 180);
-    const dLon = (lon2 - lon1) * 69 * cos;
-    return { dxMiles: dLon, dyMiles: -dLat };
+  function toRadians(value) {
+    return (value * Math.PI) / 180;
   }
 
-  // Simplified Great Britain coastline — hand-picked reference points,
-  // not survey-accurate, just enough to read as "the UK" at a glance.
-  const UK_OUTLINE = [
-    [50.07, -5.7], [50.3, -4.6], [50.3, -3.5], [50.6, -1.3], [50.8, 0.3],
-    [51.1, 1.3], [51.4, 1.4], [51.7, 1.2], [52.0, 1.6], [52.9, 1.3],
-    [53.0, 0.3], [53.7, 0.0], [54.1, -0.1], [54.5, -0.6], [54.9, -1.2],
-    [55.0, -1.6], [55.77, -2.0], [56.0, -3.2], [56.46, -2.97], [57.15, -2.1],
-    [57.7, -2.0], [58.4, -3.0], [58.6, -3.07], [58.6, -5.0], [57.8, -5.6],
-    [56.8, -5.5], [56.0, -5.7], [55.4, -5.6], [55.0, -5.0], [54.9, -3.5],
-    [53.5, -3.5], [53.3, -4.6], [52.3, -4.7], [51.6, -4.2], [51.3, -3.5],
-    [50.7, -3.9], [50.07, -5.7],
-  ];
+  function milesBetween(lat1, lon1, lat2, lon2) {
+    const phi1 = toRadians(lat1);
+    const phi2 = toRadians(lat2);
+    const deltaPhi = toRadians(lat2 - lat1);
+    const deltaLambda = toRadians(lon2 - lon1);
 
-  const UK_CITIES = [
-    { name: "London", lat: 51.5074, lon: -0.1278 },
-    { name: "Manchester", lat: 53.4808, lon: -2.2426 },
-    { name: "Birmingham", lat: 52.4862, lon: -1.8904 },
-    { name: "Edinburgh", lat: 55.9533, lon: -3.1883 },
-    { name: "Glasgow", lat: 55.8642, lon: -4.2518 },
-    { name: "Cardiff", lat: 51.4816, lon: -3.1791 },
-    { name: "Bristol", lat: 51.4545, lon: -2.5879 },
-    { name: "Leeds", lat: 53.8008, lon: -1.5491 },
-    { name: "Liverpool", lat: 53.4084, lon: -2.9916 },
-    { name: "Newcastle", lat: 54.9783, lon: -1.6178 },
-    { name: "Sheffield", lat: 53.3811, lon: -1.4701 },
-    { name: "Nottingham", lat: 52.9548, lon: -1.1581 },
-    { name: "Southampton", lat: 50.9097, lon: -1.4044 },
-    { name: "Belfast", lat: 54.5973, lon: -5.9301 },
-  ];
+    const a =
+      Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+      Math.cos(phi1) * Math.cos(phi2) *
+      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
 
-    function drawMap() {
+    const angularDistance = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+    const distanceMiles = EARTH_RADIUS_MILES * angularDistance;
+
+    const y = Math.sin(deltaLambda) * Math.cos(phi2);
+    const x =
+      Math.cos(phi1) * Math.sin(phi2) -
+      Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+    const bearing = Math.atan2(y, x);
+
+    return {
+      dxMiles: distanceMiles * Math.sin(bearing),
+      dyMiles: -distanceMiles * Math.cos(bearing),
+      distanceMiles,
+    };
+  }
+
+  function getMapOrigin() {
+    const mine = getOwnRadarLocation();
+    if (mine) return { lat: mine.lat, lon: mine.lon, isMine: true };
+
+    const first = knownLocations.find(
+      (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lon)
+    );
+
+    if (first) return { lat: first.lat, lon: first.lon, isMine: false };
+
+    return { lat: 54.6, lon: -3.2, isMine: false };
+  }
+
+  async function loadRadarGeography() {
+    if (mapGeography || mapGeographyLoading) return;
+
+    mapGeographyLoading = true;
+
+    try {
+      const response = await fetch("radar-geography.json?v=2", { cache: "force-cache" });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      mapGeography = await response.json();
+      drawMap();
+    } catch (err) {
+      console.error("Radar geography load error:", err);
+      showSystemMessage("⚠️ Radar outlines couldn't be loaded. User locations will still work.");
+    } finally {
+      mapGeographyLoading = false;
+    }
+  }
+
+  function mapPoint(lat, lon, origin, centerX, centerY) {
+    const dpr = window.devicePixelRatio || 1;
+    const vector = milesBetween(origin.lat, origin.lon, lat, lon);
+
+    return {
+      x: centerX + vector.dxMiles * mapScale * dpr,
+      y: centerY + vector.dyMiles * mapScale * dpr,
+      distanceMiles: vector.distanceMiles,
+    };
+  }
+
+  function isPointNearCanvas(point, w, h, marginPx) {
+    return (
+      point.x >= -marginPx &&
+      point.x <= w + marginPx &&
+      point.y >= -marginPx &&
+      point.y <= h + marginPx
+    );
+  }
+
+  function drawLineCollection(ctx, lines, origin, centerX, centerY, w, h, strokeStyle, lineWidth) {
+    if (!Array.isArray(lines)) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth * dpr;
+
+    lines.forEach((line) => {
+      if (!Array.isArray(line) || line.length < 2) return;
+
+      const projected = line.map((point) =>
+        mapPoint(point[0], point[1], origin, centerX, centerY)
+      );
+
+      const margin = 40 * dpr;
+      if (!projected.some((point) => isPointNearCanvas(point, w, h, margin))) return;
+
+      ctx.beginPath();
+      projected.forEach((point, index) => {
+        if (index === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      ctx.stroke();
+    });
+  }
+
+  function regionLikelyVisible(origin, spec, centerX, centerY, w, h) {
+    const dpr = window.devicePixelRatio || 1;
+    const center = mapPoint(spec.lat, spec.lon, origin, centerX, centerY);
+    const radiusPx = spec.radiusMiles * mapScale * dpr;
+    const margin = Math.max(radiusPx, 80 * dpr);
+    return isPointNearCanvas(center, w, h, margin);
+  }
+
+  function drawGeography(ctx, origin, centerX, centerY, w, h) {
+    if (!mapGeography) return;
+
+    Object.entries(MAP_GEOGRAPHY_SPECS).forEach(([key, spec]) => {
+      const region = mapGeography[key];
+      if (!region) return;
+      if (!regionLikelyVisible(origin, spec, centerX, centerY, w, h)) return;
+
+      drawLineCollection(ctx, region.coast, origin, centerX, centerY, w, h, themeRgba(0.50), 1.15);
+      drawLineCollection(ctx, region.borders, origin, centerX, centerY, w, h, themeRgba(0.28), 0.8);
+
+      const labelPoint = mapPoint(spec.lat, spec.lon, origin, centerX, centerY);
+      if (isPointNearCanvas(labelPoint, w, h, 15 * (window.devicePixelRatio || 1))) {
+        ctx.fillStyle = themeRgba(0.42);
+        ctx.font = "bold " + 10 * (window.devicePixelRatio || 1) + "px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(spec.label, labelPoint.x, labelPoint.y);
+      }
+    });
+  }
+
+  function formatDistanceMiles(distanceMiles) {
+    if (distanceMiles < 5) return "<5mi";
+    if (distanceMiles < 100) return "≈" + Math.round(distanceMiles / 10) * 10 + "mi";
+    if (distanceMiles < 1000) return "≈" + Math.round(distanceMiles / 50) * 50 + "mi";
+    return "≈" + Math.round(distanceMiles / 100) * 100 + "mi";
+  }
+
+  function requestFlightsForRegion(regionKey) {
+    if (!flightsToggle || !flightsToggle.checked || !regionKey) return;
+    knownFlights = [];
+    knownFlightRegion = regionKey;
+    updateMapDataStatus("LOADING " + regionKey.toUpperCase() + " FLIGHTS");
+    socket.emit("getFlights", { region: regionKey });
+  }
+
+  function requestHomePois() {
+    if (!poisToggle || !poisToggle.checked) return;
+    if (!locationToggle.checked) {
+      updateMapDataStatus("PLACES NEED LOCATION");
+      return;
+    }
+    mapPoisRequested = false;
+    updateMapDataStatus("LOADING LOCAL PLACES");
+    socket.emit("getMapPois");
+  }
+
+  function requestEarthquakes() {
+    if (!earthquakesToggle || !earthquakesToggle.checked) return;
+    mapEarthquakesRequested = false;
+    updateMapDataStatus("LOADING QUAKES");
+    socket.emit("getEarthquakes");
+  }
+
+  function setActiveMapShortcut(viewKey) {
+    mapShortcutBtns.forEach((btn) => {
+      let btnView = "";
+      if (btn === mapHomeBtn) btnView = "home";
+      else if (btn === mapFitBtn) btnView = "all-users";
+      else btnView = btn.dataset.mapRegion || "";
+
+      const active = btnView === viewKey;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
+  function fitMapToUsers() {
+    const origin = getMapOrigin();
+    const rect = mapCanvas.getBoundingClientRect();
+    const candidates = knownLocations.filter(
+      (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lon)
+    );
+
+    currentMapView = "all-users";
+    setActiveMapShortcut(currentMapView);
+    mapOffsetX = 0;
+    mapOffsetY = 0;
+
+    if (candidates.length === 0) {
+      mapScale = MAP_DEFAULT_LOCAL_SCALE;
+      drawMap();
+      return;
+    }
+
+    let farthest = 0;
+    candidates.forEach((loc) => {
+      const distance = milesBetween(origin.lat, origin.lon, loc.lat, loc.lon).distanceMiles;
+      farthest = Math.max(farthest, distance);
+    });
+
+    if (farthest < 25) {
+      mapScale = MAP_DEFAULT_LOCAL_SCALE;
+    } else {
+      const availableRadiusCssPx = Math.max(90, Math.min(rect.width, rect.height) * 0.38);
+      const targetScale = availableRadiusCssPx / farthest;
+      mapScale = Math.max(MAP_MIN_SCALE, Math.min(6, targetScale));
+    }
+
+    const mine = getOwnRadarLocation();
+    if (mine) requestFlightsForRegion(preferredFlightRegion(mine.lat, mine.lon));
+    drawMap();
+  }
+
+  function focusMapHome() {
+    const mine = getOwnRadarLocation();
+
+    if (!mine) {
+      currentMapView = "all-users";
+      fitMapToUsers();
+      updateMapDataStatus("HOME NEEDS LOCATION");
+      return;
+    }
+
+    currentMapView = "home";
+    setActiveMapShortcut(currentMapView);
+    mapOffsetX = 0;
+    mapOffsetY = 0;
+
+    const macro = homeMacroRegion(mine.lat, mine.lon);
+    if (macro === "uk") mapScale = 0.72;
+    else if (macro === "australia") mapScale = 0.105;
+    else if (macro === "north-america") mapScale = 0.055;
+    else mapScale = 0.18;
+
+    requestFlightsForRegion(preferredFlightRegion(mine.lat, mine.lon));
+    if (poisToggle && poisToggle.checked && !mapPoisRequested) requestHomePois();
+    if (earthquakesToggle && earthquakesToggle.checked && !mapEarthquakesRequested) requestEarthquakes();
+    drawMap();
+  }
+
+  function focusMapRegion(regionKey) {
+    const spec = MAP_REGION_SPECS[regionKey];
+    if (!spec) return;
+
+    const origin = getMapOrigin();
+    const dpr = window.devicePixelRatio || 1;
+    const vector = milesBetween(origin.lat, origin.lon, spec.lat, spec.lon);
+
+    currentMapView = regionKey;
+    setActiveMapShortcut(currentMapView);
+    mapScale = spec.scale;
+    mapOffsetX = -vector.dxMiles * mapScale * dpr;
+    mapOffsetY = -vector.dyMiles * mapScale * dpr;
+    mapInitialFocusPending = false;
+    requestFlightsForRegion(spec.flightRegion);
+    drawMap();
+  }
+
+  function poiGlyph(category) {
+    if (category === "airport") return "✈";
+    if (category === "hospital") return "+";
+    if (category === "stadium") return "S";
+    if (category === "museum") return "M";
+    if (category === "viewpoint") return "V";
+    if (category === "zoo") return "Z";
+    if (category === "historic") return "◆";
+    return "•";
+  }
+
+  function drawMap() {
     if (mapOverlay.classList.contains("hidden")) return;
 
     const ctx = mapCanvas.getContext("2d");
     const w = mapCanvas.width;
     const h = mapCanvas.height;
+    const dpr = window.devicePixelRatio || 1;
 
-    if (w === 0 || h === 0) return; // canvas not laid out yet
+    if (w === 0 || h === 0) return;
 
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = themeRgba(0.35);
+    ctx.strokeStyle = themeRgba(0.26);
     ctx.lineWidth = 1;
-    const gridSize = 40 * devicePixelRatio;
+    const gridSize = 40 * dpr;
 
     for (let x = mapOffsetX % gridSize; x < w; x += gridSize) {
       ctx.beginPath();
@@ -3987,120 +5256,110 @@ socket.on(
 
     const centerX = w / 2 + mapOffsetX;
     const centerY = h / 2 + mapOffsetY;
+    const origin = getMapOrigin();
 
-       // Radar range rings out to 400+ miles. Ring distances are fixed in
-    // real miles; a ring is only labelled if it sits far enough away
-    // (in screen pixels) from the last labelled ring, so labels never
-    // overlap when zoomed out and rings bunch together visually.
-    const RING_DISTANCES_MILES = [10, 25, 50, 100, 150, 200, 300, 400];
-    const maxVisibleRadius = Math.hypot(w, h) * 0.75;
-    const MIN_LABEL_GAP_PX = 22 * devicePixelRatio;
+    const ringDistances = [10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000, 7500, 10000, 12500];
+    const maxVisibleRadius = Math.hypot(w, h) * 0.78;
+    const minRingGap = 30 * dpr;
+    let lastRingRadius = null;
 
-    ctx.strokeStyle = themeRgba(0.5);
-    ctx.fillStyle = themeRgba(0.6);
-    ctx.font = 9 * devicePixelRatio + "px monospace";
+    ctx.strokeStyle = themeRgba(0.38);
+    ctx.fillStyle = themeRgba(0.58);
+    ctx.font = 9 * dpr + "px monospace";
     ctx.textAlign = "left";
 
-    let lastLabelRadius = null;
-
-    for (const miles of RING_DISTANCES_MILES) {
-      const r = miles * mapScale * devicePixelRatio;
-      if (r > maxVisibleRadius) break; // rings only get bigger from here
+    ringDistances.forEach((miles) => {
+      const radius = miles * mapScale * dpr;
+      if (radius > maxVisibleRadius || radius < 8 * dpr) return;
 
       ctx.beginPath();
-      ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       ctx.stroke();
 
-      if (lastLabelRadius === null || r - lastLabelRadius >= MIN_LABEL_GAP_PX) {
-        ctx.fillText(miles + "mi", centerX + r + 3, centerY - 3);
-        lastLabelRadius = r;
-      }
-    } 
-
-    // Compass marker.
-    ctx.fillStyle = themePrimary();
-    ctx.font = "bold " + 12 * devicePixelRatio + "px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("N", centerX, 16 * devicePixelRatio);
-
-    if (myJitteredLat === null && knownLocations.length === 0) {
-      ctx.fillStyle = themeDim();
-      ctx.font = 13 * devicePixelRatio + "px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("No locations to show yet.", w / 2, h / 2 + 30 * devicePixelRatio);
-      return;
-    }
-
-        const originLat =
-      myJitteredLat !== null ? myJitteredLat : knownLocations[0].lat;
-    const originLon =
-      myJitteredLon !== null ? myJitteredLon : knownLocations[0].lon;
-
-    // UK coastline outline — a faint visual reference, not
-    // survey-accurate, just enough to read as "the UK" at a glance.
-    ctx.strokeStyle = "rgba(0, 238, 255, 0.35)";
-    ctx.lineWidth = 1.5 * devicePixelRatio;
-    ctx.beginPath();
-    UK_OUTLINE.forEach((point, i) => {
-      const { dxMiles, dyMiles } = milesBetween(
-        originLat,
-        originLon,
-        point[0],
-        point[1]
-      );
-      const px = centerX + dxMiles * mapScale * devicePixelRatio;
-      const py = centerY + dyMiles * mapScale * devicePixelRatio;
-
-      if (i === 0) {
-        ctx.moveTo(px, py);
-      } else {
-        ctx.lineTo(px, py);
+      if (lastRingRadius === null || radius - lastRingRadius >= minRingGap) {
+        ctx.fillText(miles >= 1000 ? miles / 1000 + "k mi" : miles + "mi", centerX + radius + 3 * dpr, centerY - 3 * dpr);
+        lastRingRadius = radius;
       }
     });
-    ctx.stroke();
 
-    // City reference labels.
-    UK_CITIES.forEach((city) => {
-      const { dxMiles, dyMiles } = milesBetween(
-        originLat,
-        originLon,
-        city.lat,
-        city.lon
-      );
-      const px = centerX + dxMiles * mapScale * devicePixelRatio;
-      const py = centerY + dyMiles * mapScale * devicePixelRatio;
+    ctx.fillStyle = themePrimary();
+    ctx.font = "bold " + 12 * dpr + "px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("N", w / 2, 16 * dpr);
+
+    drawGeography(ctx, origin, centerX, centerY, w, h);
+
+    MAP_CITIES.forEach((city) => {
+      if (mapScale < city.minScale) return;
+      const point = mapPoint(city.lat, city.lon, origin, centerX, centerY);
+      if (!isPointNearCanvas(point, w, h, 15 * dpr)) return;
 
       ctx.beginPath();
-      ctx.arc(px, py, 2 * devicePixelRatio, 0, Math.PI * 2);
+      ctx.arc(point.x, point.y, 2 * dpr, 0, Math.PI * 2);
       ctx.fillStyle = "#4d5eff";
       ctx.fill();
-
-      ctx.fillStyle = "#4d5eff";
-      ctx.font = 9 * devicePixelRatio + "px monospace";
+      ctx.font = 9 * dpr + "px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(city.name, px, py - 6 * devicePixelRatio);
+      ctx.fillText(city.name, point.x, point.y - 6 * dpr);
     });
 
+    // The server keeps one cached global USGS feed. The client filters that
+    // feed to the CURRENT visible radar area before drawing it, so each
+    // country/home view shows only the earthquakes relevant to that view.
+    if (earthquakesToggle && earthquakesToggle.checked) {
+      getVisibleEarthquakes().forEach((quake) => {
+        const point = mapPoint(quake.lat, quake.lon, origin, centerX, centerY);
+
+        const radius = Math.max(2.5, Math.min(9, 1.5 + quake.magnitude)) * dpr;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = quake.tsunami ? "#ff1744" : "#ff5f1f";
+        ctx.lineWidth = (quake.tsunami ? 2 : 1) * dpr;
+        ctx.stroke();
+
+        if (mapScale >= 0.075) {
+          ctx.fillStyle = "#ff9a66";
+          ctx.font = 8 * dpr + "px monospace";
+          ctx.textAlign = "center";
+          ctx.fillText("M" + quake.magnitude.toFixed(1), point.x, point.y - radius - 3 * dpr);
+        }
+      });
+    }
+
+    // OpenStreetMap POIs are local to the viewer's approximate shared location.
+    if (poisToggle && poisToggle.checked && mapScale >= 0.16) {
+      knownPois.forEach((poi) => {
+        const point = mapPoint(poi.lat, poi.lon, origin, centerX, centerY);
+        if (!isPointNearCanvas(point, w, h, 50 * dpr)) return;
+
+        ctx.fillStyle = "#ff00dd";
+        ctx.font = "bold " + 10 * dpr + "px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(poiGlyph(poi.category), point.x, point.y);
+
+        if (mapScale >= 0.34) {
+          ctx.fillStyle = "#ff7bea";
+          ctx.font = 8 * dpr + "px monospace";
+          ctx.fillText(poi.name, point.x, point.y - 9 * dpr);
+        }
+      });
+    }
+
+    const myMapLocation = knownLocations.find((loc) => loc.handle === myHandle);
+    const canMeasureFromMe = !!myMapLocation || (myJitteredLat !== null && myJitteredLon !== null);
+
     knownLocations.forEach((loc) => {
-      const { dxMiles, dyMiles } = milesBetween(
-        originLat,
-        originLon,
-        loc.lat,
-        loc.lon
-      );
+      if (!Number.isFinite(loc.lat) || !Number.isFinite(loc.lon)) return;
 
-      const px = centerX + dxMiles * mapScale * devicePixelRatio;
-      const py = centerY + dyMiles * mapScale * devicePixelRatio;
-
+      const vector = milesBetween(origin.lat, origin.lon, loc.lat, loc.lon);
+      const px = centerX + vector.dxMiles * mapScale * dpr;
+      const py = centerY + vector.dyMiles * mapScale * dpr;
       const isMe = loc.handle === myHandle;
 
-      if (!isMe) {
-        const distanceMiles = Math.hypot(dxMiles, dyMiles);
-        const roundedMiles =
-          distanceMiles < 5 ? 5 : Math.round(distanceMiles / 10) * 10;
+      if (!isPointNearCanvas({ x: px, y: py }, w, h, 80 * dpr)) return;
 
-        // Proximity line from you to them — brighter when closer.
-        const alpha = Math.max(0.15, 1 - distanceMiles / 100);
+      if (!isMe && canMeasureFromMe && origin.isMine) {
+        const alpha = Math.max(0.12, Math.min(0.72, 1 - vector.distanceMiles / 12000));
         ctx.strokeStyle = themeRgba(alpha.toFixed(2));
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -4108,118 +5367,140 @@ socket.on(
         ctx.lineTo(px, py);
         ctx.stroke();
 
-        ctx.fillStyle = "#a8ffb0";
-        ctx.font = 9 * devicePixelRatio + "px monospace";
+        ctx.fillStyle = colorMixForRadar();
+        ctx.font = 9 * dpr + "px monospace";
         ctx.textAlign = "center";
-        ctx.fillText(
-          "≈" + roundedMiles + "mi",
-          (centerX + px) / 2,
-          (centerY + py) / 2 - 4 * devicePixelRatio
-        );
+        ctx.fillText(formatDistanceMiles(vector.distanceMiles), (centerX + px) / 2, (centerY + py) / 2 - 4 * dpr);
       }
 
       ctx.beginPath();
-      ctx.arc(px, py, 5 * devicePixelRatio, 0, Math.PI * 2);
-      ctx.fillStyle = loc.color || themePrimary();
-      ctx.shadowColor = loc.color || themePrimary();
-      ctx.shadowBlur = 8 * devicePixelRatio;
+      ctx.arc(px, py, 5 * dpr, 0, Math.PI * 2);
+      ctx.fillStyle = isMe ? "#ffee00" : (loc.color || themePrimary());
+      ctx.shadowColor = isMe ? "#ffee00" : (loc.color || themePrimary());
+      ctx.shadowBlur = 8 * dpr;
       ctx.fill();
       ctx.shadowBlur = 0;
 
-            ctx.fillStyle = themePrimary();
-      ctx.font = 11 * devicePixelRatio + "px monospace";
+      ctx.fillStyle = isMe ? "#ffee00" : themePrimary();
+      ctx.font = 11 * dpr + "px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(loc.handle, px, py - 10 * devicePixelRatio);
+      ctx.fillText(isMe ? "YOU" : loc.handle, px, py - 10 * dpr);
 
-      if (loc.weather) {
-        ctx.fillStyle = "#a8ffb0";
-        ctx.font = 9 * devicePixelRatio + "px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(
-          loc.weather.icon + " " + loc.weather.tempC + "°C",
-          px,
-          py + 18 * devicePixelRatio
-        );
+      if (loc.weather && mapScale >= 0.025) {
+        ctx.fillStyle = colorMixForRadar();
+        ctx.font = 9 * dpr + "px monospace";
+        ctx.fillText(loc.weather.icon + " " + loc.weather.tempC + "°C", px, py + 18 * dpr);
       }
 
-      if (loc.aqi) {
-        ctx.fillStyle = loc.aqi.color;
-        ctx.font = 8 * devicePixelRatio + "px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("AQI " + loc.aqi.value, px, py + 28 * devicePixelRatio);
+      const locAqi = selectAqiForLocation(loc);
+      if (locAqi && mapScale >= 0.04) {
+        ctx.fillStyle = locAqi.color;
+        ctx.font = 8 * dpr + "px monospace";
+        ctx.fillText((locAqi.scheme ? locAqi.scheme + " " : "") + "AQI " + locAqi.value, px, py + 28 * dpr);
       }
     });
 
     if (flightsToggle && flightsToggle.checked) {
       knownFlights.forEach((flight) => {
-        const { dxMiles, dyMiles } = milesBetween(
-          originLat,
-          originLon,
-          flight.lat,
-          flight.lon
-        );
-
-        const distanceMiles = Math.hypot(dxMiles, dyMiles);
-        if (distanceMiles > 300) return; // keep the radar readable
-
-        const px = centerX + dxMiles * mapScale * devicePixelRatio;
-        const py = centerY + dyMiles * mapScale * devicePixelRatio;
+        if (!Number.isFinite(flight.lat) || !Number.isFinite(flight.lon)) return;
+        const point = mapPoint(flight.lat, flight.lon, origin, centerX, centerY);
+        if (!isPointNearCanvas(point, w, h, 25 * dpr)) return;
 
         ctx.save();
-        ctx.translate(px, py);
+        ctx.translate(point.x, point.y);
         ctx.rotate((flight.heading * Math.PI) / 180);
         ctx.beginPath();
-        ctx.moveTo(0, -6 * devicePixelRatio);
-        ctx.lineTo(4 * devicePixelRatio, 5 * devicePixelRatio);
-        ctx.lineTo(-4 * devicePixelRatio, 5 * devicePixelRatio);
+        ctx.moveTo(0, -6 * dpr);
+        ctx.lineTo(4 * dpr, 5 * dpr);
+        ctx.lineTo(-4 * dpr, 5 * dpr);
         ctx.closePath();
         ctx.fillStyle = "#00eeff";
         ctx.shadowColor = "#00eeff";
-        ctx.shadowBlur = 5 * devicePixelRatio;
+        ctx.shadowBlur = 5 * dpr;
         ctx.fill();
         ctx.restore();
         ctx.shadowBlur = 0;
 
-        ctx.fillStyle = "#00eeff";
-        ctx.font = 8 * devicePixelRatio + "px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText(flight.callsign, px, py + 12 * devicePixelRatio);
+        if (mapScale >= 0.08) {
+          ctx.fillStyle = "#00eeff";
+          ctx.font = 8 * dpr + "px monospace";
+          ctx.textAlign = "center";
+          ctx.fillText(flight.callsign, point.x, point.y + 12 * dpr);
+        }
       });
     }
 
-    ctx.strokeStyle = "#ffee00";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 4 * devicePixelRatio, 0, Math.PI * 2);
-    ctx.stroke();
+    if (origin.isMine) {
+      ctx.strokeStyle = "#ffee00";
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 4 * dpr, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (knownLocations.length === 0) {
+      ctx.fillStyle = themeDim();
+      ctx.font = 11 * dpr + "px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("Enable location for your HOME view, or choose a country above.", w / 2, h - 18 * dpr);
+    }
 
-    ctx.fillStyle = "#ffee00";
-    ctx.font = 10 * devicePixelRatio + "px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("YOU", centerX, centerY + 18 * devicePixelRatio);
+    if (!mapGeography && mapGeographyLoading) {
+      ctx.fillStyle = themeDim();
+      ctx.font = 10 * dpr + "px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText("LOADING COASTLINES…", w - 10 * dpr, 18 * dpr);
+    }
+
+    // Keep layer counters synchronized with the area currently on screen.
+    // This also updates quake totals immediately after pan/zoom/country changes.
+    updateMapDataStatus();
   }
 
-       mapToggleBtn.addEventListener("click", (e) => {
+  function colorMixForRadar() {
+    const primary = themePrimary().replace("#", "");
+    if (!/^[0-9a-f]{6}$/i.test(primary)) return "#a8ffb0";
+    const r = parseInt(primary.slice(0, 2), 16);
+    const g = parseInt(primary.slice(2, 4), 16);
+    const b = parseInt(primary.slice(4, 6), 16);
+    const mix = (value) => Math.round(value * 0.58 + 255 * 0.42).toString(16).padStart(2, "0");
+    return "#" + mix(r) + mix(g) + mix(b);
+  }
+
+  mapToggleBtn.addEventListener("click", (e) => {
     buzz();
     playSound(iconMapSound);
     spawnIconRipple(mapToggleBtn, e);
 
-    const isOpen = !mapOverlay.classList.contains("hidden");
+    const wasOpen = !mapOverlay.classList.contains("hidden");
 
-    if (isOpen) {
-      mapOverlay.classList.add("hidden");
+    // Close every top-level panel first. If Map was already open, the second
+    // press leaves it closed; otherwise Map opens cleanly on its own.
+    closePrimaryUiPanels();
+
+    if (wasOpen) {
       return;
     }
 
     try {
+      mapInitialFocusPending = true;
       socket.emit("getLocations");
-      socket.emit("getFlights");
+      syncMapOverlayViewport();
       mapOverlay.classList.remove("hidden");
+      loadRadarGeography();
+
+      if (earthquakesToggle && earthquakesToggle.checked && !mapEarthquakesRequested) {
+        requestEarthquakes();
+      }
+
+      if (poisToggle && poisToggle.checked && !mapPoisRequested) {
+        requestHomePois();
+      }
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           resizeMapCanvas();
-          drawMap();
+          // Use cached/local coordinates immediately; the locationsUpdate event
+          // performs a second HOME focus when fresh server data arrives.
+          focusMapHome();
         });
       });
 
@@ -4233,29 +5514,100 @@ socket.on(
     }
   });
 
-  mapCloseBtn.addEventListener("click", () => {
+  mapCloseBtn.addEventListener("click", (e) => {
     buzz();
+    spawnIconRipple(mapCloseBtn, e);
     mapOverlay.classList.add("hidden");
   });
 
-    mapCanvas.addEventListener(
+  if (mapHomeBtn) {
+    mapHomeBtn.addEventListener("click", (e) => {
+      buzz(18);
+      spawnIconRipple(mapHomeBtn, e);
+      mapInitialFocusPending = false;
+      focusMapHome();
+    });
+  }
+
+  if (mapFitBtn) {
+    mapFitBtn.addEventListener("click", (e) => {
+      buzz(18);
+      spawnIconRipple(mapFitBtn, e);
+      mapInitialFocusPending = false;
+      fitMapToUsers();
+    });
+  }
+
+  mapRegionBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      buzz(18);
+      spawnIconRipple(btn, e);
+      mapInitialFocusPending = false;
+      focusMapRegion(btn.dataset.mapRegion);
+    });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !mapOverlay.classList.contains("hidden")) {
+      mapOverlay.classList.add("hidden");
+    }
+  });
+
+  if (flightsToggle) {
+    flightsToggle.addEventListener("change", () => {
+      buzz();
+      if (!flightsToggle.checked) {
+        drawMap();
+        updateMapDataStatus();
+        return;
+      }
+
+      if (MAP_REGION_SPECS[currentMapView]) {
+        requestFlightsForRegion(MAP_REGION_SPECS[currentMapView].flightRegion);
+      } else {
+        const mine = getOwnRadarLocation();
+        requestFlightsForRegion(mine ? preferredFlightRegion(mine.lat, mine.lon) : "uk");
+      }
+    });
+  }
+
+  if (poisToggle) {
+    poisToggle.addEventListener("change", () => {
+      buzz();
+      if (poisToggle.checked) requestHomePois();
+      else {
+        updateMapDataStatus();
+        drawMap();
+      }
+    });
+  }
+
+  if (earthquakesToggle) {
+    earthquakesToggle.addEventListener("change", () => {
+      buzz();
+      if (earthquakesToggle.checked) requestEarthquakes();
+      else {
+        updateMapDataStatus();
+        drawMap();
+      }
+    });
+  }
+
+  mapCanvas.addEventListener(
     "wheel",
     (e) => {
       e.preventDefault();
-      mapScale *= e.deltaY > 0 ? 0.9 : 1.1;
-      mapScale = Math.max(1, Math.min(mapScale, 60));
+      mapInitialFocusPending = false;
+      mapScale *= e.deltaY > 0 ? 0.88 : 1.14;
+      mapScale = Math.max(MAP_MIN_SCALE, Math.min(MAP_MAX_SCALE, mapScale));
       drawMap();
     },
     { passive: false }
   );
 
-  // Tracks every finger/pointer currently touching the canvas, keyed
-  // by pointerId, so we can tell a one-finger drag from a two-finger pinch.
   const activeMapPointers = new Map();
   let pinchStartDistance = null;
   let pinchStartScale = null;
-  let pinchCenterX = 0;
-  let pinchCenterY = 0;
 
   function pointerDistance() {
     const pts = Array.from(activeMapPointers.values());
@@ -4269,6 +5621,7 @@ socket.on(
       mapCanvas.setPointerCapture(e.pointerId);
     } catch (err) {}
 
+    mapInitialFocusPending = false;
     activeMapPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (activeMapPointers.size === 2) {
@@ -4289,14 +5642,14 @@ socket.on(
     if (activeMapPointers.size === 2 && pinchStartDistance) {
       const newDistance = pointerDistance();
       mapScale = pinchStartScale * (newDistance / pinchStartDistance);
-      mapScale = Math.max(1, Math.min(mapScale, 60));
+      mapScale = Math.max(MAP_MIN_SCALE, Math.min(MAP_MAX_SCALE, mapScale));
       drawMap();
       return;
     }
 
     if (activeMapPointers.size === 1 && mapDragging) {
-      mapOffsetX += (e.clientX - mapLastX) * devicePixelRatio;
-      mapOffsetY += (e.clientY - mapLastY) * devicePixelRatio;
+      mapOffsetX += (e.clientX - mapLastX) * (window.devicePixelRatio || 1);
+      mapOffsetY += (e.clientY - mapLastY) * (window.devicePixelRatio || 1);
       mapLastX = e.clientX;
       mapLastY = e.clientY;
       drawMap();
@@ -4325,11 +5678,24 @@ socket.on(
   mapCanvas.addEventListener("pointercancel", endMapPointer);
 
   window.addEventListener("resize", () => {
+    if (!profileOverlay.classList.contains("hidden")) {
+      syncProfileOverlayViewport();
+    }
+
     if (!mapOverlay.classList.contains("hidden")) {
+      syncMapOverlayViewport();
       resizeMapCanvas();
       drawMap();
     }
   });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => {
+      if (!profileOverlay.classList.contains("hidden")) {
+        syncProfileOverlayViewport();
+      }
+    });
+  }
 
   checkReturningUser();
 });
